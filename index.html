@@ -476,51 +476,48 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
-// ── Lakes via OpenStreetMap Overpass ──────────────────────────────────────────
-// Two mirror endpoints — falls back if primary 504s
-const OVERPASS_MIRRORS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-];
+// ── Lakes via GeoNames ───────────────────────────────────────────────────────
+// Free account at geonames.org — replace YOUR_GEONAMES_USERNAME below
+const GEONAMES_USER = 'pokemonrocks9';
 
-async function overpassFetch(query) {
-  for (const mirror of OVERPASS_MIRRORS) {
-    try {
-      const res = await fetch(mirror, {
-        method: 'POST',
-        body: 'data=' + encodeURIComponent(query),
-        signal: AbortSignal.timeout(18000),
-      });
-      if (!res.ok) continue;
-      const text = await res.text();
-      if (!text.trim().startsWith('{')) continue;
-      return JSON.parse(text);
-    } catch { /* try next mirror */ }
-  }
-  return null;
-}
+// Feature codes: LK=lake, LKS=lakes, LKI=intermittent lake, LKN=salt lake,
+// RSV=reservoir, PND=pond, LKRS=reservoir lake, STGNS=part of a lake
+const LAKE_FCODES = new Set(['LK','LKS','LKI','LKN','LKO','LKX','RSV','LKRS','PND','LKRS']);
 
 async function fetchLakes(lat, lon) {
-  const d = 0.5;
-  // Single compact query — way faster than 9 union clauses
-  const q = `[out:json][timeout:15];(way["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});relation["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});way["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});way["water"~"lake|reservoir|pond"]["name"](${lat-d},${lon-d},${lat+d},${lon+d}););out center 12;`;
+  if (GEONAMES_USER === 'YOUR_GEONAMES_USERNAME') {
+    // No username set — return empty gracefully
+    return [];
+  }
 
-  const json = await overpassFetch(q);
-  if (!json || !json.elements) return [];
+  // GeoNames findNearby — returns named geographic features within radius
+  // We run two queries: lakes/ponds and reservoirs, then merge
+  const radius = 40; // km
+  const maxRows = 20;
+  const base = `https://secure.geonames.org/findNearbyJSON?lat=${lat}&lng=${lon}&radius=${radius}&maxRows=${maxRows}&username=${GEONAMES_USER}`;
 
-  const seen = new Set();
-  return json.elements
-    .filter(e => e.tags && e.tags.name)
-    .map(e => {
-      const elat = e.center ? e.center.lat : e.lat;
-      const elon = e.center ? e.center.lon : e.lon;
-      if (!elat || !elon) return null;
-      return { name: e.tags.name, lat: elat, lon: elon, dist: haversine(lat, lon, elat, elon) };
-    })
-    .filter(Boolean)
-    .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
-    .sort((a,b) => a.dist - b.dist)
-    .slice(0, 8);
+  // Feature class H = hydrographic features (all water bodies)
+  const url = base + `&featureClass=H`;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.geonames) return [];
+
+    return data.geonames
+      .filter(g => LAKE_FCODES.has(g.fcode))
+      .map(g => ({
+        name: g.name,
+        lat:  parseFloat(g.lat),
+        lon:  parseFloat(g.lng),
+        dist: Math.round(parseFloat(g.distance) * 0.621371 * 10) / 10, // km to miles
+        type: g.fcodeName || 'water body',
+      }))
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
 }
 
 // ── iNaturalist fish species for a location ───────────────────────────────────
@@ -746,7 +743,11 @@ function renderLakes() {
   const d = appData.days[selectedDay];
 
   if (!lakes.length) {
-    el.innerHTML = '<div class="empty">No named lakes found nearby. OpenStreetMap coverage may be limited for this area.</div>';
+    if (GEONAMES_USER === 'YOUR_GEONAMES_USERNAME') {
+      el.innerHTML = '<div class="empty">⚙️ Add your GeoNames username to <code>index.html</code> to enable lake search.</div>';
+    } else {
+      el.innerHTML = '<div class="empty">No lakes found within 40 miles. GeoNames may have limited coverage for this area.</div>';
+    }
     return;
   }
 
@@ -759,7 +760,7 @@ function renderLakes() {
         <div class="lake-ico">🎣</div>
         <div style="flex:1;min-width:0">
           <div class="lake-name">${lk.name}</div>
-          <div class="lake-dist">${lk.dist} mi away</div>
+          <div class="lake-dist">${lk.dist} mi away · ${lk.type || "lake"}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
             <span class="tag ${cr.cls}">${cr.text} today</span>
