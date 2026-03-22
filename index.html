@@ -329,6 +329,12 @@
     .db-price-per { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
     .db-rental-type { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
     .db-add-btn { font-size: 12px; color: var(--green); background: none; border: 1px dashed var(--green); border-radius: 4px; padding: 4px 10px; cursor: pointer; margin-bottom: 4px; }
+    .db-form-subtitle { font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+    .db-section-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .db-pick { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; cursor: pointer; padding: 6px 12px; border: 1px solid var(--border2); border-radius: 20px; background: var(--bg2); color: var(--text2); transition: background .15s, color .15s, border-color .15s; user-select: none; }
+    .db-pick:has(input:checked) { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+    .db-pick input { display: none; }
+    .db-collapsible { display: none; }
     .db-hours-row { background: var(--bg2); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
     .db-hours-row-inner { display: flex; flex-direction: column; gap: 4px; }
     .hours-time-fields { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
@@ -382,7 +388,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.17.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.18.0</p>
   </div>
 
 </div>
@@ -1012,101 +1018,131 @@ function toggleSubmitForm(lakeName, btn) {
   btn.textContent = 'Cancel';
   wrap.innerHTML = `
     <div class="db-form">
-      <div class="db-form-title">Submit lake info</div>
+      <div class="db-form-title">What do you know about this lake?</div>
+      <div class="db-form-subtitle">Only check what you actually know — everything else stays as-is.</div>
 
-      <div class="db-form-section">Basic info</div>
-      <label class="db-label">Local name (optional)
-        <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
-      </label>
-      <label class="db-label">Access type
-        <select id="act-${id}">
-          <option value="">— select —</option>
-          <option value="public">Public access</option>
-          <option value="private">Private</option>
-          <option value="park">Park / managed area</option>
-        </select>
-      </label>
-      <label class="db-label">Pay to fish?
-        <select id="ptf-${id}">
-          <option value="">— select —</option>
-          <option value="true">Yes — requires permit/fee</option>
-          <option value="false">No — free to fish</option>
-        </select>
-      </label>
-      <label class="db-label">Catch rules
-        <select id="crs-${id}">
-          <option value="">— select —</option>
-          <option value="catch-and-release">Catch &amp; release only</option>
-          <option value="catch-and-keep">Catch &amp; keep allowed</option>
-          <option value="slot-limits">Slot limits apply</option>
-        </select>
-      </label>
-
-      <div class="db-form-section">Bank &amp; pier fishing</div>
-      <label class="db-label">Bank fishing available?
-        <select id="bnk-${id}" onchange="toggleBankPrices('${id}')">
-          <option value="">— select —</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      </label>
-      <div id="bnk-prices-${id}" style="display:none">
-        <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
-          <input type="checkbox" id="pier-${id}" /> Pier available
-        </label>
-        <div class="db-form-subsection">Bank fishing prices (add multiple if needed)</div>
-        <div id="bnk-price-list-${id}"></div>
-        <button class="db-add-btn" onclick="addPrice('bnk-price-list-${id}')">+ Add price tier</button>
+      <div class="db-section-picks">
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-basics-${id}', this)" /> Basic info</label>
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-bank-${id}', this)" /> Bank &amp; pier fishing</label>
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-launch-${id}', this)" /> Boat launch</label>
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-rentals-${id}', this)" /> Boat rentals</label>
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-hours-${id}', this)" /> Hours of operation</label>
+        <label class="db-pick"><input type="checkbox" onchange="toggleSection('sec-notes-${id}', this)" /> Notes</label>
       </div>
 
-      <div class="db-form-section">Boat launch</div>
-      <label class="db-label">Boat launch available?
-        <select id="lnch-${id}" onchange="toggleLaunchPrices('${id}')">
-          <option value="">— select —</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      </label>
-      <div id="lnch-prices-${id}" style="display:none">
-        <div class="db-form-subsection">Launch prices (add multiple if needed)</div>
-        <div id="lnch-price-list-${id}"></div>
-        <button class="db-add-btn" onclick="addPrice('lnch-price-list-${id}')">+ Add price tier</button>
+      <div id="sec-basics-${id}" class="db-collapsible">
+        <div class="db-form-section">Basic info</div>
+        <label class="db-label">Local name (optional)
+          <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
+        </label>
+        <label class="db-label">Access type
+          <select id="act-${id}">
+            <option value="">— select —</option>
+            <option value="public">Public access</option>
+            <option value="private">Private</option>
+            <option value="park">Park / managed area</option>
+          </select>
+        </label>
+        <label class="db-label">Pay to fish?
+          <select id="ptf-${id}">
+            <option value="">— select —</option>
+            <option value="true">Yes — requires permit/fee</option>
+            <option value="false">No — free to fish</option>
+          </select>
+        </label>
+        <label class="db-label">Catch rules
+          <select id="crs-${id}">
+            <option value="">— select —</option>
+            <option value="catch-and-release">Catch &amp; release only</option>
+            <option value="catch-and-keep">Catch &amp; keep allowed</option>
+            <option value="slot-limits">Slot limits apply</option>
+          </select>
+        </label>
       </div>
 
-      <div class="db-form-section">Boat rentals</div>
-      <div id="rental-list-${id}"></div>
-      <button class="db-add-btn" onclick="addRental('${id}')">+ Add boat type</button>
-
-      <div class="db-form-section">Hours of operation</div>
-      <div class="db-form-subsection">Add one or more time windows — each can have its own date range</div>
-      <div id="hours-list-${id}"></div>
-      <button class="db-add-btn" onclick="addHoursBlock('${id}')">+ Add hours window</button>
-
-      <div style="margin-top:10px">
-        <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
-          <input type="checkbox" id="closed-days-toggle-${id}" onchange="toggleClosedDays('${id}')" />
-          Closed on a specific day every week?
+      <div id="sec-bank-${id}" class="db-collapsible">
+        <div class="db-form-section">Bank &amp; pier fishing</div>
+        <label class="db-label">Bank fishing available?
+          <select id="bnk-${id}" onchange="toggleBankPrices('${id}')">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
         </label>
-        <div id="closed-days-${id}" style="display:none;margin-top:8px">
-          <div class="db-form-subsection">Select days always closed</div>
-          <div class="db-days-grid">
-            ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i) =>
-              `<label class="db-day-label"><input type="checkbox" class="closed-day-cb-${id}" value="${i}" />${d}</label>`
-            ).join('')}
+        <div id="bnk-prices-${id}" style="display:none">
+          <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
+            <input type="checkbox" id="pier-${id}" /> Pier available
+          </label>
+          <div class="db-form-subsection">Bank fishing prices (add multiple if needed)</div>
+          <div id="bnk-price-list-${id}"></div>
+          <button class="db-add-btn" onclick="addPrice('bnk-price-list-${id}')">+ Add price tier</button>
+        </div>
+      </div>
+
+      <div id="sec-launch-${id}" class="db-collapsible">
+        <div class="db-form-section">Boat launch</div>
+        <label class="db-label">Boat launch available?
+          <select id="lnch-${id}" onchange="toggleLaunchPrices('${id}')">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <div id="lnch-prices-${id}" style="display:none">
+          <div class="db-form-subsection">Launch prices (add multiple if needed)</div>
+          <div id="lnch-price-list-${id}"></div>
+          <button class="db-add-btn" onclick="addPrice('lnch-price-list-${id}')">+ Add price tier</button>
+        </div>
+      </div>
+
+      <div id="sec-rentals-${id}" class="db-collapsible">
+        <div class="db-form-section">Boat rentals</div>
+        <div id="rental-list-${id}"></div>
+        <button class="db-add-btn" onclick="addRental('${id}')">+ Add boat type</button>
+      </div>
+
+      <div id="sec-hours-${id}" class="db-collapsible">
+        <div class="db-form-section">Hours of operation</div>
+        <div class="db-form-subsection">Add one or more time windows — each can have its own date range</div>
+        <div id="hours-list-${id}"></div>
+        <button class="db-add-btn" onclick="addHoursBlock('${id}')">+ Add hours window</button>
+        <div style="margin-top:10px">
+          <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
+            <input type="checkbox" id="closed-days-toggle-${id}" onchange="toggleClosedDays('${id}')" />
+            Closed on a specific day every week?
+          </label>
+          <div id="closed-days-${id}" style="display:none;margin-top:8px">
+            <div class="db-form-subsection">Select days always closed</div>
+            <div class="db-days-grid">
+              ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i) =>
+                `<label class="db-day-label"><input type="checkbox" class="closed-day-cb-${id}" value="${i}" />${d}</label>`
+              ).join('')}
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="db-form-section">Notes</div>
-      <label class="db-label">Additional notes (optional)
-        <input type="text" id="nts-${id}" placeholder="e.g. Gate closes at 8pm, cash only" maxlength="300" />
-      </label>
-      <label class="db-label">Your name (optional)
-        <input type="text" id="sub-${id}" placeholder="anonymous" maxlength="40" />
-      </label>
-      <button class="db-submit-btn" onclick="submitLakeInfo(this.dataset.lake, '${id}', this)" data-lake="${lakeName}">Submit</button>
-      <div class="db-form-status" id="fst-${id}"></div>
+      <div id="sec-notes-${id}" class="db-collapsible">
+        <div class="db-form-section">Notes</div>
+        <label class="db-label">Additional notes
+          <input type="text" id="nts-${id}" placeholder="e.g. Gate closes at 8pm, cash only" maxlength="300" />
+        </label>
+      </div>
+
+      <div class="db-form-section" style="border-top:none;margin-top:8px">
+        <label class="db-label">Your name (optional)
+          <input type="text" id="sub-${id}" placeholder="anonymous" maxlength="40" />
+        </label>
+        <button class="db-submit-btn" onclick="submitLakeInfo(this.dataset.lake, '${id}', this)" data-lake="${lakeName}">Submit</button>
+        <div class="db-form-status" id="fst-${id}"></div>
+      </div>
     </div>`;
+}
+
+function toggleSection(sectionId, cb) {
+  const el = document.getElementById(sectionId);
+  if (!el) return;
+  el.style.display = cb.checked ? 'block' : 'none';
 }
 
 function toggleBankPrices(id) {
