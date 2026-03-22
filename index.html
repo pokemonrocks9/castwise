@@ -321,6 +321,15 @@
     }
     .db-submit-btn:disabled { opacity: .6; cursor: default; }
     .db-form-status { font-size: 12px; margin-top: 6px; min-height: 16px; color: var(--text2); }
+    .db-form-section { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin: 14px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .db-form-section:first-of-type { margin-top: 4px; border-top: none; }
+    .db-form-subsection { font-size: 11px; color: var(--text3); margin: 8px 0 4px; }
+    .db-price-row, .db-rental-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
+    .db-price-amt { width: 72px; padding: 5px 8px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+    .db-price-per { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+    .db-rental-type { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+    .db-add-btn { font-size: 12px; color: var(--green); background: none; border: 1px dashed var(--green); border-radius: 4px; padding: 4px 10px; cursor: pointer; margin-bottom: 4px; }
+    .db-remove-btn { font-size: 11px; color: var(--red-dark); background: none; border: none; cursor: pointer; padding: 2px 4px; }
 
     /* ── Footer ── */
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text3); }
@@ -362,7 +371,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.13.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.14.0</p>
   </div>
 
 </div>
@@ -874,6 +883,27 @@ function lakeDBCard(lakeName) {
                     : data.accessType === 'park'    ? '🏕️ Park / managed area'
                     : '❓ Access unknown';
 
+  // Bank fishing
+  const bankRow = data.bankFishing !== undefined ? (() => {
+    if (!data.bankFishing) return '<div class="db-row">🚫 No bank / pier fishing</div>';
+    const pier = data.pier ? ' · 🪝 Pier available' : '';
+    const prices = (data.bankPrices || []).map(p => `$${p.price}/${p.per}`).join(' or ');
+    return `<div class="db-row">🎣 Bank fishing available${pier}${prices ? ' — ' + prices : ' — free'}</div>`;
+  })() : '';
+
+  // Boat launch
+  const launchRow = data.boatLaunch !== undefined ? (() => {
+    if (!data.boatLaunch) return '<div class="db-row">🚫 No boat launch</div>';
+    const prices = (data.launchPrices || []).map(p => `$${p.price}/${p.per}`).join(' or ');
+    return `<div class="db-row">🚢 Boat launch${prices ? ' — ' + prices : ' — free'}</div>`;
+  })() : '';
+
+  // Boat rentals
+  const rentalRows = (data.boatRentals || []).map(r => {
+    const icon = r.type === 'kayak' ? '🛶' : r.type === 'motorized' ? '⛵' : '🚣';
+    return `<div class="db-row">${icon} ${r.type.charAt(0).toUpperCase()+r.type.slice(1)} rental — $${r.price}/${r.per}</div>`;
+  }).join('');
+
   const alias = data.localName ? data.localName : null;
 
   const badge = isConfirmed
@@ -891,6 +921,9 @@ function lakeDBCard(lakeName) {
     <div class="db-row">${accessLabel}</div>
     <div class="db-row">${payLabel}</div>
     <div class="db-row">${rulesLabel}</div>
+    ${bankRow}
+    ${launchRow}
+    ${rentalRows}
     ${data.notes ? `<div class="db-notes">${data.notes}</div>` : ''}
     <div class="db-meta">Submitted by ${data.submittedBy || 'anonymous'} · ${data.submittedAt || ''}</div>
     ${pendingSection}
@@ -919,12 +952,10 @@ function toggleSubmitForm(lakeName, btn) {
   wrap.innerHTML = `
     <div class="db-form">
       <div class="db-form-title">Submit lake info</div>
-      <label class="db-label">Pay to fish?
-        <select id="ptf-${id}">
-          <option value="">— select —</option>
-          <option value="true">Yes — requires permit/fee</option>
-          <option value="false">No — free to fish</option>
-        </select>
+
+      <div class="db-form-section">Basic info</div>
+      <label class="db-label">Local name (optional)
+        <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
       </label>
       <label class="db-label">Access type
         <select id="act-${id}">
@@ -934,36 +965,132 @@ function toggleSubmitForm(lakeName, btn) {
           <option value="park">Park / managed area</option>
         </select>
       </label>
+      <label class="db-label">Pay to fish?
+        <select id="ptf-${id}">
+          <option value="">— select —</option>
+          <option value="true">Yes — requires permit/fee</option>
+          <option value="false">No — free to fish</option>
+        </select>
+      </label>
       <label class="db-label">Catch rules
         <select id="crs-${id}">
           <option value="">— select —</option>
-          <option value="catch-and-release">Catch & release only</option>
-          <option value="catch-and-keep">Catch & keep allowed</option>
+          <option value="catch-and-release">Catch &amp; release only</option>
+          <option value="catch-and-keep">Catch &amp; keep allowed</option>
           <option value="slot-limits">Slot limits apply</option>
         </select>
       </label>
-      <label class="db-label">Local name (optional)
-        <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
+
+      <div class="db-form-section">Bank &amp; pier fishing</div>
+      <label class="db-label">Bank fishing available?
+        <select id="bnk-${id}" onchange="toggleBankPrices('${id}')">
+          <option value="">— select —</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
       </label>
-      <label class="db-label">Notes (optional)
-        <input type="text" id="nts-${id}" placeholder="e.g. Daily permit $5 at gate" maxlength="300" />
+      <div id="bnk-prices-${id}" style="display:none">
+        <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
+          <input type="checkbox" id="pier-${id}" /> Pier available
+        </label>
+        <div class="db-form-subsection">Bank fishing prices (add multiple if needed)</div>
+        <div id="bnk-price-list-${id}"></div>
+        <button class="db-add-btn" onclick="addPrice('bnk-price-list-${id}')">+ Add price tier</button>
+      </div>
+
+      <div class="db-form-section">Boat launch</div>
+      <label class="db-label">Boat launch available?
+        <select id="lnch-${id}" onchange="toggleLaunchPrices('${id}')">
+          <option value="">— select —</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </label>
+      <div id="lnch-prices-${id}" style="display:none">
+        <div class="db-form-subsection">Launch prices (add multiple if needed)</div>
+        <div id="lnch-price-list-${id}"></div>
+        <button class="db-add-btn" onclick="addPrice('lnch-price-list-${id}')">+ Add price tier</button>
+      </div>
+
+      <div class="db-form-section">Boat rentals</div>
+      <div id="rental-list-${id}"></div>
+      <button class="db-add-btn" onclick="addRental('${id}')">+ Add boat type</button>
+
+      <div class="db-form-section">Notes</div>
+      <label class="db-label">Additional notes (optional)
+        <input type="text" id="nts-${id}" placeholder="e.g. Gate closes at 8pm, cash only" maxlength="300" />
       </label>
       <label class="db-label">Your name (optional)
         <input type="text" id="sub-${id}" placeholder="anonymous" maxlength="40" />
       </label>
-      <button class="db-submit-btn" onclick="submitLakeInfo('${lakeName.replace(/'/g,"\'")}', '${id}', this)">Submit</button>
+      <button class="db-submit-btn" onclick="submitLakeInfo(this.dataset.lake, '${id}', this)" data-lake="${lakeName}">Submit</button>
       <div class="db-form-status" id="fst-${id}"></div>
     </div>`;
 }
 
+function toggleBankPrices(id) {
+  const val = document.getElementById('bnk-'+id).value;
+  document.getElementById('bnk-prices-'+id).style.display = val === 'true' ? 'block' : 'none';
+}
+function toggleLaunchPrices(id) {
+  const val = document.getElementById('lnch-'+id).value;
+  document.getElementById('lnch-prices-'+id).style.display = val === 'true' ? 'block' : 'none';
+}
+
+const PER_OPTIONS = ['day','year','3 hours','hour','2 hours','season'];
+const BOAT_TYPES  = ['rowboat','kayak','motorized','canoe','pontoon'];
+
+function addPrice(containerId) {
+  const el = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.className = 'db-price-row';
+  div.innerHTML = `$<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" />
+    per <select class="db-price-per">${PER_OPTIONS.map(o=>`<option>${o}</option>`).join('')}</select>
+    <button class="db-remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+  el.appendChild(div);
+}
+
+function addRental(id) {
+  const el = document.getElementById('rental-list-'+id);
+  const div = document.createElement('div');
+  div.className = 'db-rental-row';
+  div.innerHTML = `<select class="db-rental-type">${BOAT_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
+    $<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" />
+    per <select class="db-price-per">${PER_OPTIONS.map(o=>`<option>${o}</option>`).join('')}</select>
+    <button class="db-remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+  el.appendChild(div);
+}
+
+function getPriceList(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} .db-price-row`)).map(row => ({
+    price: parseFloat(row.querySelector('.db-price-amt').value) || 0,
+    per:   row.querySelector('.db-price-per').value,
+  })).filter(p => p.price > 0);
+}
+
+function getRentalList(id) {
+  return Array.from(document.querySelectorAll(`#rental-list-${id} .db-rental-row`)).map(row => ({
+    type:  row.querySelector('.db-rental-type').value,
+    price: parseFloat(row.querySelector('.db-price-amt').value) || 0,
+    per:   row.querySelector('.db-price-per').value,
+  })).filter(r => r.price > 0);
+}
+
 async function submitLakeInfo(lakeName, id, btn) {
-  const payToFish  = document.getElementById('ptf-'+id).value;
-  const accessType = document.getElementById('act-'+id).value;
-  const catchRules = document.getElementById('crs-'+id).value;
-  const localName  = document.getElementById('lnm-'+id).value;
-  const notes      = document.getElementById('nts-'+id).value;
-  const submittedBy= document.getElementById('sub-'+id).value;
-  const status     = document.getElementById('fst-'+id);
+  const payToFish   = document.getElementById('ptf-'+id).value;
+  const accessType  = document.getElementById('act-'+id).value;
+  const catchRules  = document.getElementById('crs-'+id).value;
+  const localName   = document.getElementById('lnm-'+id).value;
+  const notes       = document.getElementById('nts-'+id).value;
+  const submittedBy = document.getElementById('sub-'+id).value;
+  const status      = document.getElementById('fst-'+id);
+
+  const bankFishing  = document.getElementById('bnk-'+id)?.value;
+  const pier         = document.getElementById('pier-'+id)?.checked || false;
+  const bankPrices   = bankFishing === 'true' ? getPriceList('bnk-price-list-'+id) : [];
+  const boatLaunch   = document.getElementById('lnch-'+id)?.value;
+  const launchPrices = boatLaunch === 'true' ? getPriceList('lnch-price-list-'+id) : [];
+  const boatRentals  = getRentalList(id);
 
   if (!payToFish || !accessType || !catchRules) { status.textContent = '⚠️ Please fill in access type, pay status, and catch rules.'; return; }
 
@@ -975,14 +1102,28 @@ async function submitLakeInfo(lakeName, id, btn) {
     const res = await fetch(`${WORKER_URL}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lakeName, accessType, localName, payToFish: payToFish === 'true', catchRules, notes, submittedBy }),
+      body: JSON.stringify({
+        lakeName, accessType, localName,
+        payToFish: payToFish === 'true', catchRules,
+        bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
+        pier, bankPrices,
+        boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
+        launchPrices, boatRentals,
+        notes, submittedBy,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Submit failed');
 
     // Update local cache so UI reflects immediately
     if (!lakeDB[lakeName]) lakeDB[lakeName] = {};
-    const entry = { accessType, localName, payToFish: payToFish === 'true', catchRules, notes, submittedBy: submittedBy || 'anonymous',
+    const entry = {
+      accessType, localName,
+      payToFish: payToFish === 'true', catchRules,
+      bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
+      pier, bankPrices, boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
+      launchPrices, boatRentals,
+      notes, submittedBy: submittedBy || 'anonymous',
                     submittedAt: new Date().toISOString().slice(0,10), voteCount: 0, votes: [] };
     if (lakeDB[lakeName].confirmed) {
       lakeDB[lakeName].pending = entry;
