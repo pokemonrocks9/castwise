@@ -15,30 +15,6 @@
       "confirmedBy": "tyler",
       "confirmedAt": "2026-03-22"
     },
-    "pending": {
-      "accessType": "park",
-      "payToFish": false,
-      "catchRules": "catch-and-keep",
-      "pier": false,
-      "bankPrices": [],
-      "launchPrices": [],
-      "boatRentals": [],
-      "hours": [
-        {
-          "closed": false,
-          "from": "Mar 8",
-          "to": "Mar 22",
-          "open": "7:00 AM",
-          "close": "7:00 PM"
-        }
-      ],
-      "closedDays": [],
-      "submittedBy": "anonymous",
-      "submittedAt": "2026-03-22",
-      "voteCount": 0,
-      "votes": [
-        "14693bd7b06ebae2"
-      ]
-    }
+    "pending": null
   }
 }
