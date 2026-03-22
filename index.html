@@ -111,16 +111,17 @@
       background: linear-gradient(to right, transparent, var(--bg));
     }
     .day-scroll {
-      display: flex; gap: 8px; overflow-x: scroll; padding-bottom: 4px;
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
       scrollbar-width: none; -webkit-overflow-scrolling: touch;
-      touch-action: pan-x; scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain; white-space: nowrap;
     }
     .day-scroll::-webkit-scrollbar { display: none; }
     .day-card {
-      flex: 0 0 76px; border-radius: var(--radius); border: 1px solid var(--border);
+      flex: 0 0 76px; flex-shrink: 0; border-radius: var(--radius); border: 1px solid var(--border);
       background: var(--bg2); padding: 12px 8px; text-align: center; cursor: pointer;
       transition: border-color .15s, background .15s; user-select: none;
-      scroll-snap-align: start; -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: transparent; display: inline-flex;
+      flex-direction: column; align-items: center; vertical-align: top;
     }
     .day-card.active { border-color: var(--green); background: var(--bg); }
     .day-name { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
@@ -294,6 +295,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.5.0</p>
   </div>
 
 </div>
@@ -499,20 +501,9 @@ async function overpassFetch(query) {
 }
 
 async function fetchLakes(lat, lon) {
-  const d = 0.6;
-  const q = `[out:json][timeout:20];
-(
-  way["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  relation["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  way["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  relation["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  way["water"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  way["water"="lake"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  way["water"="pond"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  node["leisure"="fishing"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-  way["leisure"="fishing"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
-);
-out center 20;`;
+  const d = 0.5;
+  // Single compact query — way faster than 9 union clauses
+  const q = `[out:json][timeout:15];(way["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});relation["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});way["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});way["water"~"lake|reservoir|pond"]["name"](${lat-d},${lon-d},${lat+d},${lon+d}););out center 12;`;
 
   const json = await overpassFetch(q);
   if (!json || !json.elements) return [];
@@ -625,11 +616,12 @@ let appData = null;
 let selectedDay = 0;
 
 // ── Load all data ─────────────────────────────────────────────────────────────
+// Weather loads first and renders immediately — lakes load in background
 async function loadData(lat, lon, locName) {
   document.getElementById('locIn').value = locName;
   setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
   try {
-    const [wx, lakes] = await Promise.all([fetchWeather(lat, lon), fetchLakes(lat, lon)]);
+    const wx = await fetchWeather(lat, lon);
     const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(); date.setDate(date.getDate() + i);
@@ -650,9 +642,17 @@ async function loadData(lat, lon, locName) {
         wind:  Math.round(wind),
       };
     });
-    appData = { days, lakes, locName };
+    // Render weather/solunar immediately — don't wait on lakes
+    appData = { days, lakes: [], locName };
     selectedDay = 0;
     render();
+    // Fetch lakes in background, patch in when ready
+    fetchLakes(lat, lon).then(lakes => {
+      if (appData) {
+        appData.lakes = lakes;
+        renderLakes();
+      }
+    }).catch(() => {}); // silent fail — lakes section already shows empty state
   } catch (e) {
     setContent(`<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`);
   }
@@ -728,41 +728,54 @@ function render() {
   });
   h += `</div></div>`;
 
-  // Nearby lakes
+  // Nearby lakes — placeholder; filled by renderLakes() after background fetch
   h += `<div class="section-label">Nearby lakes &amp; water</div>`;
-  if (!lakes.length) {
-    h += `<div class="empty">No named lakes found within ~25 miles. Try a nearby larger city.</div>`;
-  } else {
-    lakes.forEach((lk, idx) => {
-      const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
-      const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
-      h += `<div class="lake-item">
-        <div class="lake-header">
-          <div class="lake-ico">🎣</div>
-          <div style="flex:1;min-width:0">
-            <div class="lake-name">${lk.name}</div>
-            <div class="lake-dist">${lk.dist} mi away</div>
-            <div class="tags">
-              <span class="tag tag-fish">${topFish}</span>
-              <span class="tag ${cr.cls}">${cr.text} today</span>
-              <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
-            </div>
-          </div>
-        </div>
-        <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
-          <span class="fish-toggle-label">Fish species near this lake</span>
-          <span class="fish-toggle-arrow">▼</span>
-        </div>
-        <div class="inat-fish-list" id="fl-${idx}"></div>
-      </div>`;
-    });
-  }
+  h += `<div id="lakes-section"><div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div></div>`;
 
   setContent(h);
 }
 
 function selectDay(i) { selectedDay = i; render(); }
 function setContent(html) { document.getElementById('content').innerHTML = html; }
+
+// ── Render just the lakes section (called after background fetch) ─────────────
+function renderLakes() {
+  const el = document.getElementById('lakes-section');
+  if (!el) return; // content was replaced (user navigated away)
+  const { lakes } = appData;
+  const d = appData.days[selectedDay];
+
+  if (!lakes.length) {
+    el.innerHTML = '<div class="empty">No named lakes found nearby. OpenStreetMap coverage may be limited for this area.</div>';
+    return;
+  }
+
+  let h = '';
+  lakes.forEach((lk, idx) => {
+    const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
+    const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+    h += `<div class="lake-item">
+      <div class="lake-header">
+        <div class="lake-ico">🎣</div>
+        <div style="flex:1;min-width:0">
+          <div class="lake-name">${lk.name}</div>
+          <div class="lake-dist">${lk.dist} mi away</div>
+          <div class="tags">
+            <span class="tag tag-fish">${topFish}</span>
+            <span class="tag ${cr.cls}">${cr.text} today</span>
+            <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
+          </div>
+        </div>
+      </div>
+      <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
+        <span class="fish-toggle-label">Fish species near this lake</span>
+        <span class="fish-toggle-arrow">▼</span>
+      </div>
+      <div class="inat-fish-list" id="fl-${idx}"></div>
+    </div>`;
+  });
+  el.innerHTML = h;
+}
 
 // ── Event handlers ────────────────────────────────────────────────────────────
 document.getElementById('btnGPS').addEventListener('click', () => {
