@@ -447,8 +447,11 @@ async function geocode(q) {
 
   if (isZip) {
     const res = await fetch(`https://api.zippopotam.us/us/${q}`);
-    if (!res.ok) throw new Error(`Zip code ${q} not found`);
-    const data = await res.json();
+    if (!res.ok) throw new Error(`Zip code ${q} not found — double-check it`);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`Zip code ${q} not found — double-check it`); }
+    if (!data.places || !data.places.length) throw new Error(`No location found for zip ${q}`);
     const place = data.places[0];
     return {
       lat:  parseFloat(place.latitude),
@@ -459,7 +462,7 @@ async function geocode(q) {
 
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`);
   const data = await res.json();
-  if (!data.results || !data.results.length) throw new Error('Location not found');
+  if (!data.results || !data.results.length) throw new Error('Location not found — try "City, ST" format');
   const r = data.results.find(x => x.country_code === 'US') || data.results[0];
   return { lat: r.latitude, lon: r.longitude, name: `${r.name}, ${r.admin1 || r.country}` };
 }
@@ -472,9 +475,31 @@ async function fetchWeather(lat, lon) {
 }
 
 // ── Lakes via OpenStreetMap Overpass ──────────────────────────────────────────
+// Two mirror endpoints — falls back if primary 504s
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+
+async function overpassFetch(query) {
+  for (const mirror of OVERPASS_MIRRORS) {
+    try {
+      const res = await fetch(mirror, {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(query),
+        signal: AbortSignal.timeout(18000),
+      });
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (!text.trim().startsWith('{')) continue;
+      return JSON.parse(text);
+    } catch { /* try next mirror */ }
+  }
+  return null;
+}
+
 async function fetchLakes(lat, lon) {
-  const d = 0.6; // ~40 mile radius
-  // Cast a wide net: named water bodies of any type, plus dedicated fishing spots
+  const d = 0.6;
   const q = `[out:json][timeout:20];
 (
   way["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
@@ -488,9 +513,10 @@ async function fetchLakes(lat, lon) {
   way["leisure"="fishing"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
 );
 out center 20;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
-  const json = await res.json();
-  // Deduplicate by name (OSM often has way + relation for same body)
+
+  const json = await overpassFetch(q);
+  if (!json || !json.elements) return [];
+
   const seen = new Set();
   return json.elements
     .filter(e => e.tags && e.tags.name)
@@ -500,7 +526,7 @@ out center 20;`;
       if (!elat || !elon) return null;
       return { name: e.tags.name, lat: elat, lon: elon, dist: haversine(lat, lon, elat, elon) };
     })
-    .filter(e => e !== null)
+    .filter(Boolean)
     .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
     .sort((a,b) => a.dist - b.dist)
     .slice(0, 8);
