@@ -329,6 +329,17 @@
     .db-price-per { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
     .db-rental-type { padding: 5px 6px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
     .db-add-btn { font-size: 12px; color: var(--green); background: none; border: 1px dashed var(--green); border-radius: 4px; padding: 4px 10px; cursor: pointer; margin-bottom: 4px; }
+    .db-hours-row { background: var(--bg2); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
+    .db-hours-row-inner { display: flex; flex-direction: column; gap: 4px; }
+    .hours-time-fields { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .db-time-input { padding: 5px 8px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; width: 110px; }
+    .db-hours-dates { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .db-month-sel, .db-day-sel { padding: 5px 4px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+    .db-month-sel { width: 70px; }
+    .db-day-sel   { width: 58px; }
+    .db-days-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+    .db-day-label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
+    .db-hours-closed { color: var(--red-dark) !important; }
     .db-remove-btn { font-size: 11px; color: var(--red-dark); background: none; border: none; cursor: pointer; padding: 2px 4px; }
 
     /* ── Footer ── */
@@ -371,7 +382,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.14.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.15.0</p>
   </div>
 
 </div>
@@ -712,6 +723,55 @@ function renderFallbackFish(container, lakeIdx) {
         <div class="inat-fish-count">${pct}%</div>
       </div>`;
   }).join('');
+
+  // Hours of operation — find today's block
+  const hoursRow = (() => {
+    const h = data.hours;
+    const cd = data.closedDays || [];
+    if (!h || !h.length) return '';
+    const now  = new Date();
+    const dow  = now.getDay();
+    const md   = now.getMonth()+1;
+    const dd   = now.getDate();
+    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    if (cd.includes(dow)) {
+      return `<div class="db-row db-hours-closed">🔴 Closed today (${DAY_NAMES[dow]}s)</div>`;
+    }
+
+    const parseDate = str => {
+      if (!str) return null;
+      const parts = str.split(' ');
+      const m = MONTHS.indexOf(parts[0]) + 1;
+      const d = parseInt(parts[1]);
+      return { m, d };
+    };
+
+    const inRange = (from, to) => {
+      if (!from || !to) return true; // year-round
+      const f = parseDate(from), t = parseDate(to);
+      if (!f || !t) return true;
+      const cur  = md * 100 + dd;
+      const fVal = f.m * 100 + f.d;
+      const tVal = t.m * 100 + t.d;
+      return fVal <= tVal ? cur >= fVal && cur <= tVal : cur >= fVal || cur <= tVal;
+    };
+
+    const block = h.find(b => inRange(b.from, b.to));
+    if (!block) return '';
+    if (block.closed) {
+      return `<div class="db-row db-hours-closed">🔴 Closed${block.from ? ` (${block.from} – ${block.to})` : ''}</div>`;
+    }
+
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    const toMins = t => { const [time, ap] = t.split(' '); let [h,m] = time.split(':').map(Number); if(ap==='PM'&&h!==12)h+=12; if(ap==='AM'&&h===12)h=0; return h*60+m; };
+    const openMins  = toMins(block.open);
+    const closeMins = toMins(block.close);
+    const isOpen    = nowMins >= openMins && nowMins < closeMins;
+    const badge     = isOpen ? '🟢' : '🔴';
+    const rangeStr  = block.from ? ` (${block.from} – ${block.to})` : '';
+    return `<div class="db-row">${badge} ${block.open} – ${block.close}${rangeStr}${block.note ? ' · '+block.note : ''}</div>`;
+  })();
   h += `<div class="inat-fallback-note">No local sightings data — showing regional estimates</div>`;
   container.innerHTML = h;
 }
@@ -921,6 +981,7 @@ function lakeDBCard(lakeName) {
     <div class="db-row">${accessLabel}</div>
     <div class="db-row">${payLabel}</div>
     <div class="db-row">${rulesLabel}</div>
+    ${hoursRow}
     ${bankRow}
     ${launchRow}
     ${rentalRows}
@@ -1016,6 +1077,26 @@ function toggleSubmitForm(lakeName, btn) {
       <div id="rental-list-${id}"></div>
       <button class="db-add-btn" onclick="addRental('${id}')">+ Add boat type</button>
 
+      <div class="db-form-section">Hours of operation</div>
+      <div class="db-form-subsection">Add one or more time windows — each can have its own date range</div>
+      <div id="hours-list-${id}"></div>
+      <button class="db-add-btn" onclick="addHoursBlock('${id}')">+ Add hours window</button>
+
+      <div style="margin-top:10px">
+        <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
+          <input type="checkbox" id="closed-days-toggle-${id}" onchange="toggleClosedDays('${id}')" />
+          Closed on a specific day every week?
+        </label>
+        <div id="closed-days-${id}" style="display:none;margin-top:8px">
+          <div class="db-form-subsection">Select days always closed</div>
+          <div class="db-days-grid">
+            ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i) =>
+              `<label class="db-day-label"><input type="checkbox" class="closed-day-cb-${id}" value="${i}" />${d}</label>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+
       <div class="db-form-section">Notes</div>
       <label class="db-label">Additional notes (optional)
         <input type="text" id="nts-${id}" placeholder="e.g. Gate closes at 8pm, cash only" maxlength="300" />
@@ -1076,6 +1157,87 @@ function getRentalList(id) {
   })).filter(r => r.price > 0);
 }
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_DAYS = [31,29,31,30,31,30,31,31,30,31,30,31]; // 29 for Feb to handle leap
+
+function addHoursBlock(id) {
+  const el = document.getElementById('hours-list-'+id);
+  const div = document.createElement('div');
+  div.className = 'db-hours-row';
+  div.innerHTML = `
+    <div class="db-hours-row-inner">
+      <label class="db-label" style="flex-direction:row;align-items:center;gap:6px;margin-bottom:0">
+        <input type="checkbox" class="hours-closed-cb" onchange="toggleHoursClosed(this)" /> All day closed
+      </label>
+      <div class="hours-time-fields">
+        <span style="font-size:12px;color:var(--text3)">Open</span>
+        <input type="time" class="db-time-input hours-open" value="07:00" />
+        <span style="font-size:12px;color:var(--text3)">Close</span>
+        <input type="time" class="db-time-input hours-close" value="19:00" />
+      </div>
+      <div class="db-form-subsection" style="margin-top:6px">Date range (leave blank if year-round)</div>
+      <div class="db-hours-dates">
+        <select class="db-month-sel hours-from-month">${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select>
+        <select class="db-day-sel hours-from-day">${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select>
+        <span style="font-size:12px;color:var(--text3)">to</span>
+        <select class="db-month-sel hours-to-month">${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select>
+        <select class="db-day-sel hours-to-day">${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select>
+      </div>
+      <label class="db-label" style="margin-top:6px">Note (optional)
+        <input type="text" class="hours-note" placeholder="e.g. Daylight savings begins" maxlength="80" />
+      </label>
+      <button class="db-remove-btn" style="margin-top:4px;display:block" onclick="this.closest('.db-hours-row').remove()">✕ Remove this window</button>
+    </div>`;
+  el.appendChild(div);
+}
+
+function toggleHoursClosed(cb) {
+  const row = cb.closest('.db-hours-row-inner');
+  row.querySelector('.hours-time-fields').style.display = cb.checked ? 'none' : 'flex';
+}
+
+function toggleClosedDays(id) {
+  const cb = document.getElementById('closed-days-toggle-'+id);
+  document.getElementById('closed-days-'+id).style.display = cb.checked ? 'block' : 'none';
+}
+
+function getHoursList(id) {
+  return Array.from(document.querySelectorAll('#hours-list-'+id+' .db-hours-row')).map(row => {
+    const isClosed = row.querySelector('.hours-closed-cb').checked;
+    const fromMonth = row.querySelector('.hours-from-month')?.value;
+    const fromDay   = row.querySelector('.hours-from-day')?.value;
+    const toMonth   = row.querySelector('.hours-to-month')?.value;
+    const toDay     = row.querySelector('.hours-to-day')?.value;
+    const note      = row.querySelector('.hours-note')?.value || '';
+    const hasRange  = fromMonth && toMonth;
+    const block = {
+      closed: isClosed,
+      note: note || undefined,
+      from: hasRange ? `${MONTHS[fromMonth-1]} ${fromDay}` : undefined,
+      to:   hasRange ? `${MONTHS[toMonth-1]} ${toDay}`   : undefined,
+    };
+    if (!isClosed) {
+      const openVal  = row.querySelector('.hours-open')?.value  || '07:00';
+      const closeVal = row.querySelector('.hours-close')?.value || '19:00';
+      block.open  = fmtTime(openVal);
+      block.close = fmtTime(closeVal);
+    }
+    return block;
+  });
+}
+
+function getClosedDays(id) {
+  if (!document.getElementById('closed-days-toggle-'+id)?.checked) return [];
+  return Array.from(document.querySelectorAll('.closed-day-cb-'+id+':checked')).map(cb => parseInt(cb.value));
+}
+
+function fmtTime(t) {
+  const [h, m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const hr = h > 12 ? h-12 : h === 0 ? 12 : h;
+  return `${hr}:${String(m).padStart(2,'0')} ${ap}`;
+}
+
 async function submitLakeInfo(lakeName, id, btn) {
   const payToFish   = document.getElementById('ptf-'+id).value;
   const accessType  = document.getElementById('act-'+id).value;
@@ -1084,6 +1246,8 @@ async function submitLakeInfo(lakeName, id, btn) {
   const notes       = document.getElementById('nts-'+id).value;
   const submittedBy = document.getElementById('sub-'+id).value;
   const status      = document.getElementById('fst-'+id);
+  const hours       = getHoursList(id);
+  const closedDays  = getClosedDays(id);
 
   const bankFishing  = document.getElementById('bnk-'+id)?.value;
   const pier         = document.getElementById('pier-'+id)?.checked || false;
@@ -1109,6 +1273,7 @@ async function submitLakeInfo(lakeName, id, btn) {
         pier, bankPrices,
         boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
         launchPrices, boatRentals,
+        hours, closedDays,
         notes, submittedBy,
       }),
     });
@@ -1123,6 +1288,7 @@ async function submitLakeInfo(lakeName, id, btn) {
       bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
       pier, bankPrices, boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
       launchPrices, boatRentals,
+      hours, closedDays,
       notes, submittedBy: submittedBy || 'anonymous',
                     submittedAt: new Date().toISOString().slice(0,10), voteCount: 0, votes: [] };
     if (lakeDB[lakeName].confirmed) {
