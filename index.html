@@ -104,15 +104,23 @@
     }
 
     /* ── Day scroll ── */
+    .day-scroll-wrap { position: relative; margin-bottom: 24px; }
+    .day-scroll-wrap::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 4px;
+      width: 48px; pointer-events: none;
+      background: linear-gradient(to right, transparent, var(--bg));
+    }
     .day-scroll {
-      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
-      margin-bottom: 24px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      display: flex; gap: 8px; overflow-x: scroll; padding-bottom: 4px;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      touch-action: pan-x; scroll-snap-type: x proximity;
     }
     .day-scroll::-webkit-scrollbar { display: none; }
     .day-card {
       flex: 0 0 76px; border-radius: var(--radius); border: 1px solid var(--border);
       background: var(--bg2); padding: 12px 8px; text-align: center; cursor: pointer;
       transition: border-color .15s, background .15s; user-select: none;
+      scroll-snap-align: start; -webkit-tap-highlight-color: transparent;
     }
     .day-card.active { border-color: var(--green); background: var(--bg); }
     .day-name { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
@@ -181,8 +189,9 @@
     .lake-item {
       background: var(--bg); border: 1px solid var(--border);
       border-radius: var(--radius-lg); padding: 14px;
-      display: flex; gap: 12px; margin-bottom: 10px;
+      margin-bottom: 10px;
     }
+    .lake-header { display: flex; gap: 12px; align-items: flex-start; }
     .lake-ico {
       width: 38px; height: 38px; border-radius: var(--radius);
       background: var(--green-light); display: flex; align-items: center;
@@ -197,6 +206,38 @@
     .tag-med    { background: var(--amber-light); color: var(--amber-dark); }
     .tag-high   { background: var(--red-light);   color: var(--red-dark); }
     .tag-catch  { background: var(--lime-light);  color: var(--lime-dark); }
+
+    /* ── iNat fish section ── */
+    .fish-toggle {
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    }
+    .fish-toggle-label { font-size: 13px; font-weight: 500; color: var(--text2); }
+    .fish-toggle-arrow { font-size: 11px; color: var(--text3); transition: transform .2s; }
+    .fish-toggle.open .fish-toggle-arrow { transform: rotate(180deg); }
+    .inat-fish-list { margin-top: 10px; display: none; flex-direction: column; gap: 8px; }
+    .inat-fish-list.open { display: flex; }
+    .inat-loading { font-size: 13px; color: var(--text3); text-align: center; padding: 12px 0; }
+    .inat-fish-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg2); border-radius: var(--radius); padding: 8px 10px;
+    }
+    .inat-fish-photo {
+      width: 40px; height: 40px; border-radius: 6px; object-fit: cover;
+      flex-shrink: 0; background: var(--border);
+    }
+    .inat-fish-photo-placeholder {
+      width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0;
+      background: var(--green-light); display: flex; align-items: center;
+      justify-content: center; font-size: 20px;
+    }
+    .inat-fish-info { flex: 1; min-width: 0; }
+    .inat-fish-common { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inat-fish-sci { font-size: 11px; color: var(--text3); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inat-fish-count { font-size: 12px; color: var(--green); font-weight: 500; flex-shrink: 0; }
+    .inat-source { font-size: 11px; color: var(--text3); margin-top: 8px; text-align: right; }
+    .inat-source a { color: var(--text3); }
+    .inat-fallback-note { font-size: 11px; color: var(--text3); margin-top: 6px; font-style: italic; }
 
     /* ── States ── */
     .loading { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
@@ -397,15 +438,29 @@ function wxIcon(c) {
   return '⛈️';
 }
 
-// ── Geocoding via Open-Meteo ──────────────────────────────────────────────────
+// ── Geocoding ─────────────────────────────────────────────────────────────────
+// US zip codes: Zippopotam.us — purpose-built, always correct, CORS-enabled, no key
+// City names: Open-Meteo geocoding, US results prioritized
 async function geocode(q) {
   q = q.trim();
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`;
-  const res = await fetch(url);
+  const isZip = /^\d{5}$/.test(q);
+
+  if (isZip) {
+    const res = await fetch(`https://api.zippopotam.us/us/${q}`);
+    if (!res.ok) throw new Error(`Zip code ${q} not found`);
+    const data = await res.json();
+    const place = data.places[0];
+    return {
+      lat:  parseFloat(place.latitude),
+      lon:  parseFloat(place.longitude),
+      name: `${place['place name']}, ${place['state abbreviation']}`,
+    };
+  }
+
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`);
   const data = await res.json();
   if (!data.results || !data.results.length) throw new Error('Location not found');
-  const isZip = /^\d{5}$/.test(q);
-  const r = isZip ? (data.results.find(x => x.country_code === 'US') || data.results[0]) : data.results[0];
+  const r = data.results.find(x => x.country_code === 'US') || data.results[0];
   return { lat: r.latitude, lon: r.longitude, name: `${r.name}, ${r.admin1 || r.country}` };
 }
 
@@ -418,18 +473,125 @@ async function fetchWeather(lat, lon) {
 
 // ── Lakes via OpenStreetMap Overpass ──────────────────────────────────────────
 async function fetchLakes(lat, lon) {
-  const d = 0.4;
-  const q = `[out:json][timeout:15];(way["natural"="water"](${lat-d},${lon-d},${lat+d},${lon+d});relation["natural"="water"](${lat-d},${lon-d},${lat+d},${lon+d}););out center 15;`;
+  const d = 0.6; // ~40 mile radius
+  // Cast a wide net: named water bodies of any type, plus dedicated fishing spots
+  const q = `[out:json][timeout:20];
+(
+  way["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  relation["natural"="water"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  way["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  relation["landuse"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  way["water"="reservoir"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  way["water"="lake"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  way["water"="pond"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  node["leisure"="fishing"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+  way["leisure"="fishing"]["name"](${lat-d},${lon-d},${lat+d},${lon+d});
+);
+out center 20;`;
   const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
   const json = await res.json();
+  // Deduplicate by name (OSM often has way + relation for same body)
+  const seen = new Set();
   return json.elements
     .filter(e => e.tags && e.tags.name)
-    .map(e => ({
-      name: e.tags.name,
-      dist: haversine(lat, lon, e.center ? e.center.lat : e.lat, e.center ? e.center.lon : e.lon),
-    }))
+    .map(e => {
+      const elat = e.center ? e.center.lat : e.lat;
+      const elon = e.center ? e.center.lon : e.lon;
+      if (!elat || !elon) return null;
+      return { name: e.tags.name, lat: elat, lon: elon, dist: haversine(lat, lon, elat, elon) };
+    })
+    .filter(e => e !== null)
+    .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
     .sort((a,b) => a.dist - b.dist)
-    .slice(0, 6);
+    .slice(0, 8);
+}
+
+// ── iNaturalist fish species for a location ───────────────────────────────────
+// Uses /observations/species_counts — one call, deduped species with counts + photos
+async function fetchInatFish(lat, lon, radiusKm = 8) {
+  const url = `https://api.inaturalist.org/v1/observations/species_counts`
+    + `?lat=${lat}&lng=${lon}&radius=${radiusKm}`
+    + `&iconic_taxa=Actinopterygii`   // all ray-finned fish
+    + `&quality_grade=research`       // community-verified only
+    + `&per_page=15`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`iNat ${res.status}`);
+  const data = await res.json();
+  return (data.results || []).map(r => ({
+    common: r.taxon.preferred_common_name || r.taxon.name,
+    sci:    r.taxon.name,
+    count:  r.count,
+    photo:  r.taxon.default_photo ? r.taxon.default_photo.square_url : null,
+    inatId: r.taxon.id,
+  }));
+}
+
+// ── Toggle iNat fish panel for a lake card ────────────────────────────────────
+async function toggleFish(lakeIdx) {
+  const toggle  = document.getElementById(`ft-${lakeIdx}`);
+  const list    = document.getElementById(`fl-${lakeIdx}`);
+  const isOpen  = list.classList.contains('open');
+
+  // Close if already open
+  if (isOpen) {
+    list.classList.remove('open');
+    toggle.classList.remove('open');
+    return;
+  }
+
+  // Open and load if not yet loaded
+  toggle.classList.add('open');
+  list.classList.add('open');
+
+  if (list.dataset.loaded) return; // already fetched
+  list.dataset.loaded = 'true';
+
+  const { lat, lon } = appData.lakes[lakeIdx];
+  list.innerHTML = `<div class="inat-loading">Loading real fish sightings…</div>`;
+
+  try {
+    const fish = await fetchInatFish(lat, lon);
+    if (fish.length >= 3) {
+      // Real iNat data
+      let h = fish.map(f => `
+        <div class="inat-fish-row">
+          ${f.photo
+            ? `<img class="inat-fish-photo" src="${f.photo}" alt="${f.common}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            : ''}
+          <div class="inat-fish-photo-placeholder" style="${f.photo ? 'display:none' : ''}">🐟</div>
+          <div class="inat-fish-info">
+            <div class="inat-fish-common">${f.common}</div>
+            <div class="inat-fish-sci">${f.sci}</div>
+          </div>
+          <div class="inat-fish-count">${f.count} obs</div>
+        </div>`).join('');
+      h += `<div class="inat-source">Sightings via <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a></div>`;
+      list.innerHTML = h;
+    } else {
+      // Sparse — fall back to regional model
+      renderFallbackFish(list, lakeIdx);
+    }
+  } catch (e) {
+    renderFallbackFish(list, lakeIdx);
+  }
+}
+
+function renderFallbackFish(container, lakeIdx) {
+  const d = appData.days[selectedDay];
+  let h = d.fish.map(f => {
+    const pct = Math.round(f.rate * 100);
+    return `
+      <div class="inat-fish-row">
+        <div class="inat-fish-photo-placeholder">🐟</div>
+        <div class="inat-fish-info">
+          <div class="inat-fish-common">${f.name}</div>
+          <div class="inat-fish-sci">Est. activity</div>
+        </div>
+        <div class="inat-fish-count">${pct}%</div>
+      </div>`;
+  }).join('');
+  h += `<div class="inat-fallback-note">No local sightings data — showing regional estimates</div>`;
+  container.innerHTML = h;
 }
 
 // ── App state ─────────────────────────────────────────────────────────────────
@@ -478,7 +640,7 @@ function render() {
   let h = '';
 
   // Day strip
-  h += `<div class="section-label">7-day solunar forecast</div><div class="day-scroll">`;
+  h += `<div class="section-label">7-day solunar forecast</div><div class="day-scroll-wrap"><div class="day-scroll">`;
   days.forEach((day, i) => {
     const l = scoreLabel(day.sc);
     h += `<div class="day-card${i===selectedDay?' active':''}" onclick="selectDay(${i})">
@@ -487,7 +649,7 @@ function render() {
       <div class="day-lbl lbl-${l}">${l}</div>
     </div>`;
   });
-  h += `</div>`;
+  h += `</div></div>`; // close day-scroll + day-scroll-wrap
 
   // Solunar + moon + weather
   h += `<div class="card"><div class="card-title">Solunar windows — ${d.name}</div>
@@ -545,20 +707,27 @@ function render() {
   if (!lakes.length) {
     h += `<div class="empty">No named lakes found within ~25 miles. Try a nearby larger city.</div>`;
   } else {
-    lakes.forEach(lk => {
+    lakes.forEach((lk, idx) => {
       const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
       const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
       h += `<div class="lake-item">
-        <div class="lake-ico">🎣</div>
-        <div style="flex:1;min-width:0">
-          <div class="lake-name">${lk.name}</div>
-          <div class="lake-dist">${lk.dist} mi away</div>
-          <div class="tags">
-            <span class="tag tag-fish">${topFish}</span>
-            <span class="tag ${cr.cls}">${cr.text} today</span>
-            <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
+        <div class="lake-header">
+          <div class="lake-ico">🎣</div>
+          <div style="flex:1;min-width:0">
+            <div class="lake-name">${lk.name}</div>
+            <div class="lake-dist">${lk.dist} mi away</div>
+            <div class="tags">
+              <span class="tag tag-fish">${topFish}</span>
+              <span class="tag ${cr.cls}">${cr.text} today</span>
+              <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
+            </div>
           </div>
         </div>
+        <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
+          <span class="fish-toggle-label">Fish species near this lake</span>
+          <span class="fish-toggle-arrow">▼</span>
+        </div>
+        <div class="inat-fish-list" id="fl-${idx}"></div>
       </div>`;
     });
   }
@@ -586,18 +755,18 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
     const { lat, lon, name } = await geocode(v);
     loadData(lat, lon, name);
   } catch (err) {
-    setContent(`<div class="err-msg">⚠️ ${err.message}. Try "High Point, NC" or a zip code like "27262".</div>`);
+    setContent(`<div class="err-msg">⚠️ ${err.message}. Try a city and state like "Nashville, TN" or a 5-digit zip code.</div>`);
   }
 });
 
-// ── Auto-load with GPS or fall back to High Point, NC ────────────────────────
+// ── Auto-load with GPS, no hardcoded fallback ─────────────────────────────────
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
     pos => loadData(pos.coords.latitude, pos.coords.longitude, 'Your location'),
-    ()  => loadData(35.9557, -80.0053, 'High Point, NC')
+    ()  => setContent('<div class="empty" style="padding:40px 20px;font-size:14px">📍 Enter a city or zip above to get started</div>')
   );
 } else {
-  loadData(35.9557, -80.0053, 'High Point, NC');
+  setContent('<div class="empty" style="padding:40px 20px;font-size:14px">📍 Enter a city or zip above to get started</div>');
 }
 </script>
 </body>
