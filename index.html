@@ -266,6 +266,17 @@
     }
     .empty { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
 
+    /* ── Lake filter bar ── */
+    .lake-filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-btn {
+      font-size: 12px; font-weight: 500; padding: 6px 14px;
+      border-radius: 20px; border: 1px solid var(--border2);
+      background: var(--bg2); color: var(--text2); cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .filter-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+
     /* ── Lake DB cards ── */
     .db-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
     .db-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
@@ -351,7 +362,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.10.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.12.0</p>
   </div>
 
 </div>
@@ -545,6 +556,13 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
+// ── Pinned lakes — always show regardless of NHD name ────────────────────────
+// Add any lake here that NHD misses or names differently from what locals use.
+// coords: approximate center of the lake
+const PINNED_LAKES = [
+  { name: 'High Point City Lake', lat: 35.9397, lon: -80.0283, type: 'lake / pond' },
+];
+
 // ── Lakes via USGS National Hydrography Dataset (NHD) ────────────────────────
 // Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
 // Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
@@ -577,12 +595,17 @@ async function fetchLakes(lat, lon) {
     if (!data.features || !data.features.length) return [];
 
     const seen = new Set();
-    return data.features
+
+    // Start with pinned lakes that fall within the bbox
+    const pinned = PINNED_LAKES
+      .map(p => ({ ...p, dist: haversine(lat, lon, p.lat, p.lon) }))
+      .filter(p => p.dist <= 35); // within 35 miles
+    pinned.forEach(p => seen.add(p.name));
+
+    const nhd = data.features
       .filter(f => f.attributes.GNIS_NAME && f.geometry)
       .map(f => {
         const name = f.attributes.GNIS_NAME;
-        // Geometry is a polygon — pull center from its envelope
-        // Rings are arrays of [lon, lat] pairs
         let allX = [], allY = [];
         const rings = f.geometry.rings || [];
         rings.forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
@@ -595,7 +618,9 @@ async function fetchLakes(lat, lon) {
         return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
       })
       .filter(Boolean)
-      .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
+      .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
+
+    return [...pinned, ...nhd]
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 8);
   } catch (e) {
@@ -859,6 +884,8 @@ function lakeDBCard(lakeName) {
                     : data.accessType === 'park'    ? '🏕️ Park / managed area'
                     : '❓ Access unknown';
 
+  const alias = data.localName ? data.localName : null;
+
   const badge = isConfirmed
     ? `<span class="db-badge db-confirmed">✓ Verified</span>`
     : `<span class="db-badge db-unconfirmed">community</span>`;
@@ -925,6 +952,9 @@ function toggleSubmitForm(lakeName, btn) {
           <option value="slot-limits">Slot limits apply</option>
         </select>
       </label>
+      <label class="db-label">Local name (optional)
+        <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
+      </label>
       <label class="db-label">Notes (optional)
         <input type="text" id="nts-${id}" placeholder="e.g. Daily permit $5 at gate" maxlength="300" />
       </label>
@@ -940,6 +970,7 @@ async function submitLakeInfo(lakeName, id, btn) {
   const payToFish  = document.getElementById('ptf-'+id).value;
   const accessType = document.getElementById('act-'+id).value;
   const catchRules = document.getElementById('crs-'+id).value;
+  const localName  = document.getElementById('lnm-'+id).value;
   const notes      = document.getElementById('nts-'+id).value;
   const submittedBy= document.getElementById('sub-'+id).value;
   const status     = document.getElementById('fst-'+id);
@@ -954,14 +985,14 @@ async function submitLakeInfo(lakeName, id, btn) {
     const res = await fetch(`${WORKER_URL}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lakeName, accessType, payToFish: payToFish === 'true', catchRules, notes, submittedBy }),
+      body: JSON.stringify({ lakeName, accessType, localName, payToFish: payToFish === 'true', catchRules, notes, submittedBy }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Submit failed');
 
     // Update local cache so UI reflects immediately
     if (!lakeDB[lakeName]) lakeDB[lakeName] = {};
-    const entry = { accessType, payToFish: payToFish === 'true', catchRules, notes, submittedBy: submittedBy || 'anonymous',
+    const entry = { accessType, localName, payToFish: payToFish === 'true', catchRules, notes, submittedBy: submittedBy || 'anonymous',
                     submittedAt: new Date().toISOString().slice(0,10), voteCount: 0, votes: [] };
     if (lakeDB[lakeName].confirmed) {
       lakeDB[lakeName].pending = entry;
@@ -1009,6 +1040,61 @@ async function voteOnLake(lakeName, btn) {
   }
 }
 
+// ── Lake filter state ────────────────────────────────────────────────────────
+let lakeFilter = 'all';
+function setLakeFilter(type) {
+  lakeFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === type));
+  renderFilteredLakes();
+}
+
+function renderFilteredLakes() {
+  const el = document.getElementById('lakes-list');
+  if (!el) return;
+  const { lakes } = appData;
+  const d = appData.days[selectedDay];
+
+  const filtered = lakeFilter === 'all' ? lakes : lakes.filter(lk => {
+    const data = lakeDB[lk.name]?.confirmed || lakeDB[lk.name]?.pending;
+    return data && data.accessType === lakeFilter;
+  });
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty">No ${lakeFilter === 'all' ? '' : lakeFilter + ' '}lakes found.</div>`;
+    return;
+  }
+
+  let h = '';
+  filtered.forEach((lk, idx) => {
+    const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
+    const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+    const displayName = lakeDB[lk.name]?.confirmed?.localName || lakeDB[lk.name]?.pending?.localName || lk.name;
+    const officialName = displayName !== lk.name ? lk.name : null;
+    h += `<div class="lake-item">
+      <div class="lake-header">
+        <div class="lake-ico">🎣</div>
+        <div style="flex:1;min-width:0">
+          <div class="lake-name">${displayName}</div>
+          ${officialName ? `<div style="font-size:11px;color:var(--text3);margin-bottom:2px">${officialName}</div>` : ''}
+          <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
+          <div class="tags">
+            <span class="tag tag-fish">${topFish}</span>
+            <span class="tag ${cr.cls}">${cr.text} today</span>
+            <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
+          </div>
+        </div>
+      </div>
+      <div class="db-section">${lakeDBCard(lk.name)}</div>
+      <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
+        <span class="fish-toggle-label">Fish species near this lake</span>
+        <span class="fish-toggle-arrow">▼</span>
+      </div>
+      <div class="inat-fish-list" id="fl-${idx}"></div>
+    </div>`;
+  });
+  el.innerHTML = h;
+} // end _unused_renderLakes
+
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
   const el = document.getElementById('lakes-section');
@@ -1021,6 +1107,24 @@ function renderLakes() {
     return;
   }
 
+  // Filter bar
+  el.innerHTML = `
+    <div class="lake-filter-bar">
+      <button class="filter-btn active" data-filter="all"    onclick="setLakeFilter('all')">All</button>
+      <button class="filter-btn"        data-filter="public" onclick="setLakeFilter('public')">🌐 Public</button>
+      <button class="filter-btn"        data-filter="park"   onclick="setLakeFilter('park')">🏕️ Park</button>
+      <button class="filter-btn"        data-filter="private" onclick="setLakeFilter('private')">🔒 Private</button>
+    </div>
+    <div id="lakes-list"></div>`;
+
+  lakeFilter = 'all';
+  renderFilteredLakes();
+}
+
+// stub so old forEach path doesn't break — all rendering now goes through renderFilteredLakes
+function _unused_renderLakes() {
+  const { lakes } = appData;
+  const d = appData.days[selectedDay];
   let h = '';
   lakes.forEach((lk, idx) => {
     const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
@@ -1029,7 +1133,8 @@ function renderLakes() {
       <div class="lake-header">
         <div class="lake-ico">🎣</div>
         <div style="flex:1;min-width:0">
-          <div class="lake-name">${lk.name}</div>
+          <div class="lake-name">${lakeDB[lk.name]?.confirmed?.localName || lakeDB[lk.name]?.pending?.localName || lk.name}</div>
+          ${(lakeDB[lk.name]?.confirmed?.localName || lakeDB[lk.name]?.pending?.localName) ? `<div style="font-size:11px;color:var(--text3);margin-bottom:2px">${lk.name}</div>` : ''}
           <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
