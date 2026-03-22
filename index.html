@@ -388,7 +388,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.18.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.19.0</p>
   </div>
 
 </div>
@@ -929,8 +929,8 @@ function initScrollFades() {
 }
 
 // ── Lake DB helpers ───────────────────────────────────────────────────────────
-function lakeDBCard(lakeName) {
-  const entry = lakeDB[lakeName];
+function lakeDBCard(lakeName, entry) {
+  if (!entry) entry = lakeDB[lakeName] || getDBRecord(lakeName);
   if (!entry) return lakeDBSubmitForm(lakeName, false);
 
   const data       = entry.confirmed || entry.pending;
@@ -1381,6 +1381,31 @@ function setLakeFilter(type) {
   renderFilteredLakes();
 }
 
+function getDBEntry(lakeName) {
+  // Direct match first
+  if (lakeDB[lakeName]) return lakeDB[lakeName].confirmed || lakeDB[lakeName].pending;
+  // Fuzzy match — find a DB key whose localName or key matches (case-insensitive)
+  const lower = lakeName.toLowerCase();
+  for (const key of Object.keys(lakeDB)) {
+    const entry = lakeDB[key].confirmed || lakeDB[key].pending;
+    if (!entry) continue;
+    if (key.toLowerCase() === lower) return entry;
+    if (entry.localName && entry.localName.toLowerCase() === lower) return entry;
+  }
+  return null;
+}
+
+function getDBRecord(lakeName) {
+  if (lakeDB[lakeName]) return lakeDB[lakeName];
+  const lower = lakeName.toLowerCase();
+  for (const key of Object.keys(lakeDB)) {
+    if (key.toLowerCase() === lower) return lakeDB[key];
+    const entry = lakeDB[key].confirmed || lakeDB[key].pending;
+    if (entry?.localName?.toLowerCase() === lower) return lakeDB[key];
+  }
+  return null;
+}
+
 function renderFilteredLakes() {
   const el = document.getElementById('lakes-list');
   if (!el) return;
@@ -1389,8 +1414,7 @@ function renderFilteredLakes() {
 
   const filtered = lakes.filter(lk => {
     if (lakeFilter === 'all') return true;
-    const data = lakeDB[lk.name]?.confirmed || lakeDB[lk.name]?.pending;
-    // Only exclude if we have data AND it explicitly says a different type
+    const data = getDBEntry(lk.name);
     if (!data || !data.accessType) return false;
     return data.accessType === lakeFilter;
   });
@@ -1404,7 +1428,8 @@ function renderFilteredLakes() {
   filtered.forEach((lk, idx) => {
     const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
     const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
-    const displayName = lakeDB[lk.name]?.confirmed?.localName || lakeDB[lk.name]?.pending?.localName || lk.name;
+    const _rec = getDBRecord(lk.name);
+    const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
     const officialName = displayName !== lk.name ? lk.name : null;
     h += `<div class="lake-item">
       <div class="lake-header">
@@ -1420,7 +1445,7 @@ function renderFilteredLakes() {
           </div>
         </div>
       </div>
-      <div class="db-section">${lakeDBCard(lk.name)}</div>
+      <div class="db-section">${lakeDBCard(lk.name, _rec)}</div>
       <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
