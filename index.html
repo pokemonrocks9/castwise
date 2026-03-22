@@ -105,11 +105,22 @@
 
     /* ── Day scroll ── */
     .day-scroll-wrap { position: relative; margin-bottom: 24px; }
+    .day-scroll-wrap::before,
     .day-scroll-wrap::after {
-      content: ''; position: absolute; right: 0; top: 0; bottom: 4px;
-      width: 48px; pointer-events: none;
+      content: ''; position: absolute; top: 0; bottom: 4px;
+      width: 48px; pointer-events: none; z-index: 1;
+      opacity: 0; transition: opacity .2s;
+    }
+    .day-scroll-wrap::before {
+      left: 0;
+      background: linear-gradient(to left, transparent, var(--bg));
+    }
+    .day-scroll-wrap::after {
+      right: 0;
       background: linear-gradient(to right, transparent, var(--bg));
     }
+    .day-scroll-wrap.fade-right::after  { opacity: 1; }
+    .day-scroll-wrap.fade-left::before  { opacity: 1; }
     .day-scroll {
       display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
       scrollbar-width: none; -webkit-overflow-scrolling: touch;
@@ -295,7 +306,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.5.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.6.0</p>
   </div>
 
 </div>
@@ -476,44 +487,50 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
-// ── Lakes via GeoNames ───────────────────────────────────────────────────────
-// Free account at geonames.org — replace YOUR_GEONAMES_USERNAME below
-const GEONAMES_USER = 'pokemonrocks9';
-
-// Feature codes: LK=lake, LKS=lakes, LKI=intermittent lake, LKN=salt lake,
-// RSV=reservoir, PND=pond, LKRS=reservoir lake, STGNS=part of a lake
-const LAKE_FCODES = new Set(['LK','LKS','LKI','LKN','LKO','LKX','RSV','LKRS','PND','LKRS']);
-
+// ── Lakes via USGS National Hydrography Dataset (NHD) ────────────────────────
+// Federal government ArcGIS REST service — no key, no account, no rate limits
+// Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
 async function fetchLakes(lat, lon) {
-  if (GEONAMES_USER === 'YOUR_GEONAMES_USERNAME') {
-    // No username set — return empty gracefully
-    return [];
-  }
+  // Build bounding box ~35 miles around the point
+  const deg = 0.5;
+  const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
 
-  // GeoNames findNearby — returns named geographic features within radius
-  // We run two queries: lakes/ponds and reservoirs, then merge
-  const radius = 40; // km
-  const maxRows = 20;
-  const base = `https://secure.geonames.org/findNearbyJSON?lat=${lat}&lng=${lon}&radius=${radius}&maxRows=${maxRows}&username=${GEONAMES_USER}`;
+  const params = new URLSearchParams({
+    where:            "GNIS_NAME <> ''",
+    geometry:         bbox,
+    geometryType:     'esriGeometryEnvelope',
+    inSR:             '4326',
+    spatialRel:       'esriSpatialRelIntersects',
+    outFields:        'GNIS_NAME,FTYPE,Shape_Area',
+    returnCentroid:   'true',
+    returnGeometry:   'false',
+    resultRecordCount: '30',
+    f:                'json',
+  });
 
-  // Feature class H = hydrographic features (all water bodies)
-  const url = base + `&featureClass=H`;
+  const url = `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query?${params}`;
 
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return [];
     const data = await res.json();
-    if (!data.geonames) return [];
+    if (!data.features || !data.features.length) return [];
 
-    return data.geonames
-      .filter(g => LAKE_FCODES.has(g.fcode))
-      .map(g => ({
-        name: g.name,
-        lat:  parseFloat(g.lat),
-        lon:  parseFloat(g.lng),
-        dist: Math.round(parseFloat(g.distance) * 0.621371 * 10) / 10, // km to miles
-        type: g.fcodeName || 'water body',
-      }))
+    // Dedupe by name, compute distance, sort nearest first
+    const seen = new Set();
+    return data.features
+      .filter(f => f.attributes.GNIS_NAME && f.centroid)
+      .map(f => {
+        const name = f.attributes.GNIS_NAME;
+        const clat = f.centroid.y;
+        const clon = f.centroid.x;
+        const type = f.attributes.FTYPE === 436 ? 'reservoir'
+                   : f.attributes.FTYPE === 361 ? 'pluvial lake'
+                   : 'lake / pond';
+        return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
+      })
+      .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
+      .sort((a, b) => a.dist - b.dist)
       .slice(0, 8);
   } catch {
     return [];
@@ -730,10 +747,29 @@ function render() {
   h += `<div id="lakes-section"><div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div></div>`;
 
   setContent(h);
+  requestAnimationFrame(initScrollFades);
 }
 
 function selectDay(i) { selectedDay = i; render(); }
 function setContent(html) { document.getElementById('content').innerHTML = html; }
+
+// ── Day scroll fade indicators ────────────────────────────────────────────────
+function initScrollFades() {
+  const wrap = document.querySelector('.day-scroll-wrap');
+  const scroll = document.querySelector('.day-scroll');
+  if (!wrap || !scroll) return;
+
+  function update() {
+    const atStart = scroll.scrollLeft <= 2;
+    const atEnd   = scroll.scrollLeft + scroll.clientWidth >= scroll.scrollWidth - 2;
+    wrap.classList.toggle('fade-left',  !atStart);
+    wrap.classList.toggle('fade-right', !atEnd);
+  }
+
+  scroll.addEventListener('scroll', update, { passive: true });
+  // Run once after paint so scrollWidth is available
+  requestAnimationFrame(update);
+}
 
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
@@ -743,11 +779,7 @@ function renderLakes() {
   const d = appData.days[selectedDay];
 
   if (!lakes.length) {
-    if (GEONAMES_USER === 'YOUR_GEONAMES_USERNAME') {
-      el.innerHTML = '<div class="empty">⚙️ Add your GeoNames username to <code>index.html</code> to enable lake search.</div>';
-    } else {
-      el.innerHTML = '<div class="empty">No lakes found within 40 miles. GeoNames may have limited coverage for this area.</div>';
-    }
+    el.innerHTML = '<div class="empty">No named lakes or reservoirs found within ~35 miles.</div>';
     return;
   }
 
