@@ -382,7 +382,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.15.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.17.0</p>
   </div>
 
 </div>
@@ -1256,7 +1256,7 @@ async function submitLakeInfo(lakeName, id, btn) {
   const launchPrices = boatLaunch === 'true' ? getPriceList('lnch-price-list-'+id) : [];
   const boatRentals  = getRentalList(id);
 
-  if (!payToFish || !accessType || !catchRules) { status.textContent = '⚠️ Please fill in access type, pay status, and catch rules.'; return; }
+  // All fields optional on update — lakeName is enforced server-side
 
   btn.disabled = true;
   btn.textContent = 'Submitting…';
@@ -1351,13 +1351,16 @@ function renderFilteredLakes() {
   const { lakes } = appData;
   const d = appData.days[selectedDay];
 
-  const filtered = lakeFilter === 'all' ? lakes : lakes.filter(lk => {
+  const filtered = lakes.filter(lk => {
+    if (lakeFilter === 'all') return true;
     const data = lakeDB[lk.name]?.confirmed || lakeDB[lk.name]?.pending;
-    return data && data.accessType === lakeFilter;
+    // Only exclude if we have data AND it explicitly says a different type
+    if (!data || !data.accessType) return false;
+    return data.accessType === lakeFilter;
   });
 
   if (!filtered.length) {
-    el.innerHTML = `<div class="empty">No ${lakeFilter === 'all' ? '' : lakeFilter + ' '}lakes found.</div>`;
+    el.innerHTML = `<div class="empty">No lakes tagged as "${lakeFilter}" yet — try All, or submit info for a lake to tag it.</div>`;
     return;
   }
 
