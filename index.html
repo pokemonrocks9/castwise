@@ -401,7 +401,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.21.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.22.0</p>
   </div>
 
 </div>
@@ -805,10 +805,70 @@ async function loadData(lat, lon, locName) {
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
-function render() {
-  const { days, lakes } = appData;
+function renderDayStrip() {
+  const { days } = appData;
+  const el = document.querySelector('.day-scroll');
+  if (!el) return;
+  // Save scroll position
+  const scrollLeft = el.scrollLeft;
+  days.forEach((day, i) => {
+    const card = el.children[i];
+    if (!card) return;
+    card.className = `day-card${i === selectedDay ? ' active' : ''}`;
+  });
+  el.scrollLeft = scrollLeft; // restore scroll position
+}
+
+function renderDayDetails() {
+  const { days } = appData;
   const d = days[selectedDay];
-  const lbl = scoreLabel(d.sc);
+
+  // Solunar
+  const solEl = document.getElementById('sol-section');
+  if (solEl) {
+    let h = `<div class="card"><div class="card-title">Solunar windows — ${d.name}</div><div class="sol-grid">`;
+    d.sol.forEach(s => { h += `<div class="sol-item"><div class="sol-type">${s.type} period</div><div class="sol-time">${s.time}</div><div class="sol-dur">${s.dur}</div></div>`; });
+    h += `</div><div class="moon-row"><div class="moon-em">${d.moon.icon}</div><div><div class="moon-name">${d.moon.name}</div><div class="moon-illum">${d.moon.illum}% illuminated</div></div></div>
+    <div class="wx-row">
+      <div class="wx-chip"><div class="wx-val" style="font-size:22px">${wxIcon(d.wc)}</div><div class="wx-lbl">conditions</div></div>
+      <div class="wx-chip"><div class="wx-val">${d.tempF}°F</div><div class="wx-lbl">high</div></div>
+      <div class="wx-chip"><div class="wx-val">${d.wind}</div><div class="wx-lbl">mph wind</div></div>
+    </div></div>`;
+    solEl.innerHTML = h;
+  }
+
+  // Hourly
+  const hourEl = document.getElementById('hourly-section');
+  if (hourEl) {
+    let h = `<div class="card"><div class="card-title">Hourly bite activity</div>`;
+    d.hours.forEach(({ h: hr, a }) => {
+      const t = hr > 12 ? `${hr-12}pm` : hr === 12 ? '12pm' : `${hr}am`;
+      const color = a >= 70 ? '#1D9E75' : a >= 45 ? '#639922' : '#B4B2A9';
+      h += `<div class="hour-row"><span class="hour-time">${t}</span><div class="hbar-track"><div class="hbar-fill" style="width:${a}%;background:${color}"></div></div><span class="hour-pk">${a >= 70 ? 'peak' : ''}</span></div>`;
+    });
+    h += `</div>`;
+    hourEl.innerHTML = h;
+  }
+
+  // Fish
+  const fishEl = document.getElementById('fish-section');
+  if (fishEl) {
+    let h = `<div class="card"><div class="card-title">Fish activity &amp; catch rates</div><div class="fish-grid">`;
+    d.fish.forEach(f => {
+      const pct = Math.round(f.rate * 100);
+      h += `<div class="fish-card"><div class="fish-name">${f.name}</div><div class="fish-sub">Est. catch rate</div><div class="fish-track"><div class="fish-fill" style="width:${pct}%"></div></div><div class="fish-pct">${pct}%</div></div>`;
+    });
+    h += `</div></div>`;
+    fishEl.innerHTML = h;
+  }
+
+  // Re-render lake tags (crowd/bite rate change per day) without wiping lake cards
+  renderFilteredLakes();
+}
+
+function render() {
+  const { days } = appData;
+  const d = days[selectedDay];
   let h = '';
 
   // Day strip
@@ -821,68 +881,27 @@ function render() {
       <div class="day-lbl lbl-${l}">${l}</div>
     </div>`;
   });
-  h += `</div></div>`; // close day-scroll + day-scroll-wrap
-
-  // Solunar + moon + weather
-  h += `<div class="card"><div class="card-title">Solunar windows — ${d.name}</div>
-    <div class="sol-grid">`;
-  d.sol.forEach(s => {
-    h += `<div class="sol-item">
-      <div class="sol-type">${s.type} period</div>
-      <div class="sol-time">${s.time}</div>
-      <div class="sol-dur">${s.dur}</div>
-    </div>`;
-  });
-  h += `</div>
-    <div class="moon-row">
-      <div class="moon-em">${d.moon.icon}</div>
-      <div>
-        <div class="moon-name">${d.moon.name}</div>
-        <div class="moon-illum">${d.moon.illum}% illuminated</div>
-      </div>
-    </div>
-    <div class="wx-row">
-      <div class="wx-chip"><div class="wx-val" style="font-size:22px">${wxIcon(d.wc)}</div><div class="wx-lbl">conditions</div></div>
-      <div class="wx-chip"><div class="wx-val">${d.tempF}°F</div><div class="wx-lbl">high</div></div>
-      <div class="wx-chip"><div class="wx-val">${d.wind}</div><div class="wx-lbl">mph wind</div></div>
-    </div>
-  </div>`;
-
-  // Hourly activity
-  h += `<div class="card"><div class="card-title">Hourly bite activity</div>`;
-  d.hours.forEach(({ h: hr, a }) => {
-    const t = hr > 12 ? `${hr-12}pm` : hr === 12 ? '12pm' : `${hr}am`;
-    const color = a >= 70 ? '#1D9E75' : a >= 45 ? '#639922' : '#B4B2A9';
-    h += `<div class="hour-row">
-      <span class="hour-time">${t}</span>
-      <div class="hbar-track"><div class="hbar-fill" style="width:${a}%;background:${color}"></div></div>
-      <span class="hour-pk">${a >= 70 ? 'peak' : ''}</span>
-    </div>`;
-  });
-  h += `</div>`;
-
-  // Fish rates
-  h += `<div class="card"><div class="card-title">Fish activity &amp; catch rates</div><div class="fish-grid">`;
-  d.fish.forEach(f => {
-    const pct = Math.round(f.rate * 100);
-    h += `<div class="fish-card">
-      <div class="fish-name">${f.name}</div>
-      <div class="fish-sub">Est. catch rate</div>
-      <div class="fish-track"><div class="fish-fill" style="width:${pct}%"></div></div>
-      <div class="fish-pct">${pct}%</div>
-    </div>`;
-  });
   h += `</div></div>`;
 
-  // Nearby lakes — placeholder; filled by renderLakes() after background fetch
+  // Named sections so we can update them in-place later
+  h += `<div id="sol-section"></div>`;
+  h += `<div id="hourly-section"></div>`;
+  h += `<div id="fish-section"></div>`;
+
+  // Lakes — persists across day changes
   h += `<div class="section-label">Nearby lakes &amp; water</div>`;
   h += `<div id="lakes-section"><div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div></div>`;
 
   setContent(h);
+  renderDayDetails(); // fill the named sections
   requestAnimationFrame(initScrollFades);
 }
 
-function selectDay(i) { selectedDay = i; render(); }
+function selectDay(i) {
+  selectedDay = i;
+  renderDayStrip();   // just swap active class, preserve scroll
+  renderDayDetails(); // update solunar/hourly/fish in-place
+}
 function setContent(html) { document.getElementById('content').innerHTML = html; }
 
 // ── Day scroll fade indicators ────────────────────────────────────────────────
