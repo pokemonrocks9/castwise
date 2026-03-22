@@ -1,3 +1,22 @@
 {
-
+  "High Point City Lake": {
+    "confirmed": null,
+    "pending": {
+      "accessType": "park",
+      "payToFish": true,
+      "catchRules": "catch-and-keep",
+      "pier": false,
+      "bankPrices": [],
+      "launchPrices": [],
+      "boatRentals": [],
+      "hours": [],
+      "closedDays": [],
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-03-22",
+      "voteCount": 0,
+      "votes": [
+        "14693bd7b06ebae2"
+      ]
+    }
+  }
 }
