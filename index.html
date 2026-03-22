@@ -266,6 +266,51 @@
     }
     .empty { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
 
+    /* ── Lake DB cards ── */
+    .db-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .db-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
+    .db-card.db-empty { border: 1px dashed var(--border2); background: transparent; }
+    .db-card-header { font-size: 12px; font-weight: 500; color: var(--text3); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .db-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+    .db-confirmed   { background: var(--green-light); color: var(--green-dark); }
+    .db-unconfirmed { background: var(--amber-light); color: var(--amber-dark); }
+    .db-row { font-size: 13px; padding: 3px 0; color: var(--text); }
+    .db-notes { font-size: 12px; color: var(--text2); margin-top: 6px; font-style: italic; }
+    .db-meta  { font-size: 11px; color: var(--text3); margin-top: 6px; }
+    .db-empty-text { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+    .db-pending-notice {
+      margin-top: 8px; padding: 8px 10px; background: var(--amber-light);
+      border-radius: var(--radius); font-size: 12px; color: var(--amber-dark);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    }
+    .db-vote-btn {
+      font-size: 11px; font-weight: 500; background: var(--amber-dark); color: #fff;
+      border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer;
+    }
+    .db-edit-btn {
+      margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--green);
+      background: none; border: 1px solid var(--green); border-radius: 4px;
+      padding: 5px 12px; cursor: pointer; width: 100%;
+    }
+    .db-edit-btn:hover { background: var(--green-light); }
+    .db-form-wrap { }
+    .db-form { background: var(--bg2); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
+    .db-form-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+    .db-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+    .db-label select, .db-label input {
+      font-size: 13px; padding: 7px 10px; border-radius: var(--radius);
+      border: 1px solid var(--border2); background: var(--bg);
+      color: var(--text); font-family: 'DM Sans', sans-serif; outline: none;
+    }
+    .db-submit-btn {
+      width: 100%; padding: 9px; background: var(--green); color: #fff;
+      border: none; border-radius: var(--radius); font-size: 13px;
+      font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      margin-top: 4px;
+    }
+    .db-submit-btn:disabled { opacity: .6; cursor: default; }
+    .db-form-status { font-size: 12px; margin-top: 6px; min-height: 16px; color: var(--text2); }
+
     /* ── Footer ── */
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text3); }
     .footer a { color: var(--text3); }
@@ -306,12 +351,25 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.6.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.9.0</p>
   </div>
 
 </div>
 
 <script>
+// ── Config ────────────────────────────────────────────────────────────────────
+// Replace with your deployed Cloudflare Worker URL after `wrangler deploy`
+const WORKER_URL = 'https://castwise-worker.tytygoins.workers.dev';
+
+// ── Lake database cache (loaded from worker on startup) ───────────────────────
+let lakeDB = {};
+async function loadLakeDB() {
+  try {
+    const res = await fetch(`${WORKER_URL}/db`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) lakeDB = await res.json();
+  } catch { /* non-fatal — app works without it */ }
+}
+
 // ── Fish database ──────────────────────────────────────────────────────────────
 const FISH = [
   { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.45 },
@@ -488,51 +546,60 @@ async function fetchWeather(lat, lon) {
 }
 
 // ── Lakes via USGS National Hydrography Dataset (NHD) ────────────────────────
-// Federal government ArcGIS REST service — no key, no account, no rate limits
 // Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
+// Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
+// and compute center from xmin/xmax/ymin/ymax ourselves.
 async function fetchLakes(lat, lon) {
-  // Build bounding box ~35 miles around the point
   const deg = 0.5;
   const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
 
   const params = new URLSearchParams({
-    where:            "GNIS_NAME <> ''",
-    geometry:         bbox,
-    geometryType:     'esriGeometryEnvelope',
-    inSR:             '4326',
-    spatialRel:       'esriSpatialRelIntersects',
-    outFields:        'GNIS_NAME,FTYPE,Shape_Area',
-    returnCentroid:   'true',
-    returnGeometry:   'false',
-    resultRecordCount: '30',
-    f:                'json',
+    where:             "GNIS_NAME <> ''",
+    geometry:          bbox,
+    geometryType:      'esriGeometryEnvelope',
+    inSR:              '4326',
+    outSR:             '4326',
+    spatialRel:        'esriSpatialRelIntersects',
+    outFields:         'GNIS_NAME,FTYPE',
+    returnGeometry:    'true',   // need geometry to find center
+    resultRecordCount: '40',
+    f:                 'json',
   });
 
   const url = `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query?${params}`;
 
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
     if (!res.ok) return [];
-    const data = await res.json();
+    const text = await res.text();
+    if (!text.startsWith('{')) return [];
+    const data = JSON.parse(text);
     if (!data.features || !data.features.length) return [];
 
-    // Dedupe by name, compute distance, sort nearest first
     const seen = new Set();
     return data.features
-      .filter(f => f.attributes.GNIS_NAME && f.centroid)
+      .filter(f => f.attributes.GNIS_NAME && f.geometry)
       .map(f => {
         const name = f.attributes.GNIS_NAME;
-        const clat = f.centroid.y;
-        const clon = f.centroid.x;
+        // Geometry is a polygon — pull center from its envelope
+        // Rings are arrays of [lon, lat] pairs
+        let allX = [], allY = [];
+        const rings = f.geometry.rings || [];
+        rings.forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
+        if (!allX.length) return null;
+        const clon = (Math.min(...allX) + Math.max(...allX)) / 2;
+        const clat = (Math.min(...allY) + Math.max(...allY)) / 2;
         const type = f.attributes.FTYPE === 436 ? 'reservoir'
                    : f.attributes.FTYPE === 361 ? 'pluvial lake'
                    : 'lake / pond';
         return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
       })
+      .filter(Boolean)
       .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 8);
-  } catch {
+  } catch (e) {
+    console.warn('NHD fetch failed:', e);
     return [];
   }
 }
@@ -771,10 +838,167 @@ function initScrollFades() {
   requestAnimationFrame(update);
 }
 
+// ── Lake DB helpers ───────────────────────────────────────────────────────────
+function lakeDBCard(lakeName) {
+  const entry = lakeDB[lakeName];
+  if (!entry) return lakeDBSubmitForm(lakeName, false);
+
+  const data       = entry.confirmed || entry.pending;
+  const isConfirmed = !!entry.confirmed;
+  const hasPending  = !!entry.pending && !!entry.confirmed;
+
+  const payLabel  = data.payToFish === true  ? '💰 Pay to fish'
+                  : data.payToFish === false ? '🆓 Free to fish'
+                  : '❓ Pay status unknown';
+  const rulesLabel = data.catchRules === 'catch-and-release' ? '🔄 Catch & release only'
+                   : data.catchRules === 'catch-and-keep'    ? '🎣 Catch & keep allowed'
+                   : data.catchRules === 'slot-limits'       ? '📏 Slot limits apply'
+                   : '❓ Rules unknown';
+
+  const badge = isConfirmed
+    ? `<span class="db-badge db-confirmed">✓ Verified</span>`
+    : `<span class="db-badge db-unconfirmed">community</span>`;
+
+  const pendingSection = hasPending ? `
+    <div class="db-pending-notice">
+      🔔 Update pending · ${entry.pending.voteCount}/10 votes
+      <button class="db-vote-btn" onclick="voteOnLake('${lakeName.replace(/'/g,"\'")}', this)">Vote it's accurate</button>
+    </div>` : '';
+
+  return `<div class="db-card">
+    <div class="db-card-header">${badge} Community info</div>
+    <div class="db-row">${payLabel}</div>
+    <div class="db-row">${rulesLabel}</div>
+    ${data.notes ? `<div class="db-notes">${data.notes}</div>` : ''}
+    <div class="db-meta">Submitted by ${data.submittedBy || 'anonymous'} · ${data.submittedAt || ''}</div>
+    ${pendingSection}
+    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}', this)">Suggest an update</button>
+  </div>
+  <div class="db-form-wrap" id="form-${lakeName.replace(/[^a-z0-9]/gi,'_')}"></div>`;
+}
+
+function lakeDBSubmitForm(lakeName, inline) {
+  const id = lakeName.replace(/[^a-z0-9]/gi,'_');
+  return `<div class="db-card db-empty">
+    <div class="db-card-header">No info yet</div>
+    <p class="db-empty-text">Know about this lake? Add pay/rules info for everyone.</p>
+    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}', this)">Add info</button>
+  </div>
+  <div class="db-form-wrap" id="form-${id}"></div>`;
+}
+
+function toggleSubmitForm(lakeName, btn) {
+  const id = lakeName.replace(/[^a-z0-9]/gi,'_');
+  const wrap = document.getElementById('form-' + id);
+  if (!wrap) return;
+  if (wrap.innerHTML) { wrap.innerHTML = ''; btn.textContent = btn.dataset.open || 'Add info'; return; }
+  btn.dataset.open = btn.textContent;
+  btn.textContent = 'Cancel';
+  wrap.innerHTML = `
+    <div class="db-form">
+      <div class="db-form-title">Submit lake info</div>
+      <label class="db-label">Pay to fish?
+        <select id="ptf-${id}">
+          <option value="">— select —</option>
+          <option value="true">Yes — requires permit/fee</option>
+          <option value="false">No — free to fish</option>
+        </select>
+      </label>
+      <label class="db-label">Catch rules
+        <select id="crs-${id}">
+          <option value="">— select —</option>
+          <option value="catch-and-release">Catch & release only</option>
+          <option value="catch-and-keep">Catch & keep allowed</option>
+          <option value="slot-limits">Slot limits apply</option>
+        </select>
+      </label>
+      <label class="db-label">Notes (optional)
+        <input type="text" id="nts-${id}" placeholder="e.g. Daily permit $5 at gate" maxlength="300" />
+      </label>
+      <label class="db-label">Your name (optional)
+        <input type="text" id="sub-${id}" placeholder="anonymous" maxlength="40" />
+      </label>
+      <button class="db-submit-btn" onclick="submitLakeInfo('${lakeName.replace(/'/g,"\'")}', '${id}', this)">Submit</button>
+      <div class="db-form-status" id="fst-${id}"></div>
+    </div>`;
+}
+
+async function submitLakeInfo(lakeName, id, btn) {
+  const payToFish  = document.getElementById('ptf-'+id).value;
+  const catchRules = document.getElementById('crs-'+id).value;
+  const notes      = document.getElementById('nts-'+id).value;
+  const submittedBy= document.getElementById('sub-'+id).value;
+  const status     = document.getElementById('fst-'+id);
+
+  if (!payToFish || !catchRules) { status.textContent = '⚠️ Please fill in pay status and catch rules.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  status.textContent = '';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lakeName, payToFish: payToFish === 'true', catchRules, notes, submittedBy }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Submit failed');
+
+    // Update local cache so UI reflects immediately
+    if (!lakeDB[lakeName]) lakeDB[lakeName] = {};
+    const entry = { payToFish: payToFish === 'true', catchRules, notes, submittedBy: submittedBy || 'anonymous',
+                    submittedAt: new Date().toISOString().slice(0,10), voteCount: 0, votes: [] };
+    if (lakeDB[lakeName].confirmed) {
+      lakeDB[lakeName].pending = entry;
+    } else {
+      lakeDB[lakeName] = { confirmed: null, pending: entry };
+    }
+
+    // Re-render lakes
+    renderLakes();
+    status.textContent = '✅ Submitted! Thanks for contributing.';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+    status.textContent = '⚠️ ' + e.message;
+  }
+}
+
+async function voteOnLake(lakeName, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Voting…';
+  try {
+    const res  = await fetch(`${WORKER_URL}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lakeName }),
+    });
+    const data = await res.json();
+    if (data.status === 'already_voted') { btn.textContent = 'Already voted'; return; }
+    if (data.status === 'auto_confirmed') {
+      if (lakeDB[lakeName]) {
+        lakeDB[lakeName].confirmed = lakeDB[lakeName].pending;
+        lakeDB[lakeName].confirmed.confirmedBy = 'community';
+        lakeDB[lakeName].pending = null;
+      }
+      renderLakes();
+      return;
+    }
+    if (lakeDB[lakeName] && lakeDB[lakeName].pending) {
+      lakeDB[lakeName].pending.voteCount = data.voteCount;
+    }
+    btn.textContent = `Voted (${data.voteCount}/10)`;
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Vote it\'s accurate';
+  }
+}
+
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
   const el = document.getElementById('lakes-section');
-  if (!el) return; // content was replaced (user navigated away)
+  if (!el) return;
   const { lakes } = appData;
   const d = appData.days[selectedDay];
 
@@ -792,7 +1016,7 @@ function renderLakes() {
         <div class="lake-ico">🎣</div>
         <div style="flex:1;min-width:0">
           <div class="lake-name">${lk.name}</div>
-          <div class="lake-dist">${lk.dist} mi away · ${lk.type || "lake"}</div>
+          <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
             <span class="tag ${cr.cls}">${cr.text} today</span>
@@ -800,6 +1024,7 @@ function renderLakes() {
           </div>
         </div>
       </div>
+      <div class="db-section">${lakeDBCard(lk.name)}</div>
       <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
@@ -830,6 +1055,9 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
     setContent(`<div class="err-msg">⚠️ ${err.message}. Try a city and state like "Nashville, TN" or a 5-digit zip code.</div>`);
   }
 });
+
+// ── Load lake DB in background on startup ────────────────────────────────────
+loadLakeDB();
 
 // ── Auto-load with GPS, no hardcoded fallback ─────────────────────────────────
 if (navigator.geolocation) {
