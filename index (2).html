@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>CastWise — Free Fishing Intelligence</title>
+  <meta name="description" content="Free solunar calendar, nearby lakes, fish activity and catch rate estimates. No subscription needed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #1D9E75;
+      --green-light: #E1F5EE;
+      --green-dark: #0F6E56;
+      --green-mid: #085041;
+      --blue-light: #E6F1FB;
+      --blue-mid: #185FA5;
+      --amber-light: #FAEEDA;
+      --amber-dark: #854F0B;
+      --red-light: #FCEBEB;
+      --red-dark: #A32D2D;
+      --lime-light: #EAF3DE;
+      --lime-dark: #3B6D11;
+      --gray-100: #F5F5F4;
+      --gray-200: #E5E4E0;
+      --gray-400: #A8A8A0;
+      --gray-600: #5F5E5A;
+      --gray-800: #2C2C2A;
+      --bg: #ffffff;
+      --bg2: #F7F6F3;
+      --border: rgba(0,0,0,0.1);
+      --border2: rgba(0,0,0,0.18);
+      --text: #1a1a18;
+      --text2: #5a5a54;
+      --text3: #9a9990;
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a18;
+        --bg2: #222220;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.18);
+        --text: #f0ede8;
+        --text2: #a8a49e;
+        --text3: #6a6760;
+        --gray-100: #2a2a28;
+        --green-light: #0d3d2e;
+        --blue-light: #0d2440;
+        --amber-light: #3a2a0a;
+        --red-light: #3a1818;
+        --lime-light: #1a2e0a;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    a { color: var(--green); }
+
+    /* ── Layout ── */
+    .app { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    /* ── Header ── */
+    .header { margin-bottom: 20px; }
+    .logo { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1; }
+    .logo span { color: var(--green); }
+    .tagline { font-size: 13px; color: var(--text3); margin-top: 3px; }
+
+    /* ── Location bar ── */
+    .loc-wrap { display: flex; gap: 8px; margin-bottom: 20px; }
+    .loc-bar {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 10px 14px;
+    }
+    .loc-bar input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-size: 15px; color: var(--text); font-family: 'DM Sans', sans-serif;
+    }
+    .loc-bar input::placeholder { color: var(--text3); }
+    .loc-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--text3); }
+    .btn {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; font-weight: 500; color: var(--text2);
+      cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+      transition: background .15s, color .15s;
+    }
+    .btn:hover { background: var(--gray-100); color: var(--text); }
+    .btn-primary { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-primary:hover { background: var(--green-dark); }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 11px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text3); margin-bottom: 10px;
+    }
+
+    /* ── Day scroll ── */
+    .day-scroll {
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+      margin-bottom: 24px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .day-scroll::-webkit-scrollbar { display: none; }
+    .day-card {
+      flex: 0 0 76px; border-radius: var(--radius); border: 1px solid var(--border);
+      background: var(--bg2); padding: 12px 8px; text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s; user-select: none;
+    }
+    .day-card.active { border-color: var(--green); background: var(--bg); }
+    .day-name { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+    .day-score { font-size: 22px; font-weight: 500; line-height: 1; margin-bottom: 5px; }
+    .day-lbl {
+      font-size: 10px; border-radius: 4px; padding: 2px 5px;
+      font-weight: 500; display: inline-block;
+    }
+    .lbl-excellent { background: var(--green-light); color: var(--green-dark); }
+    .lbl-good      { background: var(--lime-light);  color: var(--lime-dark); }
+    .lbl-fair      { background: var(--amber-light); color: var(--amber-dark); }
+    .lbl-poor      { background: var(--red-light);   color: var(--red-dark); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px;
+    }
+    .card-title { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+
+    /* ── Solunar ── */
+    .sol-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .sol-item {
+      background: var(--bg2); border-radius: var(--radius);
+      padding: 12px; text-align: center;
+    }
+    .sol-type { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+    .sol-time { font-size: 17px; font-weight: 500; }
+    .sol-dur  { font-size: 11px; color: var(--green); margin-top: 3px; }
+
+    /* ── Moon row ── */
+    .moon-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px; background: var(--bg2); border-radius: var(--radius); margin-top: 4px;
+    }
+    .moon-em { font-size: 26px; width: 34px; text-align: center; line-height: 1; }
+    .moon-name { font-size: 14px; font-weight: 500; }
+    .moon-illum { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* ── Weather chips ── */
+    .wx-row { display: flex; gap: 8px; margin-top: 12px; }
+    .wx-chip {
+      flex: 1; background: var(--bg2); border-radius: var(--radius);
+      padding: 10px 8px; text-align: center;
+    }
+    .wx-val { font-size: 18px; font-weight: 500; line-height: 1.2; }
+    .wx-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+    /* ── Hourly timeline ── */
+    .hour-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); }
+    .hour-time { font-size: 12px; color: var(--text3); width: 42px; flex-shrink: 0; }
+    .hbar-track { flex: 1; background: var(--bg2); border-radius: 4px; height: 7px; overflow: hidden; }
+    .hbar-fill  { height: 100%; border-radius: 4px; transition: width .3s ease; }
+    .hour-pk { font-size: 11px; color: var(--green); font-weight: 500; width: 38px; text-align: right; flex-shrink: 0; }
+
+    /* ── Fish cards ── */
+    .fish-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .fish-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; }
+    .fish-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+    .fish-sub  { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+    .fish-track { background: var(--bg); border-radius: 3px; height: 5px; overflow: hidden; }
+    .fish-fill  { height: 100%; border-radius: 3px; background: var(--green); }
+    .fish-pct   { font-size: 11px; color: var(--green); font-weight: 500; margin-top: 4px; }
+
+    /* ── Lakes ── */
+    .lake-item {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px;
+      display: flex; gap: 12px; margin-bottom: 10px;
+    }
+    .lake-ico {
+      width: 38px; height: 38px; border-radius: var(--radius);
+      background: var(--green-light); display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .lake-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lake-dist { font-size: 12px; color: var(--text2); margin: 3px 0 8px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+    .tag-fish   { background: var(--blue-light);  color: var(--blue-mid); }
+    .tag-low    { background: var(--green-light); color: var(--green-dark); }
+    .tag-med    { background: var(--amber-light); color: var(--amber-dark); }
+    .tag-high   { background: var(--red-light);   color: var(--red-dark); }
+    .tag-catch  { background: var(--lime-light);  color: var(--lime-dark); }
+
+    /* ── States ── */
+    .loading { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
+    .loading .spinner {
+      width: 28px; height: 28px; border: 2px solid var(--border2);
+      border-top-color: var(--green); border-radius: 50%;
+      animation: spin .7s linear infinite; margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .err-msg {
+      background: var(--red-light); border: 1px solid rgba(162,45,45,.2);
+      border-radius: var(--radius); padding: 14px; font-size: 13px;
+      color: var(--red-dark); margin-bottom: 16px;
+    }
+    .empty { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text3); }
+    .footer a { color: var(--text3); }
+
+    /* ── Responsive ── */
+    @media (max-width: 420px) {
+      .app { padding: 16px 12px 48px; }
+      .fish-grid { grid-template-columns: 1fr 1fr; }
+      .day-card { flex: 0 0 68px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">Cast<span>Wise</span></div>
+    <div class="tagline">Free fishing intelligence — no subscription ever</div>
+  </div>
+
+  <div class="loc-wrap">
+    <div class="loc-bar">
+      <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
+      </svg>
+      <input type="text" id="locIn" placeholder="City, state or zip — press Enter" autocomplete="off" />
+    </div>
+    <button class="btn" id="btnGPS">📍 GPS</button>
+  </div>
+
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div>
+      Loading your local fishing forecast…
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
+    <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
+  </div>
+
+</div>
+
+<script>
+// ── Fish database ──────────────────────────────────────────────────────────────
+const FISH = [
+  { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.45 },
+  { name: 'Crappie',         peak: [3,4,5,10,11],    tr: [55,75], base: 0.55 },
+  { name: 'Catfish',         peak: [5,6,7,8,9],      tr: [65,85], base: 0.40 },
+  { name: 'Bluegill',        peak: [5,6,7,8],        tr: [65,85], base: 0.60 },
+  { name: 'Rainbow Trout',   peak: [3,4,5,10,11,12], tr: [45,65], base: 0.38 },
+  { name: 'Walleye',         peak: [4,5,6,9,10,11],  tr: [55,72], base: 0.35 },
+  { name: 'Yellow Perch',    peak: [4,5,10,11],      tr: [55,72], base: 0.50 },
+  { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.42 },
+];
+
+// ── Moon phase ─────────────────────────────────────────────────────────────────
+function moonPhase(date) {
+  const cycle = 29.53058867;
+  const phase = (((date - new Date(2000,0,6)) / 864e5 % cycle) + cycle) % cycle;
+  const p = phase / cycle;
+  const i = p<0.03||p>0.97 ? 0 : p<0.22 ? 1 : p<0.28 ? 2 : p<0.47 ? 3
+            : p<0.53 ? 4 : p<0.72 ? 5 : p<0.78 ? 6 : 7;
+  return {
+    name:  ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'][i],
+    icon:  ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][i],
+    illum: Math.round(Math.abs(Math.cos(p * 2 * Math.PI)) * 100),
+    phase,
+  };
+}
+
+// ── Sunrise / sunset (Spencer equation) ───────────────────────────────────────
+function sunTimes(lat, lon, date) {
+  const r = Math.PI / 180;
+  const day = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
+  const B   = (360/365) * (day - 81) * r;
+  const eot = 9.87*Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B);
+  const tcf  = 4 * lon + eot;
+  const decl = 23.45 * Math.sin(r * (360/365) * (day - 81)) * r;
+  const ha   = Math.acos(-Math.tan(lat*r) * Math.tan(decl)) / r;
+  return { rise: 12 - ha/15 - tcf/60, set: 12 + ha/15 - tcf/60 };
+}
+
+// ── Solunar windows ───────────────────────────────────────────────────────────
+function solunarWindows(lat, lon, date) {
+  const { phase } = moonPhase(date);
+  const ld = 24.8;
+  const off = (phase / 29.53) * ld;
+  const m1 = (off % ld) - 12, m2 = m1 + 12.4;
+  const n1 = m1 + 6.2,       n2 = n1 + 12.4;
+  const fmt = h => {
+    const a = ((h % 24) + 24) % 24, hr = Math.floor(a);
+    const mn = Math.round((a - hr) * 60);
+    const ap = hr >= 12 ? 'PM' : 'AM';
+    const dh = hr > 12 ? hr-12 : hr === 0 ? 12 : hr;
+    return `${dh}:${String(mn).padStart(2,'0')} ${ap}`;
+  };
+  return [
+    { type:'Major', time:fmt(m1+12), hour:((m1+12+24)%24), dur:'2 hr window' },
+    { type:'Major', time:fmt(m2+12), hour:((m2+12+24)%24), dur:'2 hr window' },
+    { type:'Minor', time:fmt(n1+12), hour:((n1+12+24)%24), dur:'1 hr window' },
+    { type:'Minor', time:fmt(n2+12), hour:((n2+12+24)%24), dur:'1 hr window' },
+  ];
+}
+
+// ── Solunar score (0–100) ─────────────────────────────────────────────────────
+function calcScore(date, wcode, wind, moon) {
+  let s = 50;
+  const il = moon.illum;
+  if (il > 90 || il < 5)   s += 20;
+  else if (il > 70 || il < 15) s += 12;
+  else if (il > 50)         s += 6;
+  if (wcode <= 3)  s += 15;
+  else if (wcode <= 51) s += 5;
+  else if (wcode >= 71) s -= 15;
+  if (wind < 10) s += 10;
+  else if (wind > 20) s -= 10;
+  if (date.getDay() === 0 || date.getDay() === 6) s += 3;
+  return Math.min(100, Math.max(5, s));
+}
+
+function scoreLabel(s) {
+  return s >= 78 ? 'excellent' : s >= 58 ? 'good' : s >= 38 ? 'fair' : 'poor';
+}
+
+// ── Crowd heuristic ───────────────────────────────────────────────────────────
+function crowdEstimate(sc, dow, wc) {
+  let c = (dow === 0 || dow === 6) ? 35 : 10;
+  if (wc <= 3) c += 20; else if (wc >= 61) c -= 10;
+  if (sc >= 75) c += 15;
+  c = Math.min(95, Math.max(5, c));
+  return c > 60 ? { text:'busy',     cls:'tag-high' }
+       : c > 35 ? { text:'moderate', cls:'tag-med'  }
+       :           { text:'quiet',    cls:'tag-low'  };
+}
+
+// ── Fish activity rates ───────────────────────────────────────────────────────
+function fishRates(month, tempF, wc, sc) {
+  return FISH.map(f => {
+    let r = f.base;
+    if (f.peak.includes(month)) r += 0.20;
+    if (tempF >= f.tr[0] && tempF <= f.tr[1])        r += 0.15;
+    else if (tempF < f.tr[0]-15 || tempF > f.tr[1]+15) r -= 0.15;
+    if (wc <= 3) r += 0.05;
+    r += (sc - 50) / 100 * 0.15;
+    return { ...f, rate: Math.min(0.95, Math.max(0.02, r)) };
+  }).sort((a,b) => b.rate - a.rate).slice(0, 6);
+}
+
+// ── Hourly activity ───────────────────────────────────────────────────────────
+function hourlyActivity(windows, rise, set) {
+  return Array.from({ length: 19 }, (_, i) => {
+    const h = i + 4;
+    let a = 20;
+    if (Math.abs(h - rise) < 1.5) a += 40;
+    if (Math.abs(h - set)  < 1.5) a += 35;
+    windows.forEach(w => {
+      const diff = Math.abs(h - w.hour), range = w.type === 'Major' ? 2 : 1;
+      if (diff < range) a += w.type === 'Major' ? 35 : 20;
+    });
+    return { h, a: Math.min(100, a) };
+  });
+}
+
+// ── Haversine distance (miles) ────────────────────────────────────────────────
+function haversine(a, b, c, d) {
+  const R = 3959, dL = (c-a)*Math.PI/180, dO = (d-b)*Math.PI/180;
+  const x = Math.sin(dL/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x)) * 10) / 10;
+}
+
+// ── Weather icon ──────────────────────────────────────────────────────────────
+function wxIcon(c) {
+  if (c === 0) return '☀️';
+  if (c <= 2)  return '⛅';
+  if (c <= 3)  return '☁️';
+  if (c <= 48) return '🌫️';
+  if (c <= 67) return '🌧️';
+  if (c <= 77) return '🌨️';
+  if (c <= 82) return '🌦️';
+  return '⛈️';
+}
+
+// ── Geocoding via Open-Meteo ──────────────────────────────────────────────────
+async function geocode(q) {
+  q = q.trim();
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!data.results || !data.results.length) throw new Error('Location not found');
+  const isZip = /^\d{5}$/.test(q);
+  const r = isZip ? (data.results.find(x => x.country_code === 'US') || data.results[0]) : data.results[0];
+  return { lat: r.latitude, lon: r.longitude, name: `${r.name}, ${r.admin1 || r.country}` };
+}
+
+// ── Weather fetch ─────────────────────────────────────────────────────────────
+async function fetchWeather(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,windspeed_10m_max&temperature_unit=fahrenheit&forecast_days=7&timezone=auto`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+// ── Lakes via OpenStreetMap Overpass ──────────────────────────────────────────
+async function fetchLakes(lat, lon) {
+  const d = 0.4;
+  const q = `[out:json][timeout:15];(way["natural"="water"](${lat-d},${lon-d},${lat+d},${lon+d});relation["natural"="water"](${lat-d},${lon-d},${lat+d},${lon+d}););out center 15;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+  const json = await res.json();
+  return json.elements
+    .filter(e => e.tags && e.tags.name)
+    .map(e => ({
+      name: e.tags.name,
+      dist: haversine(lat, lon, e.center ? e.center.lat : e.lat, e.center ? e.center.lon : e.lon),
+    }))
+    .sort((a,b) => a.dist - b.dist)
+    .slice(0, 6);
+}
+
+// ── App state ─────────────────────────────────────────────────────────────────
+let appData = null;
+let selectedDay = 0;
+
+// ── Load all data ─────────────────────────────────────────────────────────────
+async function loadData(lat, lon, locName) {
+  document.getElementById('locIn').value = locName;
+  setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
+  try {
+    const [wx, lakes] = await Promise.all([fetchWeather(lat, lon), fetchLakes(lat, lon)]);
+    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(); date.setDate(date.getDate() + i);
+      const moon  = moonPhase(date);
+      const wc    = wx.daily.weathercode[i];
+      const wind  = wx.daily.windspeed_10m_max[i];
+      const tempF = wx.daily.temperature_2m_max[i];
+      const sc    = calcScore(date, wc, wind, moon);
+      const sol   = solunarWindows(lat, lon, date);
+      const sun   = sunTimes(lat, lon, date);
+      return {
+        date, sc, wc, moon, sol,
+        name:  i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_NAMES[date.getDay()],
+        hours: hourlyActivity(sol, sun.rise, sun.set),
+        fish:  fishRates(date.getMonth() + 1, tempF, wc, sc),
+        crowd: crowdEstimate(sc, date.getDay(), wc),
+        tempF: Math.round(tempF),
+        wind:  Math.round(wind),
+      };
+    });
+    appData = { days, lakes, locName };
+    selectedDay = 0;
+    render();
+  } catch (e) {
+    setContent(`<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const { days, lakes } = appData;
+  const d = days[selectedDay];
+  const lbl = scoreLabel(d.sc);
+  let h = '';
+
+  // Day strip
+  h += `<div class="section-label">7-day solunar forecast</div><div class="day-scroll">`;
+  days.forEach((day, i) => {
+    const l = scoreLabel(day.sc);
+    h += `<div class="day-card${i===selectedDay?' active':''}" onclick="selectDay(${i})">
+      <div class="day-name">${day.name}</div>
+      <div class="day-score">${day.sc}</div>
+      <div class="day-lbl lbl-${l}">${l}</div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // Solunar + moon + weather
+  h += `<div class="card"><div class="card-title">Solunar windows — ${d.name}</div>
+    <div class="sol-grid">`;
+  d.sol.forEach(s => {
+    h += `<div class="sol-item">
+      <div class="sol-type">${s.type} period</div>
+      <div class="sol-time">${s.time}</div>
+      <div class="sol-dur">${s.dur}</div>
+    </div>`;
+  });
+  h += `</div>
+    <div class="moon-row">
+      <div class="moon-em">${d.moon.icon}</div>
+      <div>
+        <div class="moon-name">${d.moon.name}</div>
+        <div class="moon-illum">${d.moon.illum}% illuminated</div>
+      </div>
+    </div>
+    <div class="wx-row">
+      <div class="wx-chip"><div class="wx-val" style="font-size:22px">${wxIcon(d.wc)}</div><div class="wx-lbl">conditions</div></div>
+      <div class="wx-chip"><div class="wx-val">${d.tempF}°F</div><div class="wx-lbl">high</div></div>
+      <div class="wx-chip"><div class="wx-val">${d.wind}</div><div class="wx-lbl">mph wind</div></div>
+    </div>
+  </div>`;
+
+  // Hourly activity
+  h += `<div class="card"><div class="card-title">Hourly bite activity</div>`;
+  d.hours.forEach(({ h: hr, a }) => {
+    const t = hr > 12 ? `${hr-12}pm` : hr === 12 ? '12pm' : `${hr}am`;
+    const color = a >= 70 ? '#1D9E75' : a >= 45 ? '#639922' : '#B4B2A9';
+    h += `<div class="hour-row">
+      <span class="hour-time">${t}</span>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${a}%;background:${color}"></div></div>
+      <span class="hour-pk">${a >= 70 ? 'peak' : ''}</span>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // Fish rates
+  h += `<div class="card"><div class="card-title">Fish activity &amp; catch rates</div><div class="fish-grid">`;
+  d.fish.forEach(f => {
+    const pct = Math.round(f.rate * 100);
+    h += `<div class="fish-card">
+      <div class="fish-name">${f.name}</div>
+      <div class="fish-sub">Est. catch rate</div>
+      <div class="fish-track"><div class="fish-fill" style="width:${pct}%"></div></div>
+      <div class="fish-pct">${pct}%</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  // Nearby lakes
+  h += `<div class="section-label">Nearby lakes &amp; water</div>`;
+  if (!lakes.length) {
+    h += `<div class="empty">No named lakes found within ~25 miles. Try a nearby larger city.</div>`;
+  } else {
+    lakes.forEach(lk => {
+      const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
+      const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+      h += `<div class="lake-item">
+        <div class="lake-ico">🎣</div>
+        <div style="flex:1;min-width:0">
+          <div class="lake-name">${lk.name}</div>
+          <div class="lake-dist">${lk.dist} mi away</div>
+          <div class="tags">
+            <span class="tag tag-fish">${topFish}</span>
+            <span class="tag ${cr.cls}">${cr.text} today</span>
+            <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  setContent(h);
+}
+
+function selectDay(i) { selectedDay = i; render(); }
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+
+// ── Event handlers ────────────────────────────────────────────────────────────
+document.getElementById('btnGPS').addEventListener('click', () => {
+  if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => loadData(pos.coords.latitude, pos.coords.longitude, 'Your location'),
+    ()  => alert('Could not get GPS location. Try typing your city instead.')
+  );
+});
+
+document.getElementById('locIn').addEventListener('keydown', async e => {
+  if (e.key !== 'Enter') return;
+  const v = e.target.value.trim();
+  if (!v) return;
+  try {
+    const { lat, lon, name } = await geocode(v);
+    loadData(lat, lon, name);
+  } catch (err) {
+    setContent(`<div class="err-msg">⚠️ ${err.message}. Try "High Point, NC" or a zip code like "27262".</div>`);
+  }
+});
+
+// ── Auto-load with GPS or fall back to High Point, NC ────────────────────────
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => loadData(pos.coords.latitude, pos.coords.longitude, 'Your location'),
+    ()  => loadData(35.9557, -80.0053, 'High Point, NC')
+  );
+} else {
+  loadData(35.9557, -80.0053, 'High Point, NC');
+}
+</script>
+</body>
+</html>
