@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>CastWise — Free Fishing Intelligence</title>
   <meta name="description" content="Free solunar calendar, nearby lakes, fish activity and catch rate estimates. No subscription needed." />
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <meta name="theme-color" content="#1D9E75" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CastWise" />
@@ -16,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CastWise" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet" />
@@ -400,7 +401,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.20.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.21.0</p>
   </div>
 
 </div>
@@ -746,54 +747,6 @@ function renderFallbackFish(container, lakeIdx) {
       </div>`;
   }).join('');
 
-  // Hours of operation — find today's block
-  const hoursRow = (() => {
-    const h = data.hours;
-    const cd = data.closedDays || [];
-    if (!h || !h.length) return '';
-    const now  = new Date();
-    const dow  = now.getDay();
-    const md   = now.getMonth()+1;
-    const dd   = now.getDate();
-    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-    if (cd.includes(dow)) {
-      return `<div class="db-row db-hours-closed">🔴 Closed today (${DAY_NAMES[dow]}s)</div>`;
-    }
-
-    const parseDate = str => {
-      if (!str) return null;
-      const parts = str.split(' ');
-      const m = MONTHS.indexOf(parts[0]) + 1;
-      const d = parseInt(parts[1]);
-      return { m, d };
-    };
-
-    const inRange = (from, to) => {
-      if (!from || !to) return true; // year-round
-      const f = parseDate(from), t = parseDate(to);
-      if (!f || !t) return true;
-      const cur  = md * 100 + dd;
-      const fVal = f.m * 100 + f.d;
-      const tVal = t.m * 100 + t.d;
-      return fVal <= tVal ? cur >= fVal && cur <= tVal : cur >= fVal || cur <= tVal;
-    };
-
-    const block = h.find(b => inRange(b.from, b.to));
-    if (!block) return '';
-    if (block.closed) {
-      return `<div class="db-row db-hours-closed">🔴 Closed${block.from ? ` (${block.from} – ${block.to})` : ''}</div>`;
-    }
-
-    const nowMins = now.getHours()*60 + now.getMinutes();
-    const toMins = t => { const [time, ap] = t.split(' '); let [h,m] = time.split(':').map(Number); if(ap==='PM'&&h!==12)h+=12; if(ap==='AM'&&h===12)h=0; return h*60+m; };
-    const openMins  = toMins(block.open);
-    const closeMins = toMins(block.close);
-    const isOpen    = nowMins >= openMins && nowMins < closeMins;
-    const badge     = isOpen ? '🟢' : '🔴';
-    const rangeStr  = block.from ? ` (${block.from} – ${block.to})` : '';
-    return `<div class="db-row">${badge} ${block.open} – ${block.close}${rangeStr}${block.note ? ' · '+block.note : ''}</div>`;
-  })();
   h += `<div class="inat-fallback-note">No local sightings data — showing regional estimates</div>`;
   container.innerHTML = h;
 }
@@ -951,6 +904,28 @@ function initScrollFades() {
 }
 
 // ── Lake DB helpers ───────────────────────────────────────────────────────────
+function calcHoursRow(data) {
+  const hours = data.hours;
+  const cd    = data.closedDays || [];
+  if (!hours || !hours.length) return '';
+  const now  = new Date();
+  const dow  = now.getDay();
+  const md   = now.getMonth() + 1;
+  const dd   = now.getDate();
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if (cd.includes(dow)) return `<div class="db-row db-hours-closed">🔴 Closed today (${DAY_NAMES[dow]}s)</div>`;
+  const parseDate = str => { if (!str) return null; const p = str.split(' '); return { m: MONTHS.indexOf(p[0])+1, d: parseInt(p[1]) }; };
+  const inRange = (from, to) => { if (!from || !to) return true; const f=parseDate(from),t=parseDate(to); if(!f||!t) return true; const cur=md*100+dd,fv=f.m*100+f.d,tv=t.m*100+t.d; return fv<=tv ? cur>=fv&&cur<=tv : cur>=fv||cur<=tv; };
+  const block = hours.find(b => inRange(b.from, b.to));
+  if (!block) return '';
+  if (block.closed) return `<div class="db-row db-hours-closed">🔴 Closed${block.from ? ` (${block.from} – ${block.to})` : ''}</div>`;
+  const toMins = t => { const [time,ap]=t.split(' '); let [h,m]=time.split(':').map(Number); if(ap==='PM'&&h!==12)h+=12; if(ap==='AM'&&h===12)h=0; return h*60+m; };
+  const nowMins=now.getHours()*60+now.getMinutes(), openMins=toMins(block.open), closeMins=toMins(block.close);
+  const isOpen=nowMins>=openMins&&nowMins<closeMins;
+  const rangeStr=block.from?` (${block.from} – ${block.to})`:'';
+  return `<div class="db-row">${isOpen?'🟢':'🔴'} ${block.open} – ${block.close}${rangeStr}${block.note?' · '+block.note:''}</div>`;
+}
+
 function lakeDBCard(lakeName, entry) {
   if (!entry) entry = lakeDB[lakeName] || getDBRecord(lakeName);
   if (!entry) return lakeDBSubmitForm(lakeName, false);
@@ -1009,7 +984,7 @@ function lakeDBCard(lakeName, entry) {
     <div class="db-row">${accessLabel}</div>
     <div class="db-row">${payLabel}</div>
     <div class="db-row">${rulesLabel}</div>
-    ${hoursRow}
+    ${calcHoursRow(data)}
     ${bankRow}
     ${launchRow}
     ${rentalRows}
@@ -1540,7 +1515,7 @@ if (navigator.geolocation) {
 
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
   // ── Register service worker ────────────────────────────────────────────────
   if ('serviceWorker' in navigator) {
