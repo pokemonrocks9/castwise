@@ -362,7 +362,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.12.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.13.0</p>
   </div>
 
 </div>
@@ -568,65 +568,55 @@ const PINNED_LAKES = [
 // Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
 // and compute center from xmin/xmax/ymin/ymax ourselves.
 async function fetchLakes(lat, lon) {
-  const deg = 0.5;
-  const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
+  const BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query';
+  const deg = 0.7; // ~48mi bbox
 
-  const params = new URLSearchParams({
-    where:             "GNIS_NAME <> ''",
-    geometry:          bbox,
-    geometryType:      'esriGeometryEnvelope',
-    inSR:              '4326',
-    outSR:             '4326',
-    spatialRel:        'esriSpatialRelIntersects',
-    outFields:         'GNIS_NAME,FTYPE',
-    returnGeometry:    'true',   // need geometry to find center
-    resultRecordCount: '40',
-    f:                 'json',
-  });
+  // Always start with pinned lakes within range
+  const seen = new Set();
+  const pinned = PINNED_LAKES
+    .map(p => ({ ...p, dist: haversine(lat, lon, p.lat, p.lon) }))
+    .filter(p => p.dist <= 48);
+  pinned.forEach(p => seen.add(p.name));
 
-  const url = `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query?${params}`;
+  const tryQuery = async (where) => {
+    const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
+    const p = new URLSearchParams({
+      where, geometry: bbox, geometryType: 'esriGeometryEnvelope',
+      inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'GNIS_NAME,FTYPE,FCODE', returnGeometry: 'true',
+      resultRecordCount: '60', f: 'json',
+    });
+    try {
+      const res = await fetch(`${BASE}?${p}`, { signal: AbortSignal.timeout(12000) });
+      if (!res.ok) return [];
+      const text = await res.text();
+      if (!text.trim().startsWith('{')) return [];
+      const data = JSON.parse(text);
+      return data.features || [];
+    } catch { return []; }
+  };
 
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) return [];
-    const text = await res.text();
-    if (!text.startsWith('{')) return [];
-    const data = JSON.parse(text);
-    if (!data.features || !data.features.length) return [];
+  // Try with FTYPE filter first, then fall back to just GNIS_NAME if empty
+  let features = await tryQuery("GNIS_NAME <> '' AND FTYPE IN (390, 436, 378, 361)");
+  if (!features.length) features = await tryQuery("GNIS_NAME <> ''");
 
-    const seen = new Set();
+  const nhd = features
+    .filter(f => f.attributes.GNIS_NAME && f.geometry)
+    .map(f => {
+      const name = f.attributes.GNIS_NAME;
+      let allX = [], allY = [];
+      (f.geometry.rings || []).forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
+      if (!allX.length) return null;
+      const clon = (Math.min(...allX) + Math.max(...allX)) / 2;
+      const clat = (Math.min(...allY) + Math.max(...allY)) / 2;
+      const ftype = f.attributes.FTYPE;
+      const type = (ftype === 436 || ftype === 378) ? 'reservoir' : ftype === 361 ? 'pluvial lake' : 'lake / pond';
+      return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
+    })
+    .filter(Boolean)
+    .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
 
-    // Start with pinned lakes that fall within the bbox
-    const pinned = PINNED_LAKES
-      .map(p => ({ ...p, dist: haversine(lat, lon, p.lat, p.lon) }))
-      .filter(p => p.dist <= 35); // within 35 miles
-    pinned.forEach(p => seen.add(p.name));
-
-    const nhd = data.features
-      .filter(f => f.attributes.GNIS_NAME && f.geometry)
-      .map(f => {
-        const name = f.attributes.GNIS_NAME;
-        let allX = [], allY = [];
-        const rings = f.geometry.rings || [];
-        rings.forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
-        if (!allX.length) return null;
-        const clon = (Math.min(...allX) + Math.max(...allX)) / 2;
-        const clat = (Math.min(...allY) + Math.max(...allY)) / 2;
-        const type = f.attributes.FTYPE === 436 ? 'reservoir'
-                   : f.attributes.FTYPE === 361 ? 'pluvial lake'
-                   : 'lake / pond';
-        return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
-      })
-      .filter(Boolean)
-      .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
-
-    return [...pinned, ...nhd]
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, 8);
-  } catch (e) {
-    console.warn('NHD fetch failed:', e);
-    return [];
-  }
+  return [...pinned, ...nhd].sort((a, b) => a.dist - b.dist).slice(0, 10);
 }
 
 // ── iNaturalist fish species for a location ───────────────────────────────────
