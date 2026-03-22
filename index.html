@@ -401,7 +401,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.22.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.23.0</p>
   </div>
 
 </div>
@@ -862,7 +862,7 @@ function renderDayDetails() {
     fishEl.innerHTML = h;
   }
 
-  // Re-render lake tags (crowd/bite rate change per day) without wiping lake cards
+  // Re-render lake cards so fish type tags update per day
   renderFilteredLakes();
 }
 
@@ -1442,7 +1442,6 @@ function renderFilteredLakes() {
 
   let h = '';
   filtered.forEach((lk, idx) => {
-    const cr = crowdEstimate(d.sc, d.date.getDay(), d.wc);
     const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
     const _rec = getDBRecord(lk.name);
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
@@ -1456,8 +1455,6 @@ function renderFilteredLakes() {
           <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
-            <span class="tag ${cr.cls}">${cr.text} today</span>
-            <span class="tag tag-catch">${Math.round(d.fish[0].rate * 100)}% bite rate</span>
           </div>
         </div>
       </div>
