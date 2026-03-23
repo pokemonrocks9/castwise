@@ -1,0 +1,40 @@
+{
+  "packageId": "com.castwise.app",
+  "host": "pokemonrocks9.github.io",
+  "name": "CastWise",
+  "launcherName": "CastWise",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#1D9E75",
+  "navigationColor": "#1D9E75",
+  "navigationColorDark": "#0F6E56",
+  "navigationDividerColor": "#0F6E56",
+  "backgroundColor": "#1a1a18",
+  "enableNotifications": false,
+  "startUrl": "/castwise/",
+  "iconUrl": "https://pokemonrocks9.github.io/castwise/icons/icon-512.png",
+  "maskableIconUrl": "https://pokemonrocks9.github.io/castwise/icons/icon-512.png",
+  "monochromeIconUrl": "https://pokemonrocks9.github.io/castwise/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signing": {
+    "outputDirectory": "./",
+    "signingMode": "release"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "0.26.0",
+  "shortcuts": [],
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://pokemonrocks9.github.io/castwise/",
+  "minSdkVersion": 24,
+  "targetSdkVersion": 34
+}
