@@ -162,6 +162,13 @@ jobs:
           </manifest>
           EOF
 
+          # ── gradle.properties ────────────────────────────────────────────────────
+          cat > castwise-apk/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
           # ── colors.xml ────────────────────────────────────────────────────────
           cat > castwise-apk/app/src/main/res/values/colors.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
