@@ -16,5 +16,25 @@
       "confirmedAt": "2026-03-22"
     },
     "pending": null
+  },
+  "Oak Hollow Lake": {
+    "confirmed": null,
+    "pending": {
+      "accessType": "park",
+      "payToFish": true,
+      "catchRules": "catch-and-keep",
+      "pier": false,
+      "bankPrices": [],
+      "launchPrices": [],
+      "boatRentals": [],
+      "hours": [],
+      "closedDays": [],
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-03-23",
+      "voteCount": 0,
+      "votes": [
+        "2ce66c26e061c2de"
+      ]
+    }
   }
 }
