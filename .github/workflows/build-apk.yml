@@ -22,14 +22,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -37,38 +34,34 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
-      - name: Restore keystore from secret
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > castwise.keystore
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
 
-      - name: Configure Bubblewrap SDK paths (skip interactive prompts)
+      - name: Configure Bubblewrap SDK paths (no prompts)
         run: |
-          mkdir -p ~/.bubblewrap
-          cat > ~/.bubblewrap/config.json << BWEOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_SDK_ROOT"
-          }
-          BWEOF
+          bubblewrap updateConfig \
+            --jdkPath "$JAVA_HOME" \
+            --androidSdkPath "$ANDROID_SDK_ROOT"
 
-      - name: Initialize Bubblewrap project
+      - name: Copy twa-manifest to build dir
         run: |
           mkdir -p twa-build
-          cd twa-build
-          echo "n" | bubblewrap init \
-            --manifest https://pokemonrocks9.github.io/castwise/manifest.json \
-            --directory . || true
-          cp ../twa-manifest.json twa-manifest.json
+          cp twa-manifest.json twa-build/twa-manifest.json
 
-      - name: Build APK
+      - name: Restore keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > castwise.keystore
+
+      - name: Build APK (skip init — use existing twa-manifest.json)
         working-directory: ./twa-build
         run: |
           bubblewrap build \
+            --manifest ./twa-manifest.json \
             --ks "${{ github.workspace }}/castwise.keystore" \
             --ksPass "${{ secrets.KEYSTORE_PASSWORD }}" \
             --ksKeyAlias "${{ secrets.KEY_ALIAS }}" \
             --ksKeyPass "${{ secrets.KEY_PASSWORD }}"
 
-      - name: Upload APK as artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: castwise-${{ github.sha }}
@@ -84,10 +77,10 @@ jobs:
           body: |
             Auto-built APK from commit ${{ github.sha }}
 
-            **Install:**
+            **To install:**
             1. Download `app-release-signed.apk` below
-            2. On your Android device: Settings → Install unknown apps → allow your browser
-            3. Open the downloaded APK and install
+            2. On Android: Settings → Install unknown apps → allow your browser
+            3. Open the APK and install
           files: twa-build/*.apk
           draft: false
           prerelease: true
