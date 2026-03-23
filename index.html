@@ -227,6 +227,8 @@
     .tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
     .tag-fish   { background: var(--blue-light);  color: var(--blue-mid); }
+    .tag-paid   { background: var(--amber-light); color: var(--amber-dark); }
+    .tag-free   { background: var(--green-light); color: var(--green-dark); }
     .tag-low    { background: var(--green-light); color: var(--green-dark); }
     .tag-med    { background: var(--amber-light); color: var(--amber-dark); }
     .tag-high   { background: var(--red-light);   color: var(--red-dark); }
@@ -401,7 +403,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.26.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.27.0</p>
   </div>
 
 </div>
@@ -1440,6 +1442,23 @@ function renderFilteredLakes() {
   let h = '';
   filtered.forEach((lk, idx) => {
     const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+    const _dbEntry = getDBEntry(lk.name);
+    const _hasPrices = _dbEntry && (
+      (_dbEntry.bankPrices||[]).length ||
+      (_dbEntry.launchPrices||[]).length ||
+      (_dbEntry.boatRentals||[]).length
+    );
+    const _isFree = _dbEntry && (
+      _dbEntry.payToFish === false &&
+      !(_dbEntry.bankPrices||[]).length &&
+      !(_dbEntry.launchPrices||[]).length &&
+      !(_dbEntry.boatRentals||[]).length
+    );
+    const priceBadge = _hasPrices
+      ? '<span class="tag tag-paid">💰 Paid</span>'
+      : _isFree
+      ? '<span class="tag tag-free">🆓 Free</span>'
+      : '';
     const _rec = getDBRecord(lk.name);
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
     const officialName = displayName !== lk.name ? lk.name : null;
@@ -1452,6 +1471,7 @@ function renderFilteredLakes() {
           <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
+            ${priceBadge}
           </div>
         </div>
       </div>
