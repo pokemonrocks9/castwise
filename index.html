@@ -401,7 +401,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.24.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.26.0</p>
   </div>
 
 </div>
@@ -953,9 +953,7 @@ function lakeDBCard(lakeName, entry) {
   const isConfirmed = !!entry.confirmed;
   const hasPending  = !!entry.pending && !!entry.confirmed;
 
-  const payLabel  = data.payToFish === true  ? '💰 Pay to fish'
-                  : data.payToFish === false ? '🆓 Free to fish'
-                  : '❓ Pay status unknown';
+
   const rulesLabel = data.catchRules === 'catch-and-release' ? '🔄 Catch & release only'
                    : data.catchRules === 'catch-and-keep'    ? '🪣 Catch & keep allowed'
                    : data.catchRules === 'slot-limits'       ? '📏 Slot limits apply'
@@ -1001,7 +999,6 @@ function lakeDBCard(lakeName, entry) {
   return `<div class="db-card">
     <div class="db-card-header">${badge} Community info</div>
     <div class="db-row">${accessLabel}</div>
-    <div class="db-row">${payLabel}</div>
     <div class="db-row">${rulesLabel}</div>
     ${calcHoursRow(data)}
     ${bankRow}
