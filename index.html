@@ -401,7 +401,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.23.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.24.0</p>
   </div>
 
 </div>
@@ -957,7 +957,7 @@ function lakeDBCard(lakeName, entry) {
                   : data.payToFish === false ? '🆓 Free to fish'
                   : '❓ Pay status unknown';
   const rulesLabel = data.catchRules === 'catch-and-release' ? '🔄 Catch & release only'
-                   : data.catchRules === 'catch-and-keep'    ? '🎣 Catch & keep allowed'
+                   : data.catchRules === 'catch-and-keep'    ? '🪣 Catch & keep allowed'
                    : data.catchRules === 'slot-limits'       ? '📏 Slot limits apply'
                    : '❓ Rules unknown';
   const accessLabel = data.accessType === 'public' ? '🌐 Public access'
@@ -968,9 +968,9 @@ function lakeDBCard(lakeName, entry) {
   // Bank fishing
   const bankRow = data.bankFishing !== undefined ? (() => {
     if (!data.bankFishing) return '<div class="db-row">🚫 No bank / pier fishing</div>';
-    const pier = data.pier ? ' · 🪝 Pier available' : '';
     const prices = (data.bankPrices || []).map(p => `$${p.price}/${p.per}`).join(' or ');
-    return `<div class="db-row">🎣 Bank fishing available${pier}${prices ? ' — ' + prices : ' — free'}</div>`;
+    const pierRow = data.pier ? '<div class="db-row">🪝 Pier available</div>' : '';
+    return `<div class="db-row">🪨 Bank fishing available${prices ? ' — ' + prices : ' — free'}</div>${pierRow}`;
   })() : '';
 
   // Boat launch
@@ -1531,8 +1531,21 @@ if (navigator.geolocation) {
 
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update();
+      });
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    }).catch(() => {});
+  }
   // ── Register service worker ────────────────────────────────────────────────
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
