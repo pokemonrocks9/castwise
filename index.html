@@ -403,7 +403,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.28.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.29.0</p>
   </div>
 
 </div>
@@ -1515,9 +1515,26 @@ function renderLakes() {
 // ── Event handlers ────────────────────────────────────────────────────────────
 document.getElementById('btnGPS').addEventListener('click', () => {
   if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
+  const btn = document.getElementById('btnGPS');
+  const input = document.getElementById('locIn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  input.value = 'Getting your location…';
+  input.disabled = true;
   navigator.geolocation.getCurrentPosition(
-    pos => loadData(pos.coords.latitude, pos.coords.longitude, 'Your location'),
-    ()  => alert('Could not get GPS location. Try typing your city instead.')
+    pos => {
+      btn.textContent = '🛰️';
+      btn.disabled = false;
+      input.disabled = false;
+      loadData(pos.coords.latitude, pos.coords.longitude, 'Your location');
+    },
+    () => {
+      btn.textContent = '🛰️';
+      btn.disabled = false;
+      input.value = '';
+      input.disabled = false;
+      setContent('<div class="err-msg">⚠️ Could not get GPS location. Try typing your city instead.</div>');
+    }
   );
 });
 
