@@ -29,74 +29,187 @@ jobs:
       - name: Accept licenses
         run: yes | sdkmanager --licenses || true
 
-      - name: Clone TWA template
-        run: |
-          git clone --depth 1 https://github.com/GoogleChromeLabs/svgomg-twa.git twa-build
+      - name: Install build tools and platform
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Configure TWA for CastWise
+      - name: Restore keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > castwise.keystore
+
+      - name: Build Android project from scratch
         run: |
-          cd twa-build
-          cat > app/build.gradle << 'GRADLE'
+          mkdir -p castwise-apk/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p castwise-apk/app/src/main/res/values
+          mkdir -p castwise-apk/gradle/wrapper
+
+          # ── settings.gradle ──────────────────────────────────────────────────
+          cat > castwise-apk/settings.gradle << 'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "CastWise"
+          include ':app'
+          EOF
+
+          # ── root build.gradle ─────────────────────────────────────────────────
+          cat > castwise-apk/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          # ── gradle wrapper ────────────────────────────────────────────────────
+          cat > castwise-apk/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          # Download gradle wrapper jar
+          curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar \
+            -o castwise-apk/gradle/wrapper/gradle-wrapper.jar
+
+          # ── gradlew script ────────────────────────────────────────────────────
+          curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradlew \
+            -o castwise-apk/gradlew
+          chmod +x castwise-apk/gradlew
+
+          # ── app/build.gradle ──────────────────────────────────────────────────
+          cat > castwise-apk/app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
           }
           android {
+              namespace 'com.castwise.app'
               compileSdk 34
               defaultConfig {
-                  applicationId "com.castwise.app"
+                  applicationId 'com.castwise.app'
                   minSdk 24
                   targetSdk 34
-                  versionCode ${{ github.run_number }}
-                  versionName "0.26.${{ github.run_number }}"
+                  versionCode 1
+                  versionName '0.26.0'
               }
               signingConfigs {
                   release {
-                      storeFile file(System.getenv("KEYSTORE_PATH"))
-                      storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("KEY_ALIAS")
-                      keyPassword System.getenv("KEY_PASSWORD")
+                      storeFile file(System.getenv('KEYSTORE_PATH'))
+                      storePassword System.getenv('KEYSTORE_PASSWORD')
+                      keyAlias System.getenv('KEY_ALIAS')
+                      keyPassword System.getenv('KEY_PASSWORD')
                   }
               }
               buildTypes {
                   release {
                       signingConfig signingConfigs.release
                       minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
                   }
               }
           }
           dependencies {
               implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
           }
-          GRADLE
+          EOF
 
-          # Update TWA host config
-          cat > app/src/main/res/values/strings.xml << 'XML'
+          # ── AndroidManifest.xml ───────────────────────────────────────────────
+          cat > castwise-apk/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="CastWise"
+                  android:icon="@mipmap/ic_launcher"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.NoTitleBar">
+                  <activity
+                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                          android:value="https://pokemonrocks9.github.io/castwise/" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                          android:resource="@color/colorPrimary" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                          android:resource="@drawable/splash" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                          android:resource="@color/backgroundColor" />
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https"
+                                android:host="pokemonrocks9.github.io"
+                                android:pathPrefix="/castwise/" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # ── colors.xml ────────────────────────────────────────────────────────
+          cat > castwise-apk/app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">#1D9E75</color>
+              <color name="backgroundColor">#1a1a18</color>
+          </resources>
+          EOF
+
+          # ── strings.xml ───────────────────────────────────────────────────────
+          cat > castwise-apk/app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">CastWise</string>
-              <string name="launcher_name">CastWise</string>
-              <string name="twa_package_name">com.castwise.app</string>
-              <string name="asset_statements">[{"include": "https://pokemonrocks9.github.io/.well-known/assetlinks.json"}]</string>
-              <string name="twa_url">https://pokemonrocks9.github.io/castwise/</string>
           </resources>
-          XML
+          EOF
 
-      - name: Restore keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > castwise.keystore
+          # ── splash drawable (simple color) ────────────────────────────────────
+          mkdir -p castwise-apk/app/src/main/res/drawable
+          cat > castwise-apk/app/src/main/res/drawable/splash.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="#1D9E75" />
+          </shape>
+          EOF
 
-      - name: Build release APK
-        working-directory: ./twa-build
+          # ── launcher icon — copy our 512px icon, resize to mipmap sizes ───────
+          cp icons/icon-512.png castwise-apk/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          for size_dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi; do
+            mkdir -p castwise-apk/app/src/main/res/$size_dir
+            cp icons/icon-512.png castwise-apk/app/src/main/res/$size_dir/ic_launcher.png
+          done
+
+      - name: Assemble release APK
+        working-directory: castwise-apk
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/castwise.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: castwise-${{ github.sha }}
-          path: twa-build/app/build/outputs/apk/release/*.apk
+          path: castwise-apk/app/build/outputs/apk/release/*.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -110,7 +223,7 @@ jobs:
             **To install on Android:**
             1. Download `app-release.apk` below
             2. Settings → Install unknown apps → allow your browser
-            3. Open the APK file and tap Install
-          files: twa-build/app/build/outputs/apk/release/*.apk
+            3. Open the APK and tap Install
+          files: castwise-apk/app/build/outputs/apk/release/*.apk
           draft: false
           prerelease: true
