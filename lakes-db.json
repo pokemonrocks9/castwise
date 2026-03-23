@@ -33,6 +33,32 @@
       "confirmedBy": "tyler",
       "confirmedAt": "2026-03-23"
     },
-    "pending": null
+    "pending": {
+      "accessType": "park",
+      "payToFish": false,
+      "catchRules": "catch-and-keep",
+      "bankFishing": true,
+      "pier": true,
+      "bankPrices": [
+        {
+          "price": 2,
+          "per": "day"
+        },
+        {
+          "price": 30,
+          "per": "year"
+        }
+      ],
+      "launchPrices": [],
+      "boatRentals": [],
+      "hours": [],
+      "closedDays": [],
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-03-23",
+      "voteCount": 0,
+      "votes": [
+        "14693bd7b06ebae2"
+      ]
+    }
   }
 }
