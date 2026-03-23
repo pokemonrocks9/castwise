@@ -20,21 +20,6 @@
   "Oak Hollow Lake": {
     "confirmed": {
       "accessType": "park",
-      "payToFish": true,
-      "catchRules": "catch-and-keep",
-      "pier": false,
-      "bankPrices": [],
-      "launchPrices": [],
-      "boatRentals": [],
-      "hours": [],
-      "closedDays": [],
-      "submittedBy": "anonymous",
-      "submittedAt": "2026-03-23",
-      "confirmedBy": "tyler",
-      "confirmedAt": "2026-03-23"
-    },
-    "pending": {
-      "accessType": "park",
       "payToFish": false,
       "catchRules": "catch-and-keep",
       "bankFishing": true,
@@ -55,10 +40,9 @@
       "closedDays": [],
       "submittedBy": "anonymous",
       "submittedAt": "2026-03-23",
-      "voteCount": 0,
-      "votes": [
-        "14693bd7b06ebae2"
-      ]
-    }
+      "confirmedBy": "tyler",
+      "confirmedAt": "2026-03-23"
+    },
+    "pending": null
   }
 }
