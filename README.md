@@ -21,4 +21,4 @@ Access the testing space here https://pokemonrocks9.github.io/castwise/
 ==FOR FULL TRANSPARENCY==  
 LLMs are used to aid with the coding of this app, as I am very new to this.
 However, no data put in is to be fed into an LLM, nor will I allow images for future parts of this app, or any submitted or account data to be fed into an LLM.  
-There is no AI in the program itself, and there never will be.  
+There is no AI in the program itself. The only calculations are for rates of fishing, and the Solunar view.  
