@@ -10,9 +10,9 @@ Currently it can do the following:
 -Show a fishing score up to 7 days ahead, which is estimated with on device calculations  
 -List lakes and potential fish in the area  
 -Each lake has the potential to list:  
-  -If it is a park, private, or public lake  
-  -If it costs to fish, whether bank fishing, if a pier is available, or boat launch is available  
-  -If it is a catch and keep or catch and release area  
+   -If it is a park, private, or public lake  
+   -If it costs to fish, whether bank fishing, if a pier is available, or boat launch is available  
+   -If it is a catch and keep or catch and release area  
 
 
   
