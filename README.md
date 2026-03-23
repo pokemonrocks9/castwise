@@ -14,5 +14,11 @@ Currently it can do the following:
    -If it costs to fish, whether bank fishing, if a pier is available, or boat launch is available  
    -If it is a catch and keep or catch and release area  
 
+If you have suggestions. Put them as a github issue.  
 
+Access the testing space here https://pokemonrocks9.github.io/castwise/
   
+==FOR FULL TRANSPARENCY==  
+LLMs are used to aid with the coding of this app, as I am very new to this.
+However, no data put in is to be fed into an LLM, nor will I allow images for future parts of this app, or any submitted or account data to be fed into an LLM.  
+There is no AI in the program itself, and there never will be.  
