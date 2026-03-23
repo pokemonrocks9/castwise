@@ -65,7 +65,7 @@ jobs:
           # ── root build.gradle ─────────────────────────────────────────────────
           cat > castwise-apk/build.gradle << 'EOF'
           plugins {
-              id 'com.android.application' version '8.2.2' apply false
+              id 'com.android.application' version '8.7.3' apply false
           }
           EOF
 
@@ -73,7 +73,7 @@ jobs:
           cat > castwise-apk/gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.9-bin.zip
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
@@ -119,7 +119,7 @@ jobs:
               }
           }
           dependencies {
-              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.3'
           }
           EOF
 
@@ -134,7 +134,8 @@ jobs:
                   android:theme="@android:style/Theme.NoTitleBar">
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
-                      android:exported="true">
+                      android:exported="true"
+                      android:screenOrientation="portrait">
                       <meta-data
                           android:name="android.support.customtabs.trusted.DEFAULT_URL"
                           android:value="https://pokemonrocks9.github.io/castwise/" />
