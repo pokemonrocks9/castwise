@@ -4,10 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'index.html'      # only rebuild when the app actually changes
+      - 'index.html'
       - 'manifest.json'
       - 'twa-manifest.json'
-  workflow_dispatch:       # also allow manual trigger from Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -40,19 +40,33 @@ jobs:
       - name: Restore keystore from secret
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > castwise.keystore
 
+      - name: Configure Bubblewrap SDK paths (skip interactive prompts)
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << BWEOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          }
+          BWEOF
+
       - name: Initialize Bubblewrap project
         run: |
-          bubblewrap init --manifest https://pokemonrocks9.github.io/castwise/manifest.json \
-            --directory ./twa-build
+          mkdir -p twa-build
+          cd twa-build
+          echo "n" | bubblewrap init \
+            --manifest https://pokemonrocks9.github.io/castwise/manifest.json \
+            --directory . || true
+          cp ../twa-manifest.json twa-manifest.json
 
       - name: Build APK
         working-directory: ./twa-build
-        env:
-          KEYSTORE_PATH: ../castwise.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: bubblewrap build
+        run: |
+          bubblewrap build \
+            --ks "${{ github.workspace }}/castwise.keystore" \
+            --ksPass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            --ksKeyAlias "${{ secrets.KEY_ALIAS }}" \
+            --ksKeyPass "${{ secrets.KEY_PASSWORD }}"
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
@@ -69,7 +83,7 @@ jobs:
           name: CastWise Build ${{ github.run_number }}
           body: |
             Auto-built APK from commit ${{ github.sha }}
-            
+
             **Install:**
             1. Download `app-release-signed.apk` below
             2. On your Android device: Settings → Install unknown apps → allow your browser
