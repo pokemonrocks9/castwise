@@ -56,8 +56,7 @@
     "pending": null
   },
   "Ranch Lake": {
-    "confirmed": null,
-    "pending": {
+    "confirmed": {
       "accessType": "private",
       "localName": "ranch Lake",
       "payToFish": true,
@@ -71,10 +70,9 @@
       "notes": "No fishing zone ",
       "submittedBy": "anonymous",
       "submittedAt": "2026-03-27",
-      "voteCount": 0,
-      "votes": [
-        "11195e867ae43169"
-      ]
-    }
+      "confirmedBy": "tyler",
+      "confirmedAt": "2026-03-27"
+    },
+    "pending": null
   }
 }
