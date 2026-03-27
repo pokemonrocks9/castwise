@@ -54,5 +54,24 @@
       "confirmedAt": "2026-03-23"
     },
     "pending": null
+  },
+  "Ranch Lake": {
+    "confirmed": null,
+    "pending": {
+      "payToFish": false,
+      "pier": false,
+      "bankPrices": [],
+      "launchPrices": [],
+      "boatRentals": [],
+      "hours": [],
+      "closedDays": [],
+      "notes": "No fishing zone ",
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-03-27",
+      "voteCount": 0,
+      "votes": [
+        "11195e867ae43169"
+      ]
+    }
   }
 }
