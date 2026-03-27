@@ -58,7 +58,10 @@
   "Ranch Lake": {
     "confirmed": null,
     "pending": {
-      "payToFish": false,
+      "accessType": "private",
+      "localName": "ranch Lake",
+      "payToFish": true,
+      "catchRules": "catch-and-release",
       "pier": false,
       "bankPrices": [],
       "launchPrices": [],
