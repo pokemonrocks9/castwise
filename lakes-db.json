@@ -59,23 +59,6 @@
     "confirmed": {
       "accessType": "private",
       "localName": "Ranch Lake",
-      "payToFish": true,
-      "catchRules": "catch-and-release",
-      "pier": false,
-      "bankPrices": [],
-      "launchPrices": [],
-      "boatRentals": [],
-      "hours": [],
-      "closedDays": [],
-      "notes": "No fishing zone ",
-      "submittedBy": "anonymous",
-      "submittedAt": "2026-03-27",
-      "confirmedBy": "tyler",
-      "confirmedAt": "2026-03-27"
-    },
-    "pending": {
-      "accessType": "private",
-      "localName": "Ranch Lake",
       "payToFish": false,
       "catchRules": "catch-and-release",
       "pier": false,
@@ -87,10 +70,9 @@
       "notes": "No fishing zone ",
       "submittedBy": "anonymous",
       "submittedAt": "2026-03-28",
-      "voteCount": 0,
-      "votes": [
-        "3ea7edb450f2d0c2"
-      ]
-    }
+      "confirmedBy": "tyler",
+      "confirmedAt": "2026-03-28"
+    },
+    "pending": null
   }
 }
