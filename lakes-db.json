@@ -58,7 +58,7 @@
   "Ranch Lake": {
     "confirmed": {
       "accessType": "private",
-      "localName": "ranch Lake",
+      "localName": "Ranch Lake",
       "payToFish": true,
       "catchRules": "catch-and-release",
       "pier": false,
