@@ -1,31 +1,6 @@
 {
   "High Point City Lake": {
     "confirmed": {
-      "accessType": "park",
-      "payToFish": false,
-      "catchRules": "catch-and-keep",
-      "bankFishing": true,
-      "pier": true,
-      "bankPrices": [
-        {
-          "price": 2,
-          "per": "day"
-        },
-        {
-          "price": 30,
-          "per": "year"
-        }
-      ],
-      "launchPrices": [],
-      "boatRentals": [],
-      "hours": [],
-      "closedDays": [],
-      "submittedBy": "anonymous",
-      "submittedAt": "2026-03-23",
-      "confirmedBy": "tyler",
-      "confirmedAt": "2026-03-23"
-    },
-    "pending": {
       "noFishing": false,
       "accessType": "park",
       "payToFish": false,
@@ -56,11 +31,10 @@
       "closedDays": [],
       "submittedBy": "anonymous",
       "submittedAt": "2026-03-29",
-      "voteCount": 0,
-      "votes": [
-        "19545a8b7d1b0a2c"
-      ]
-    }
+      "confirmedBy": "tyler",
+      "confirmedAt": "2026-03-29"
+    },
+    "pending": null
   },
   "Oak Hollow Lake": {
     "confirmed": {
