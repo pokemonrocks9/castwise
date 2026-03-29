@@ -281,6 +281,32 @@
     }
     .empty { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
 
+    /* ── Lake status variants ── */
+    .lake-item.lake-community { border-color: #BA7517; border-width: 2px; }
+    .lake-item.lake-no-fish   { border-color: #A32D2D; border-width: 2px; opacity: 0.8; }
+    .lake-ico.lake-ico-community { background: var(--amber-light); }
+    .lake-ico.lake-ico-no-fish   { background: var(--red-light); }
+    .lake-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 500; padding: 2px 7px;
+      border-radius: 4px; margin-bottom: 6px;
+    }
+    .lake-badge-community { background: var(--amber-light); color: var(--amber-dark); }
+    .lake-badge-nofish    { background: var(--red-light);   color: var(--red-dark); }
+
+    /* ── Add lake form ── */
+    .add-lake-btn {
+      width: 100%; margin-top: 10px; padding: 12px;
+      background: transparent; border: 1px dashed var(--border2);
+      border-radius: var(--radius-lg); font-size: 13px; color: var(--text2);
+      cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center;
+    }
+    .add-lake-btn:hover { border-color: var(--green); color: var(--green); }
+    .add-lake-form {
+      background: var(--bg2); border-radius: var(--radius-lg);
+      border: 1px solid var(--border); padding: 16px; margin-top: 10px;
+    }
+
     /* ── Lake filter bar ── */
     .lake-filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
     .filter-btn {
@@ -403,7 +429,7 @@
   <div class="footer">
     <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a> · Solunar math is calculated locally</p>
     <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.31.0</p>
+    <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.32.0</p>
   </div>
 
 </div>
@@ -605,8 +631,32 @@ async function fetchWeather(lat, lon) {
 // Add any lake here that NHD misses or names differently from what locals use.
 // coords: approximate center of the lake
 const PINNED_LAKES = [
-  { name: 'High Point City Lake', lat: 35.9397, lon: -80.0283, type: 'lake / pond' },
+  { name: 'High Point City Lake',  lat: 35.9397, lon: -80.0283, type: 'lake / pond' },
+  { name: 'Kernersville Lake',     lat: 36.1185, lon: -80.0717, type: 'lake / pond' },
 ];
+
+// ── Community-submitted lakes cache ──────────────────────────────────────────
+let communityLakes = [];
+async function loadCommunityLakes() {
+  try {
+    const res = await fetch(`${WORKER_URL}/community-lakes`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) communityLakes = await res.json();
+  } catch { /* non-fatal */ }
+}
+
+// ── No-fishing lakes — flagged as unfishable in the DB ────────────────────────
+function isNoFish(lakeName) {
+  const entry = getDBEntry(lakeName);
+  return entry && entry.noFishing === true;
+}
+
+function isCommunityLake(lakeName) {
+  return communityLakes.some(cl => cl.name === lakeName);
+}
+
+function getCommunityLake(lakeName) {
+  return communityLakes.find(cl => cl.name === lakeName);
+}
 
 // ── Lakes via USGS National Hydrography Dataset (NHD) ────────────────────────
 // Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
@@ -661,7 +711,13 @@ async function fetchLakes(lat, lon) {
     .filter(Boolean)
     .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
 
-  return [...pinned, ...nhd].sort((a, b) => a.dist - b.dist).slice(0, 10);
+  // Merge in community submitted lakes within range
+  const community = communityLakes
+    .map(cl => ({ ...cl, dist: haversine(lat, lon, cl.lat, cl.lon), source: 'community' }))
+    .filter(cl => cl.dist <= 48 && !seen.has(cl.name));
+  community.forEach(cl => seen.add(cl.name));
+
+  return [...pinned, ...nhd, ...community].sort((a, b) => a.dist - b.dist).slice(0, 12);
 }
 
 // ── iNaturalist fish species for a location ───────────────────────────────────
@@ -785,7 +841,7 @@ async function loadData(lat, lon, locName) {
       };
     });
     // Render weather/solunar immediately — don't wait on lakes
-    appData = { days, lakes: [], locName };
+    appData = { days, lakes: [], locName, userLat: lat, userLon: lon };
     selectedDay = 0;
     render();
     // Fetch lakes + lakeDB in parallel, render only after both are ready
@@ -1047,6 +1103,10 @@ function toggleSubmitForm(lakeName, btn) {
 
       <div id="sec-basics-${id}" class="db-collapsible">
         <div class="db-form-section">Basic info</div>
+        <label class="db-label" style="flex-direction:row;align-items:center;gap:8px;padding:8px;background:var(--red-light);border-radius:var(--radius);margin-bottom:8px">
+          <input type="checkbox" id="nof-${id}" />
+          <span style="color:var(--red-dark);font-size:13px">🚫 Mark as no fishing allowed (private/restricted water)</span>
+        </label>
         <label class="db-label">Local name (optional)
           <input type="text" id="lnm-${id}" placeholder="e.g. High Point City Lake" maxlength="80" />
         </label>
@@ -1290,6 +1350,7 @@ function fmtTime(t) {
 }
 
 async function submitLakeInfo(lakeName, id, btn) {
+  const noFishing   = document.getElementById('nof-'+id)?.checked || false;
   const payToFish   = document.getElementById('ptf-'+id).value;
   const accessType  = document.getElementById('act-'+id).value;
   const catchRules  = document.getElementById('crs-'+id).value;
@@ -1318,7 +1379,7 @@ async function submitLakeInfo(lakeName, id, btn) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        lakeName, accessType, localName,
+        lakeName, noFishing, accessType, localName,
         payToFish: payToFish === 'true', catchRules,
         bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
         pier, bankPrices,
@@ -1334,7 +1395,7 @@ async function submitLakeInfo(lakeName, id, btn) {
     // Update local cache so UI reflects immediately
     if (!lakeDB[lakeName]) lakeDB[lakeName] = {};
     const entry = {
-      accessType, localName,
+      noFishing, accessType, localName,
       payToFish: payToFish === 'true', catchRules,
       bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
       pier, bankPrices, boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
@@ -1462,10 +1523,29 @@ function renderFilteredLakes() {
     const _rec = getDBRecord(lk.name);
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
     const officialName = displayName !== lk.name ? lk.name : null;
-    h += `<div class="lake-item">
+    const _noFish    = isNoFish(lk.name);
+    const _isCommunity = lk.source === 'community' || isCommunityLake(lk.name);
+    const _communityData = getCommunityLake(lk.name);
+    const _confirmed = _communityData?.confirmed;
+
+    const lakeClass = _noFish ? 'lake-item lake-no-fish'
+                    : _isCommunity && !_confirmed ? 'lake-item lake-community'
+                    : 'lake-item';
+    const icoClass  = _noFish ? 'lake-ico lake-ico-no-fish'
+                    : _isCommunity && !_confirmed ? 'lake-ico lake-ico-community'
+                    : 'lake-ico';
+    const icoEmoji  = _noFish ? '🚫' : '🎣';
+    const badge     = _noFish
+      ? `<div class="lake-badge lake-badge-nofish">🚫 No fishing</div>`
+      : _isCommunity && !_confirmed
+      ? `<div class="lake-badge lake-badge-community">📍 Community submitted · unverified</div>`
+      : '';
+
+    h += `<div class="${lakeClass}">
       <div class="lake-header">
-        <div class="lake-ico">🎣</div>
+        <div class="${icoClass}">${icoEmoji}</div>
         <div style="flex:1;min-width:0">
+          ${badge}
           <div class="lake-name">${displayName}</div>
           ${officialName ? `<div style="font-size:11px;color:var(--text3);margin-bottom:2px">${officialName}</div>` : ''}
           <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
@@ -1475,14 +1555,16 @@ function renderFilteredLakes() {
           </div>
         </div>
       </div>
-      <div class="db-section">${lakeDBCard(lk.name, _rec)}</div>
-      <div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
+      ${_noFish ? '<div style="padding:8px 0;font-size:13px;color:var(--red-dark)">This water is not open for public fishing.</div>' : `<div class="db-section">${lakeDBCard(lk.name, _rec)}</div>`}
+      ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
       </div>
-      <div class="inat-fish-list" id="fl-${idx}"></div>
+      <div class="inat-fish-list" id="fl-${idx}"></div>`}
     </div>`;
   });
+  // Add lake submission button at bottom
+  h += `<button class="add-lake-btn" onclick="showAddLakeForm()">📍 Don't see your lake? Add it</button><div id="add-lake-form-wrap"></div>`;
   el.innerHTML = h;
 } // end _unused_renderLakes
 
@@ -1510,6 +1592,78 @@ function renderLakes() {
 
   lakeFilter = 'all';
   renderFilteredLakes();
+}
+
+// ── Add missing lake form ─────────────────────────────────────────────────────
+function showAddLakeForm() {
+  const wrap = document.getElementById('add-lake-form-wrap');
+  if (!wrap) return;
+  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
+
+  const hasLocation = appData?.userLat && appData?.userLon;
+
+  wrap.innerHTML = `
+    <div class="add-lake-form">
+      <div class="db-form-title">Add a missing lake</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+        Know a lake that isn't showing up? Submit it and it'll appear for everyone once verified.
+      </p>
+      <label class="db-label">Lake name
+        <input type="text" id="new-lake-name" placeholder="e.g. Thomasville City Lake" maxlength="80" />
+      </label>
+      <label class="db-label">Water type
+        <select id="new-lake-type">
+          <option value="lake / pond">Lake / Pond</option>
+          <option value="reservoir">Reservoir</option>
+          <option value="river">River</option>
+          <option value="creek">Creek</option>
+        </select>
+      </label>
+      ${hasLocation
+        ? `<div style="font-size:12px;color:var(--green);margin-bottom:8px">📍 Your current location will be used as the lake's coordinates</div>`
+        : `<div style="font-size:12px;color:var(--amber-dark);margin-bottom:8px">⚠️ Use the 🛰️ GPS button first so we can save the lake's coordinates</div>`
+      }
+      <label class="db-label">Your name (optional)
+        <input type="text" id="new-lake-submitter" placeholder="anonymous" maxlength="40" />
+      </label>
+      <button class="db-submit-btn" onclick="submitNewLake()" ${hasLocation ? '' : 'disabled'}>Submit lake</button>
+      <div class="db-form-status" id="new-lake-status"></div>
+    </div>`;
+}
+
+async function submitNewLake() {
+  const name        = document.getElementById('new-lake-name')?.value.trim();
+  const type        = document.getElementById('new-lake-type')?.value;
+  const submittedBy = document.getElementById('new-lake-submitter')?.value.trim();
+  const status      = document.getElementById('new-lake-status');
+
+  if (!name) { status.textContent = '⚠️ Please enter a lake name.'; return; }
+  if (!appData?.userLat || !appData?.userLon) { status.textContent = '⚠️ Use GPS first to set coordinates.'; return; }
+
+  status.textContent = 'Submitting…';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/submit-lake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        lat:  appData.userLat,
+        lon:  appData.userLon,
+        type,
+        submittedBy: submittedBy || 'anonymous',
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Submit failed');
+
+    // Add to local community lakes cache so it shows immediately
+    communityLakes.push({ name, lat: appData.userLat, lon: appData.userLon, type, confirmed: false });
+    renderLakes();
+    status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
+  } catch (e) {
+    status.textContent = '⚠️ ' + e.message;
+  }
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
@@ -1556,6 +1710,7 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
 
 // ── Load lake DB in background on startup ────────────────────────────────────
 loadLakeDB();
+loadCommunityLakes();
 
 // ── Show prompt on load — no automatic location grab ─────────────────────────
 setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
