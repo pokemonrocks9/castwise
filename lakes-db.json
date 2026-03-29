@@ -99,6 +99,31 @@
       "confirmedBy": "tyler",
       "confirmedAt": "2026-03-29"
     },
-    "pending": null
+    "pending": {
+      "noFishing": false,
+      "accessType": "park",
+      "payToFish": false,
+      "catchRules": "catch-and-keep",
+      "bankFishing": true,
+      "pier": false,
+      "bankPrices": [],
+      "boatLaunch": false,
+      "launchPrices": [],
+      "boatRentals": [
+        {
+          "type": "rowboat",
+          "price": 5,
+          "per": "3 hours"
+        }
+      ],
+      "hours": [],
+      "closedDays": [],
+      "submittedBy": "Poky",
+      "submittedAt": "2026-03-29",
+      "voteCount": 0,
+      "votes": [
+        "8d1a6e939dce7676"
+      ]
+    }
   }
 }
