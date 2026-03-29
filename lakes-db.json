@@ -25,7 +25,42 @@
       "confirmedBy": "tyler",
       "confirmedAt": "2026-03-23"
     },
-    "pending": null
+    "pending": {
+      "noFishing": false,
+      "accessType": "park",
+      "payToFish": false,
+      "catchRules": "catch-and-keep",
+      "bankFishing": true,
+      "pier": false,
+      "bankPrices": [
+        {
+          "price": 2,
+          "per": "day"
+        },
+        {
+          "price": 30,
+          "per": "year"
+        }
+      ],
+      "launchPrices": [],
+      "boatRentals": [],
+      "hours": [
+        {
+          "closed": false,
+          "from": "Mar 23",
+          "to": "Apr 19",
+          "open": "7:00 AM",
+          "close": "7:30 PM"
+        }
+      ],
+      "closedDays": [],
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-03-29",
+      "voteCount": 0,
+      "votes": [
+        "19545a8b7d1b0a2c"
+      ]
+    }
   },
   "Oak Hollow Lake": {
     "confirmed": {
