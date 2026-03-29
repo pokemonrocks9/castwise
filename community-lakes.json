@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "name": "Test2",
+    "lat": 36.0403,
+    "lon": -80.1933,
+    "type": "lake / pond",
+    "confirmed": false,
+    "submittedBy": "anonymous",
+    "submittedAt": "2026-03-29",
+    "confirmations": []
+  }
+]
