@@ -77,8 +77,7 @@
     "pending": null
   },
   "Kernersville Lake": {
-    "confirmed": null,
-    "pending": {
+    "confirmed": {
       "noFishing": false,
       "payToFish": false,
       "bankFishing": true,
@@ -97,10 +96,9 @@
       "closedDays": [],
       "submittedBy": "Poky",
       "submittedAt": "2026-03-29",
-      "voteCount": 0,
-      "votes": [
-        "8d1a6e939dce7676"
-      ]
-    }
+      "confirmedBy": "tyler",
+      "confirmedAt": "2026-03-29"
+    },
+    "pending": null
   }
 }
