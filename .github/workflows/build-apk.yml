@@ -47,8 +47,7 @@ jobs:
       run: |
         set -euxo pipefail
         echo "PATH in new step: $PATH"
-        which pwabuilder
-        pwabuilder --version
+        which pwabuilder # Confirm pwabuilder is found in PATH
 
     - name: Generate Android APK using PWA Builder CLI
       run: |
