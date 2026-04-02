@@ -84,8 +84,16 @@ jobs:
         echo "--- Searching for Android build files (to see if we need to run Gradle manually): ---"
         find . -name "build.gradle"
 
+    - name: Build APK with Gradle
+      run: |
+        cd CastWise/android/source
+        chmod +x gradlew
+        ./gradlew assembleDebug
+        echo "--- Build complete. APKs generated: ---"
+        find app/build/outputs/apk -name "*.apk" || echo "No APK found in outputs."
+
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
-        path: "**/*.apk" # Search globally for the APK in case it was generated
+        path: CastWise/android/source/app/build/outputs/apk/**/*.apk
