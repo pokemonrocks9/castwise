@@ -30,13 +30,16 @@ jobs:
     - name: Install PWA Builder CLI and prepare environment
       run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
-        echo "Current PATH before npm install: $PATH"
+        echo "Current PATH before npm install (should contain Node.js bin): $PATH"
+        npm --version # Debug npm version
         npm install -g @pwabuilder/cli
-        GLOBAL_NPM_BIN=$(npm bin -g)
-        echo "Global npm bin directory: $GLOBAL_NPM_BIN"
-        echo "Adding $GLOBAL_NPM_BIN to GITHUB_PATH"
-        echo "$GLOBAL_NPM_BIN" >> $GITHUB_PATH
-        echo "PATH after GITHUB_PATH modification (may not reflect immediately in current shell): $PATH"
+        # Determine the global npm bin directory and add it to GITHUB_PATH
+        # npm bin -g is failing, so we'll use npm prefix -g and assume 'bin' subdirectory
+        NPM_GLOBAL_PREFIX=$(npm prefix -g)
+        GLOBAL_BIN_PATH="$NPM_GLOBAL_PREFIX/bin"
+        echo "Determined global npm bin path: $GLOBAL_BIN_PATH"
+        echo "Adding $GLOBAL_BIN_PATH to GITHUB_PATH"
+        echo "$GLOBAL_BIN_PATH" >> $GITHUB_PATH
 
     - name: "Debug: Verify pwabuilder is in PATH"
       run: |
