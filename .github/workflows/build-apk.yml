@@ -28,9 +28,6 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v2
 
-    # NOTE: The sdkmanager --licenses command is often handled by setup-android,
-    # but it's good practice to keep it if issues persist.
-    # If you see license issues, add a step like: `run: yes | sdkmanager --licenses`
     - name: Install PWA Builder CLI and prepare environment
       run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
@@ -47,35 +44,12 @@ jobs:
         echo "Listing contents of $NPM_GLOBAL_BIN_DIR:"
         ls -l "$NPM_GLOBAL_BIN_DIR" || echo "Global bin directory not found or empty."
 
-    - name: "Debug: Verify pwabuilder is in PATH"
-      run: |
-        set -euxo pipefail
-        echo "PATH in new step: $PATH"
-        which pwabuilder # Confirm pwabuilder is found in PATH
-
     - name: Generate Android APK using PWA Builder CLI
       run: |
-        set -euxo pipefail # Exit on error, show commands, treat unset variables as error
-        echo "Current working directory: $(pwd)"
+        set -euxo pipefail
         echo "Attempting to build PWA from URL: ${{ secrets.PWA_URL }}"
-        # Ensure the base output directory exists. PWA Builder should create it, but this is a safeguard.
-        mkdir -p build/android
-        # Call pwabuilder directly, assuming it's now in PATH from global install
-        pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android --verbose
-        echo "--- Listing contents of current directory after pwabuilder ---"
-        ls -la
-        echo "--- Listing contents of build/android/ after pwabuilder command ---"
-        ls -R build/android/ || echo "Directory build/android is still empty or not found after pwabuilder."
-
-    - name: "Debug: List PWA Builder output directories"
-      run: |
-        echo "--- Look! A CastWise directory was created. Listing its contents: ---"
-        ls -la CastWise/ || echo "CastWise directory not found."
-        ls -R CastWise/ || echo "Cannot list CastWise recursively."
-        echo "--- Searching for APK files anywhere in the workspace: ---"
-        find . -name "*.apk"
-        echo "--- Searching for Android build files (to see if we need to run Gradle manually): ---"
-        find . -name "build.gradle"
+        # Call pwabuilder directly (it will generate the CastWise folder)
+        pwabuilder ${{ secrets.PWA_URL }} --platforms android
 
     - name: Downgrade to Java 8 for Gradle build
       uses: actions/setup-java@v4
