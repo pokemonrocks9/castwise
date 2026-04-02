@@ -20,7 +20,7 @@ jobs:
         node-version: '18' # Use a Node.js version compatible with PWA Builder
 
     - name: Generate Android APK using PWA Builder
-      uses: pwabuilder/action@v1
+      uses: pwabuilder/action@v2 # Updated action version to v2
       with:
         url: 'https://pokemonrocks9.github.io/castwise/' # IMPORTANT: Replace with your actual deployed PWA URL
         platforms: 'android'
