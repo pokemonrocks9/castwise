@@ -76,17 +76,16 @@ jobs:
 
     - name: "Debug: List PWA Builder output directories"
       run: |
-        echo "--- Listing contents of build/android/ ---"
-        ls -R build/android/ || echo "Directory build/android not found or empty."
-        echo "--- Attempting to list contents of build/android/android/app/build/outputs/apk/ (common PWA Builder path) ---"
-        ls -R build/android/android/app/build/outputs/apk/ || echo "Directory build/android/android/app/build/outputs/apk/ not found or empty."
-        echo "--- Attempting to list contents of build/android/twa/app/build/outputs/apk/ (another common PWA Builder path) ---"
-        ls -R build/android/twa/app/build/outputs/apk/ || echo "Directory build/android/twa/app/build/outputs/apk/ not found or empty."
-        echo "--- Attempting to list contents of build/android/platforms/android/app/build/outputs/apk/ (original path) ---"
-        ls -R build/android/platforms/android/app/build/outputs/apk/ || echo "Directory build/android/platforms/android/app/build/outputs/apk/ not found or empty."
+        echo "--- Look! A CastWise directory was created. Listing its contents: ---"
+        ls -la CastWise/ || echo "CastWise directory not found."
+        ls -R CastWise/ || echo "Cannot list CastWise recursively."
+        echo "--- Searching for APK files anywhere in the workspace: ---"
+        find . -name "*.apk"
+        echo "--- Searching for Android build files (to see if we need to run Gradle manually): ---"
+        find . -name "build.gradle"
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
-        path: build/android/**/*.apk # More general path to find any generated APK within build/android
+        path: "**/*.apk" # Search globally for the APK in case it was generated
