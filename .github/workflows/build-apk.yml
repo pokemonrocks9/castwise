@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Grant the GITHUB_TOKEN permission to create releases and tags
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
@@ -66,11 +69,29 @@ jobs:
         find app/src/main/res -type f -name "[0-9]*.png" -delete
         chmod +x gradlew
         ./gradlew assembleDebug
-        echo "--- Build complete. APKs generated: ---"
-        find app/build/outputs/apk -name "*.apk" || echo "No APK found in outputs."
+
+    - name: Extract version from sw.js
+      run: |
+        # Grab the text between the quotes on the 'const VERSION' line
+        APP_VERSION=$(awk -F"'" '/const VERSION/ {print $2}' sw.js)
+        echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+        echo "Extracted version: $APP_VERSION"
+
+    - name: Rename APK for Release
+      run: |
+        # Pull the APK out of the deeply nested build folder and rename it beautifully
+        mv CastWise/android/source/app/build/outputs/apk/debug/app-debug.apk CastWise-${{ env.APP_VERSION }}.apk
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.APP_VERSION }}
+        name: Release ${{ env.APP_VERSION }}
+        files: CastWise-${{ env.APP_VERSION }}.apk
+        body: "Automated Android APK build for CastWise version ${{ env.APP_VERSION }}."
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
-        path: CastWise/android/source/app/build/outputs/apk/**/*.apk
+        path: CastWise-${{ env.APP_VERSION }}.apk
