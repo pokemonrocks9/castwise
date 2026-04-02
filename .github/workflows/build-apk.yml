@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17' # Ensure this matches the JAVA_HOME version
+        java-version: '8' # Gradle 4.6 requires Java 8 (it does not support Java 17)
 
     - name: Set up Android SDK
       uses: android-actions/setup-android@v2
