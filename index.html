@@ -1795,20 +1795,20 @@ function getAndLoadLocation() {
     loadData(pos.coords.latitude, pos.coords.longitude, 'Your location');
   };
 
-  const onFail = () => {
+  const onFail = (error) => {
     btn.textContent = '🛰️';
     btn.disabled = false;
     input.value = '';
     input.disabled = false;
-    setContent('<div class="err-msg">⚠️ Could not get GPS location. Try typing your city instead.</div>');
-    // If auto-location was enabled, disable it on failure to prevent repeated attempts
-    if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
+    setContent(`<div class="err-msg">⚠️ Could not get GPS location: ${error.message}. Try typing your city instead.</div>`);
+
+    // Only disable auto-location if permission was explicitly denied, otherwise allow retry on next load
+    if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true' && error.code === error.PERMISSION_DENIED) {
       localStorage.setItem(AUTO_LOCATION_KEY, 'false');
       const autoLocToggle = document.getElementById('autoLocToggle');
       if (autoLocToggle) autoLocToggle.checked = false;
     }
   };
-  // Try fast coarse location first (cell/wifi), fall back to full GPS if it fails
   navigator.geolocation.getCurrentPosition(
     onSuccess,
     () => navigator.geolocation.getCurrentPosition(onSuccess, onFail, { enableHighAccuracy: true, timeout: 15000 }),
@@ -1857,26 +1857,13 @@ if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
   setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
 }
 // ── Register service worker ────────────────────────────────────────────────────
+// Use absolute path for consistent scope and consolidate registration
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') reg.update();
-      });
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-            newWorker.postMessage({ type: 'SKIP_WAITING' });
-          }
-        });
-      });
-    }).catch(() => {});
-  }
-  // ── Register service worker ────────────────────────────────────────────────
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+    reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
+  }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
+}
 </script>
 </body>
 </html>
