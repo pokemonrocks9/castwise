@@ -25,7 +25,7 @@ jobs:
     - name: Generate Android APK using PWA Builder CLI
       run: npx pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
 
-    - name: Debug: List PWA Builder output directories
+    - name: "Debug: List PWA Builder output directories"
       run: |
         echo "--- Listing contents of build/android/ ---"
         ls -R build/android/ || echo "Directory build/android not found or empty."
