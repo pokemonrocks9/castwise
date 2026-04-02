@@ -19,11 +19,16 @@ jobs:
       with:
         node-version: '20' # Updated to Node.js 20 for PWA Builder compatibility
 
-    - name: Install PWA Builder CLI
-      run: npm install -g @pwabuilder/cli
+    - name: Install PWA Builder CLI and prepare environment
+      run: |
+        set -euxo pipefail # Exit on error, show commands, treat unset variables as error
+        npm install -g @pwabuilder/cli
 
     - name: Generate Android APK using PWA Builder CLI
-      run: npx pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
+      run: |
+        set -euxo pipefail # Exit on error, show commands, treat unset variables as error
+        echo "Attempting to build PWA from URL: ${{ secrets.PWA_URL }}"
+        npx pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
 
     - name: "Debug: List PWA Builder output directories"
       run: |
