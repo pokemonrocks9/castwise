@@ -47,15 +47,15 @@ jobs:
       run: |
         set -euxo pipefail
         echo "PATH in new step: $PATH"
-        which pwabuilder
-        pwabuilder --version
+        which pwa
+        pwa --version
 
     - name: Generate Android APK using PWA Builder CLI
       run: |
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
         echo "Attempting to build PWA from URL: ${{ secrets.PWA_URL }}"
         # Call pwabuilder directly, assuming it's now in PATH from global install
-        pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
+        pwa ${{ secrets.PWA_URL }} --platforms android --output build/android
 
     - name: "Debug: List PWA Builder output directories"
       run: |
