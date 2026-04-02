@@ -461,7 +461,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.35.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.36.0</p>
     </div>
   </div>
 
@@ -480,6 +480,16 @@
       </svg>
       <div style="font-size:20px;font-weight:600;color:var(--text)">Settings</div>
       <div style="font-size:14px;color:var(--text3)">Coming soon</div>
+
+      <!-- New setting for automatic location -->
+      <div style="width:100%; max-width:300px; margin-top:20px; text-align:left;">
+        <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--text);">Automatic Location</span>
+          <input type="checkbox" id="autoLocToggle" style="width:20px; height:20px;" />
+        </label>
+        <p style="font-size:12px; color:var(--text3); margin-top:8px;">Automatically use your device's location when the app opens.</p>
+      </div>
+
     </div>
   </div>
 
@@ -505,6 +515,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 // Replace with your deployed Cloudflare Worker URL after `wrangler deploy`
 const WORKER_URL = 'https://castwise-worker.tytygoins.workers.dev';
+const AUTO_LOCATION_KEY = 'castwise_auto_location'; // New constant for localStorage key
 
 // ── Tab navigation + History API ─────────────────────────────────────────────
 let currentTab = 'solunar';
@@ -1769,7 +1780,7 @@ async function submitNewLake() {
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
-document.getElementById('btnGPS').addEventListener('click', () => {
+function getAndLoadLocation() {
   if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
   const btn = document.getElementById('btnGPS');
   const input = document.getElementById('locIn');
@@ -1783,12 +1794,19 @@ document.getElementById('btnGPS').addEventListener('click', () => {
     input.disabled = false;
     loadData(pos.coords.latitude, pos.coords.longitude, 'Your location');
   };
+
   const onFail = () => {
     btn.textContent = '🛰️';
     btn.disabled = false;
     input.value = '';
     input.disabled = false;
     setContent('<div class="err-msg">⚠️ Could not get GPS location. Try typing your city instead.</div>');
+    // If auto-location was enabled, disable it on failure to prevent repeated attempts
+    if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
+      localStorage.setItem(AUTO_LOCATION_KEY, 'false');
+      const autoLocToggle = document.getElementById('autoLocToggle');
+      if (autoLocToggle) autoLocToggle.checked = false;
+    }
   };
   // Try fast coarse location first (cell/wifi), fall back to full GPS if it fails
   navigator.geolocation.getCurrentPosition(
@@ -1796,7 +1814,10 @@ document.getElementById('btnGPS').addEventListener('click', () => {
     () => navigator.geolocation.getCurrentPosition(onSuccess, onFail, { enableHighAccuracy: true, timeout: 15000 }),
     { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
   );
-});
+}
+
+// Modify existing btnGPS event listener to use the new function
+document.getElementById('btnGPS').addEventListener('click', getAndLoadLocation);
 
 document.getElementById('locIn').addEventListener('keydown', async e => {
   if (e.key !== 'Enter') return;
@@ -1810,13 +1831,31 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
   }
 });
 
+// Add event listener for the new auto-location toggle and initialize its state
+document.addEventListener('DOMContentLoaded', () => {
+  const autoLocToggle = document.getElementById('autoLocToggle');
+  if (autoLocToggle) {
+    // Initialize toggle state from localStorage
+    autoLocToggle.checked = localStorage.getItem(AUTO_LOCATION_KEY) === 'true';
+
+    // Add change listener to update localStorage
+    autoLocToggle.addEventListener('change', (e) => {
+      localStorage.setItem(AUTO_LOCATION_KEY, e.target.checked);
+    });
+  }
+});
+
 // ── Load lake DB in background on startup ────────────────────────────────────
 loadLakeDB();
 loadCommunityLakes();
 
 // ── Show prompt on load — no automatic location grab ─────────────────────────
-setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
-
+// Modify this section to check for auto-location setting
+if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
+  getAndLoadLocation(); // Automatically get location if setting is enabled
+} else {
+  setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
+}
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
