@@ -24,14 +24,6 @@ jobs:
 
     - name: Generate Android APK using PWA Builder CLI
       run: pwabuilder --url ${{ secrets.PWA_URL }} --platform android --output build/android
-      with:
-        # The PWA Builder CLI requires the URL to be passed directly in the run command.
-        # It's highly recommended to store your PWA URL as a GitHub Secret for security.
-        # For now, I've used a placeholder `secrets.PWA_URL`.
-        # If you prefer, you can hardcode it back to 'https://pokemonrocks9.github.io/castwise/'
-        # but using secrets is a best practice.
-        # The output path is also handled directly by the CLI command.
-        # No 'uses' keyword here as we're running a shell command.
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
