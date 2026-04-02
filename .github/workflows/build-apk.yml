@@ -26,7 +26,18 @@ jobs:
         java -version
         sdkmanager --version || echo "sdkmanager not found or failed"
         which java || echo "java not found"
-        which sdkmanager || echo "sdkmanager not found"
+        which sdkmanager || echo "sdkmanager not found" # This will output the path if found
+        # Ensure ANDROID_HOME is set for subsequent steps
+        echo "ANDROID_HOME=${ANDROID_HOME}" >> $GITHUB_ENV
+        # Install necessary Android SDK components if not already present.
+        # The 'platforms;android-33' and 'build-tools;33.0.2' are common requirements.
+        # Adjust versions as needed or based on pwabuilder's requirements.
+        # Using yes | to accept licenses automatically.
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "cmdline-tools;latest"
+        # Add Android SDK tools to PATH for all subsequent steps
+        echo "${ANDROID_HOME}/platform-tools" >> $GITHUB_PATH
+        echo "${ANDROID_HOME}/cmdline-tools/latest/bin" >> $GITHUB_PATH
     - name: Install PWA Builder CLI and prepare environment
       run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
@@ -57,7 +68,7 @@ jobs:
         # Ensure the base output directory exists. PWA Builder should create it, but this is a safeguard.
         mkdir -p build/android
         # Call pwabuilder directly, assuming it's now in PATH from global install
-        pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
+        pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android --verbose
         echo "--- Listing contents of current directory after pwabuilder ---"
         ls -la
         echo "--- Listing contents of build/android/ after pwabuilder command ---"
