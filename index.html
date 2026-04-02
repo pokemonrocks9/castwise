@@ -461,7 +461,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.33.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.35.0</p>
     </div>
   </div>
 
@@ -920,6 +920,8 @@ let selectedDay = 0;
 async function loadData(lat, lon, locName) {
   document.getElementById('locIn').value = locName;
   setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
+  const lakesTab = document.getElementById('lakes-tab-content');
+  if (lakesTab) lakesTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
   try {
     const wx = await fetchWeather(lat, lon);
     const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -961,6 +963,7 @@ async function loadData(lat, lon, locName) {
     });
   } catch (e) {
     setContent(`<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`);
+    if (lakesTab) lakesTab.innerHTML = `<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`;
   }
 }
 
@@ -1047,10 +1050,6 @@ function render() {
   h += `<div id="sol-section"></div>`;
   h += `<div id="hourly-section"></div>`;
   h += `<div id="fish-section"></div>`;
-
-  // Lakes — persists across day changes
-  h += `<div class="section-label">Nearby lakes &amp; water</div>`;
-  h += `<div id="lakes-section"><div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div></div>`;
 
   setContent(h);
   renderDayDetails(); // fill the named sections
@@ -1672,14 +1671,12 @@ function renderFilteredLakes() {
 
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
-  // Render in both the solunar tab lakes-section AND the dedicated lakes tab
-  const el  = document.getElementById('lakes-section');
   const el2 = document.getElementById('lakes-tab-content');
   const { lakes } = appData;
   const d = appData.days[selectedDay];
 
   if (!lakes.length) {
-    el.innerHTML = '<div class="empty">No named lakes or reservoirs found within ~35 miles.</div>';
+    if (el2) el2.innerHTML = '<div class="empty">No named lakes or reservoirs found within ~35 miles.</div>';
     return;
   }
 
@@ -1693,7 +1690,6 @@ function renderLakes() {
     </div>
     <div id="lakes-list"></div>`;
 
-  if (el)  el.innerHTML  = lakesHTML;
   if (el2) el2.innerHTML = lakesHTML;
 
   lakeFilter = 'all';
