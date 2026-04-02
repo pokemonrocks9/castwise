@@ -19,25 +19,25 @@ jobs:
       with:
         node-version: '20' # Updated to Node.js 20 for PWA Builder compatibility
 
-    - name: "Debug: Check Java and Android SDK setup"
-      run: |
-        echo "JAVA_HOME: $JAVA_HOME"
-        echo "ANDROID_HOME: $ANDROID_HOME"
-        java -version
-        sdkmanager --version || echo "sdkmanager not found or failed"
-        which java || echo "java not found"
-        which sdkmanager || echo "sdkmanager not found" # This will output the path if found
-        # Ensure ANDROID_HOME is set for subsequent steps
-        echo "ANDROID_HOME=${ANDROID_HOME}" >> $GITHUB_ENV
-        # Install necessary Android SDK components if not already present.
-        # The 'platforms;android-33' and 'build-tools;33.0.2' are common requirements.
-        # Adjust versions as needed or based on pwabuilder's requirements.
-        # Using yes | to accept licenses automatically.
-        yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "cmdline-tools;latest"
-        # Add Android SDK tools to PATH for all subsequent steps
-        echo "${ANDROID_HOME}/platform-tools" >> $GITHUB_PATH
-        echo "${ANDROID_HOME}/cmdline-tools/latest/bin" >> $GITHUB_PATH
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17' # Ensure this matches the JAVA_HOME version
+
+    - name: Set up Android SDK
+      uses: actions/setup-android@v2
+      with:
+        # Explicitly install the desired Android SDK components.
+        # The latest cmdline-tools should be handled by the action.
+        # `build-tools-version` and `platform-version` ensure these are installed.
+        build-tools-version: '33.0.2' # Or a newer stable version
+        platform-version: '33'       # Or a newer stable version, e.g., '34'
+        # The action handles setting ANDROID_HOME and adding SDK tools to PATH
+
+    # NOTE: The sdkmanager --licenses command is often handled by setup-android,
+    # but it's good practice to keep it if issues persist.
+    # If you see license issues, add a step like: `run: yes | sdkmanager --licenses`
     - name: Install PWA Builder CLI and prepare environment
       run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
