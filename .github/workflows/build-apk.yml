@@ -30,9 +30,20 @@ jobs:
     - name: Install PWA Builder CLI and prepare environment
       run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
+        echo "Current PATH before npm install: $PATH"
         npm install -g @pwabuilder/cli
-        echo "Adding $(npm root -g)/.bin to PATH"
-        echo "$(npm root -g)/.bin" >> $GITHUB_PATH
+        GLOBAL_NPM_BIN=$(npm bin -g)
+        echo "Global npm bin directory: $GLOBAL_NPM_BIN"
+        echo "Adding $GLOBAL_NPM_BIN to GITHUB_PATH"
+        echo "$GLOBAL_NPM_BIN" >> $GITHUB_PATH
+        echo "PATH after GITHUB_PATH modification (may not reflect immediately in current shell): $PATH"
+
+    - name: "Debug: Verify pwabuilder is in PATH"
+      run: |
+        set -euxo pipefail
+        echo "PATH in new step: $PATH"
+        which pwabuilder
+        pwabuilder --version
 
     - name: Generate Android APK using PWA Builder CLI
       run: |
