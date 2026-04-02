@@ -26,6 +26,10 @@ jobs:
       run: npx pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
 
     - name: Upload Android APK artifact
+      run: |
+        echo "Listing contents of build/android/platforms/android/app/build/outputs/apk/:"
+        ls -R build/android/platforms/android/app/build/outputs/apk/ || echo "Directory not found or empty."
+    - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
