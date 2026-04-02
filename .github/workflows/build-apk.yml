@@ -23,7 +23,7 @@ jobs:
       run: npm install -g @pwabuilder/cli
 
     - name: Generate Android APK using PWA Builder CLI
-      run: pwabuilder --url ${{ secrets.PWA_URL }} --platform android --output build/android
+      run: npx pwabuilder --url ${{ secrets.PWA_URL }} --platform android --output build/android
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
