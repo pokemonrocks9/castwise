@@ -19,16 +19,27 @@ jobs:
       with:
         node-version: '20' # Updated to Node.js 20 for PWA Builder compatibility
 
-    - name: Install PWA Builder CLI and prepare environment
+    - name: Debug: Check Java and Android SDK setup
       run: |
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        java -version
+        sdkmanager --version || echo "sdkmanager not found or failed"
+        which java || echo "java not found"
+        which sdkmanager || echo "sdkmanager not found"
+    - name: Install PWA Builder CLI and prepare environment
+      run: | # Ensure global npm bin is in PATH for pwabuilder to be directly callable
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
         npm install -g @pwabuilder/cli
+        echo "Adding $(npm root -g)/.bin to PATH"
+        echo "$(npm root -g)/.bin" >> $GITHUB_PATH
 
     - name: Generate Android APK using PWA Builder CLI
       run: |
         set -euxo pipefail # Exit on error, show commands, treat unset variables as error
         echo "Attempting to build PWA from URL: ${{ secrets.PWA_URL }}"
-        npx pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
+        # Call pwabuilder directly, assuming it's now in PATH from global install
+        pwabuilder ${{ secrets.PWA_URL }} --platforms android --output build/android
 
     - name: "Debug: List PWA Builder output directories"
       run: |
