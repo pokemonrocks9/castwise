@@ -94,6 +94,13 @@ jobs:
         
         # Inject Location Permissions for Android WebView/TWA fallback
         sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' app/src/main/AndroidManifest.xml
+        
+        # Inject Runtime Location Permission Request into the main activity so the APK actually prompts the user
+        find app/src/main/java -name "*.java" -exec sed -i '/super\.onCreate/a \        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {\n            requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION}, 1);\n        }' {} + || true
+        
+        # Fix Dark Mode not applying in the APK by switching the Android wrapper theme to DayNight
+        find app/src/main/res/values* -type f -name "*.xml" -exec sed -i 's/Theme.AppCompat.Light/Theme.AppCompat.DayNight/g' {} + || true
+        
         chmod +x gradlew
         ./gradlew assembleDebug
 
