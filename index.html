@@ -481,7 +481,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.52.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.53.0</p>
     </div>
   </div>
 
@@ -1934,17 +1934,17 @@ function generateLureRecs() {
   // 3. Species-Specific Overrides
   if (species === 'catfish') {
     // Catfish bypass color/lure rules
-    recType = 'Rig: Slip Sinker Rig or Carolina Rig';
-    recColor = 'Bait: Cut bait (shad/bluegill), Chicken Liver, or Nightcrawlers';
-    recWeight = env === 'river' ? '1oz to 3oz No-Roll sinker (depends on flow)' : '1/2oz to 1oz Egg Sinker';
+    recType = 'Cut bait (shad/bluegill), Chicken Liver, Stink Bait, or Nightcrawlers';
+    recColor = 'N/A (Catfish hunt by scent, not sight)';
+    recWeight = env === 'river' ? 'Slip Sinker Rig with 1oz to 3oz No-Roll sinker' : 'Slip Sinker Rig with 1/2oz to 1oz Egg Sinker';
     recTech = 'Cast out to drop-offs, deep holes, or channel swings and let it sit on the bottom. Keep a tight line to watch for bites.';
     reason = `Catfish rely heavily on smell, so live or cut bait is essential. The ${env === 'river' ? 'no-roll sinker keeps your bait pinned in the current' : 'egg sinker lets the fish take the bait without feeling resistance'}.`;
   } 
   else if (species === 'panfish') {
     // Panfish simplified rules
-    recType = depth === 'shallow' ? 'Small float/bobber rig' : '1/32oz to 1/16oz micro-jig or inline spinner';
-    recColor = clarity === 'muddy' ? 'Chartreuse or Pink grub' : 'Natural live red worm, wax worm, or white grub';
-    recWeight = 'Split shot (size BB or 3/0) just enough to balance the float';
+    recType = depth === 'shallow' ? 'Live bait (red worm/wax worm) or micro-jig' : '1/32oz to 1/16oz micro-jig or inline spinner';
+    recColor = clarity === 'muddy' ? 'Chartreuse, Pink, or White (if using jigs)' : 'Natural colors or actual live bait';
+    recWeight = depth === 'shallow' ? 'Small float/bobber rig with a split shot (size BB)' : 'Light tackle (2-4lb line) with a small snap swivel';
     recTech = depth === 'shallow' ? 'Cast near cover/weeds and watch the float.' : 'Cast and retrieve very slowly, occasionally twitching the rod tip.';
     reason = 'Panfish have small mouths, so downsizing your presentation is key. They often hang around structure like docks, brush, or lily pads.';
   }
@@ -1953,13 +1953,16 @@ function generateLureRecs() {
     recTech = env === 'river' ? 'Cast upstream and retrieve slightly faster than the current.' : 'Steady retrieve with occasional pauses to let the spinner flutter down.';
     reason = `Trout are visual feeders. In ${clarity} water with ${isSunny ? 'sun' : 'clouds'}, the ${recColor} color will trigger reaction strikes.`;
     if (depth === 'deep' && env === 'lake') {
-      recType = 'PowerBait or floating dough bait on a small size 10 treble hook';
-      recTech = 'Bottom fish using a slip sinker rig, allowing the bait to float 18-24 inches off the bottom.';
+      recType = 'PowerBait or floating dough bait';
+      recColor = 'Chartreuse, Rainbow, or bright fluorescent colors';
+      recWeight = 'Slip Sinker Rig (1/8oz to 1/4oz egg sinker) with a small size 10 treble hook';
+      recTech = 'Cast out and let it sit. The sinker stays on the bottom while the dough bait floats 18-24 inches above it.';
       reason = 'When trout are deep in lakes, they often cruise just off the bottom looking for food.';
     }
   }
   else if (species === 'walleye') {
-    recType = depth === 'deep' ? 'Bottom Bouncer with crawler harness or heavy Jig & Minnow' : 'Suspending Jerkbait or medium-diving Crankbait';
+    recType = depth === 'deep' ? 'Jig & Minnow or Crawler Harness' : 'Suspending Jerkbait or medium-diving Crankbait';
+    if (depth === 'deep') recWeight = env === 'river' ? 'Heavy 3/8oz to 1/2oz Jig to cut current' : 'Bottom Bouncer (1oz to 2oz) or 3/8oz Jig';
     recTech = 'Keep the bait right on the bottom. Walleye are tightly bottom-oriented most of the day. Retrieve very slowly with drags and pauses.';
     reason = `Walleye have sensitive eyes. ${isSunny && depth === 'shallow' ? 'In bright sun, they will retreat to deeper water, making shallow fishing tough.' : 'Your chosen depth and clarity dictate getting the bait right in their face.'}`;
   }
