@@ -602,20 +602,22 @@
         
         <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
           <div style="font-size:15px;font-weight:500;margin-bottom:4px">Mono to Braid Equivalent</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-style:italic">* Equivalents are estimates and may vary by manufacturer.</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-style:italic">* Equivalents are estimated using PowerPro specifications and may vary by manufacturer.</div>
           <label class="db-label">Current Mono/Fluoro Weight (lbs)
             <select id="line-mono-weight">
+              <option value="1">1 lb</option>
               <option value="2">2 lb</option>
               <option value="4">4 lb</option>
               <option value="6">6 lb</option>
               <option value="8">8 lb</option>
               <option value="10">10 lb</option>
               <option value="12">12 lb</option>
-              <option value="14">14 lb</option>
-              <option value="17">17 lb</option>
+              <option value="16">16 lb</option>
+              <option value="18">18 lb</option>
               <option value="20">20 lb</option>
-              <option value="25">25 lb</option>
               <option value="30">30 lb</option>
+              <option value="50">50 lb</option>
+              <option value="80">80 lb</option>
             </select>
           </label>
           <button class="db-submit-btn" style="margin-top:8px" onclick="calcMonoBraid()">Get Braid Equivalent</button>
@@ -2129,10 +2131,11 @@ function showTackleSection(sec) {
 
 // ── Line Calculator Engine ────────────────────────────────────────────────────
 const BRAID_EQUIV = {
-  2: 10, 4: 15, 6: 20, 8: 30, 10: 40, 12: 50, 14: 65, 15: 65, 17: 65, 20: 80, 25: 100, 30: 150
+  1: 8, 2: 10, 4: 15, 6: 20, 8: 30, 10: 40, 12: 50, 16: 65, 18: 80, 20: 100, 30: 150, 50: 200, 80: 250
 };
 function getBraidEquiv(mono) {
   if (!mono) return 0;
+  if (mono < 1) return 5;
   const keys = Object.keys(BRAID_EQUIV).map(Number).sort((a,b)=>a-b);
   let closest = keys[keys.length-1];
   for(let k of keys) { if (mono <= k) { closest = k; break; } }
