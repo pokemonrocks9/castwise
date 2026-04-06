@@ -474,7 +474,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.58.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.60.0</p>
     </div>
   </div>
 
@@ -544,6 +544,14 @@
       </svg>
       <div style="font-size:20px;font-weight:600;color:var(--text)">Settings</div>
       <div style="font-size:14px;color:var(--text3)">Coming soon</div>
+
+      <!-- PWA Install Button -->
+      <div style="width:100%; max-width:300px; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
+        <button id="installPwaBtn" style="width:100%; background:var(--green); color:#fff; border:none; border-radius:var(--radius); padding:12px; font-size:15px; font-weight:500; font-family:'DM Sans', sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Install CastWise App
+        </button>
+      </div>
 
       <!-- New setting for automatic location -->
       <div style="width:100%; max-width:300px; margin-top:20px; text-align:left;">
@@ -2149,8 +2157,29 @@ if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
 } else {
   setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
 }
+
+// ── PWA Install Logic ──────────────────────────────────────────────────────────
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // Stop Chrome from automatically showing the banner
+  deferredPrompt = e;
+  const wrap = document.getElementById('installPwaWrap');
+  if (wrap) wrap.style.display = 'block'; // Show our custom install button
+});
+
+document.getElementById('installPwaBtn')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('installPwaWrap').style.display = 'none';
+  }
+  deferredPrompt = null;
+});
+
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
+
   navigator.serviceWorker.register('sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
