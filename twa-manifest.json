@@ -21,7 +21,7 @@
     "signingMode": "release"
   },
   "appVersionCode": 1,
-  "appVersionName": "0.26.0",
+  "appVersionName": "0.56.0",
   "shortcuts": [],
   "features": {
     "locationDelegation": {
