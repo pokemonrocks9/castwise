@@ -474,7 +474,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.61.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.62.0</p>
     </div>
   </div>
 
@@ -2017,6 +2017,48 @@ function generateLureRecs() {
 
   resEl.innerHTML = html;
   resEl.style.display = 'block';
+}
+
+// ── Tackle Menu Routing ───────────────────────────────────────────────────────
+function showTackleMenu() {
+  document.getElementById('tackle-menu').style.display = 'block';
+  document.getElementById('tackle-lures').style.display = 'none';
+  document.getElementById('tackle-line').style.display = 'none';
+}
+function showTackleSection(sec) {
+  document.getElementById('tackle-menu').style.display = 'none';
+  document.getElementById('tackle-lures').style.display = sec === 'lures' ? 'block' : 'none';
+  document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
+}
+
+// ── Line Calculator Engine ────────────────────────────────────────────────────
+const BRAID_EQUIV = {
+  2: 8, 4: 10, 6: 20, 8: 30, 10: 40, 12: 50, 14: 50, 15: 65, 17: 65, 20: 80, 25: 100, 30: 150
+};
+function getBraidEquiv(mono) {
+  if (!mono) return 0;
+  const keys = Object.keys(BRAID_EQUIV).map(Number).sort((a,b)=>a-b);
+  let closest = keys[keys.length-1];
+  for(let k of keys) { if (mono <= k) { closest = k; break; } }
+  return BRAID_EQUIV[closest] || (mono * 4);
+}
+
+function calcRodBraid() {
+  const min = parseInt(document.getElementById('line-rod-min').value) || 0;
+  const max = parseInt(document.getElementById('line-rod-max').value) || 0;
+  const res = document.getElementById('line-rod-result');
+  if (!min && !max) { res.innerHTML = '<div class="err-msg" style="margin-bottom:0">⚠️ Please enter at least one rod weight</div>'; return; }
+  const bMin = getBraidEquiv(min);
+  const bMax = getBraidEquiv(max);
+  res.innerHTML = `<div class="db-row"><b>Recommended Braid:</b> ${min ? bMin+'lb' : '0lb'} ${min && max ? '-' : ''} ${max ? bMax+'lb' : ''}</div>
+    <div class="db-notes">This braid has a similar thickness to the rod's recommended mono rating, allowing for maximum spool capacity and proper casting.</div>`;
+}
+
+function calcMonoBraid() {
+  const val = parseInt(document.getElementById('line-mono-weight').value);
+  const braid = getBraidEquiv(val);
+  document.getElementById('line-mono-result').innerHTML = `<div class="db-row"><b>Equivalent Braid:</b> ~${braid}lb</div>
+    <div class="db-notes">Provides the same spool capacity and casting profile as ${val}lb mono.</div>`;
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
