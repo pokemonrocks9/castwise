@@ -471,11 +471,6 @@
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
       </div>
     </div>
-    <div class="footer">
-      <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
-      <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.66.0</p>
-    </div>
   </div>
 
   <div id="tab-lakes" class="tab-panel">
@@ -487,36 +482,25 @@
   </div>
 
   <div id="tab-tackle" class="tab-panel">
-    <!-- Tackle Box Menu -->
-    <div id="tackle-menu" style="margin-top:20px">
-      <div class="card-title" style="margin-bottom:14px">Tackle Box</div>
-      <div class="fish-grid">
-        <div class="fish-card" onclick="showTackleSection('lures')" style="cursor:pointer;text-align:center;padding:24px 12px">
-          <div style="margin-bottom:8px;display:flex;justify-content:center">
-            <svg viewBox="0 0 512 512" class="fill-svg" style="width:36px;height:36px;color:var(--green)">
-              <path d="M275.37,309.707l-0.833-0.274c-1.967-0.917-10.852-2.292-16.142,0.55c-1.097,0.443-1.292,1.36,0.474,2.926c5.244,4.622,9.107,8.671,10.852,12.934c1.314,3.217,3.11,2.384,3.56,1.682c0.477-0.741,1.447-3.179,2.234-5.249c2.682,1.543,4.997,3.652,6.792,6.257c3.194,4.622,4.401,10.237,3.392,15.784c-1.02,5.539-4.126,10.359-8.759,13.553c-4.626,3.201-10.237,4.408-15.784,3.4c-5.546-1.016-10.359-4.134-13.561-8.756l-28.317-40.988c0.756-1.322,1.299-2.75,1.562-4.225c0.615-3.323-0.061-6.937-2.144-9.939c-2.078-3.018-5.214-4.928-8.541-5.531c-3.33-0.604-6.945,0.069-9.946,2.139c-3.01,2.086-4.917,5.226-5.524,8.557c-0.619,3.33,0.057,6.937,2.143,9.947c2.071,3.01,5.21,4.912,8.541,5.515c1.475,0.276,3.006,0.276,4.508,0.046l28.317,40.98c3.197,4.622,4.4,10.222,3.392,15.776c-1.016,5.539-4.129,10.367-8.755,13.561c-4.634,3.2-10.238,4.4-15.784,3.399c-5.55-1.016-10.363-4.141-13.564-8.755c-1.792-2.613-2.949-5.516-3.446-8.572c2.22,0,4.836-0.046,5.696-0.237c0.825-0.168,2.231-1.55-0.305-3.919c-3.374-3.148-5.792-8.182-8.263-14.73c-0.836-2.2-1.765-2.346-2.571-1.474c-4.526,3.942-6.387,12.743-6.226,14.905l-0.034,0.878c-0.256,7.036,1.734,13.828,5.749,19.635c4.939,7.158,12.364,11.948,20.906,13.508c8.541,1.573,17.178-0.29,24.337-5.242h0.007c7.147-4.943,11.942-12.361,13.5-20.91c0.363-1.978,0.523-3.965,0.519-5.944c1.85,0.696,3.767,1.253,5.749,1.612c8.538,1.574,17.178-0.283,24.33-5.226h0.007c7.155-4.95,11.949-12.376,13.504-20.918c1.57-8.534-0.29-17.174-5.237-24.333C287.694,316.217,282.044,311.953,275.37,309.707z M209.828,307.905c-0.841,0.565-1.788,0.733-2.716,0.58c-0.929-0.184-1.753-0.673-2.334-1.513c-0.573-0.832-0.745-1.78-0.581-2.712c0.176-0.924,0.669-1.749,1.502-2.33c0.844-0.573,1.788-0.749,2.72-0.581c0.921,0.168,1.745,0.672,2.33,1.498c0.574,0.84,0.745,1.788,0.58,2.719C211.154,306.491,210.661,307.316,209.828,307.905z"/>
-              <path d="M506.224,254.127c-4.015-5.821-9.661-10.076-16.338-12.33l-0.833-0.283c-1.966-0.909-10.848-2.276-16.142,0.558c-1.097,0.444-1.295,1.368,0.478,2.927c5.244,4.629,9.103,8.67,10.848,12.934c1.31,3.216,3.11,2.391,3.564,1.68c0.473-0.741,1.444-3.17,2.23-5.248c2.682,1.544,4.993,3.652,6.792,6.257c3.198,4.622,4.401,10.23,3.392,15.776c-1.02,5.547-4.122,10.36-8.759,13.568c-4.63,3.202-10.238,4.401-15.78,3.392c-5.55-1.016-10.363-4.133-13.564-8.755l-28.321-40.98c0.764-1.322,1.298-2.751,1.566-4.232c0.615-3.331-0.057-6.93-2.14-9.947c-2.078-3.01-5.218-4.913-8.548-5.516c-3.327-0.611-6.941,0.061-9.947,2.139c-3.006,2.078-4.912,5.218-5.52,8.549c-0.615,3.323,0.057,6.937,2.14,9.947c2.078,3.01,5.214,4.912,8.544,5.516c1.475,0.275,3.006,0.275,4.508,0.038l28.317,40.98c3.197,4.63,4.404,10.23,3.396,15.784c-1.02,5.539-4.133,10.36-8.759,13.568c-4.634,3.194-10.242,4.393-15.784,3.392c-5.547-1.024-10.364-4.133-13.565-8.756c-1.792-2.605-2.945-5.515-3.445-8.572c2.219,0,4.836-0.046,5.699-0.23c0.821-0.175,2.227-1.558-0.309-3.926c-3.373-3.14-5.788-8.182-8.263-14.722c-0.836-2.208-1.761-2.345-2.571-1.49c-4.522,3.958-6.383,12.751-6.226,14.914l-0.034,0.878c-0.256,7.036,1.734,13.82,5.753,19.634c4.939,7.159,12.36,11.949,20.902,13.508c8.541,1.566,17.182-0.29,24.341-5.233l0.007-0.008c7.148-4.944,11.942-12.362,13.496-20.911c0.363-1.978,0.523-3.972,0.519-5.936c1.854,0.688,3.767,1.245,5.75,1.612c8.541,1.558,17.178-0.29,24.329-5.234l0.004-0.007c7.158-4.944,11.952-12.37,13.51-20.911C513.023,269.919,511.166,261.271,506.224,254.127z M424.344,239.986c-0.841,0.574-1.788,0.742-2.716,0.58c-0.925-0.167-1.753-0.672-2.33-1.504c-0.581-0.833-0.749-1.78-0.584-2.712c0.176-0.925,0.673-1.742,1.505-2.331c0.844-0.572,1.784-0.748,2.716-0.588c0.924,0.184,1.749,0.68,2.33,1.505c0.574,0.848,0.746,1.795,0.584,2.72C425.669,238.58,425.176,239.405,424.344,239.986z"/>
-              <path d="M403.693,198.525c-55.106-56.451-156.49-100.128-249.899-88.034c-75.505,9.779-111.45,58.972-120.007,86.07c-0.08-0.084-0.148-0.175-0.233-0.26c-3.541-3.544-8.487-5.76-13.9-5.76s-10.352,2.216-13.893,5.76c-3.553,3.546-5.764,8.488-5.76,13.897c-0.004,5.417,2.208,10.36,5.76,13.905c3.541,3.552,8.48,5.76,13.893,5.752c5.413,0.008,10.359-2.2,13.9-5.752c0.848-0.848,1.612-1.781,2.296-2.774c1.826,4.026,4.007,7.869,6.497,11.528l-30.872,36.014c-3.805,4.439-3.29,11.116,1.145,14.92c4.439,3.812,11.12,3.293,14.925-1.145l28.901-33.707c32.553,29.62,88.03,42.47,130.274,40.98c34.25-1.207,84.004-24.188,112.229-37.634c28.222-13.438,93.993-15.455,100.04-16.8C405.038,234.142,411.088,205.248,403.693,198.525z M27.136,217.685c-1.929,1.925-4.542,3.094-7.483,3.102c-2.938-0.008-5.551-1.177-7.484-3.102c-1.918-1.932-3.094-4.545-3.098-7.487c0.004-2.934,1.18-5.546,3.098-7.479c1.933-1.925,4.546-3.102,7.484-3.102c2.941,0,5.554,1.177,7.483,3.102c1.925,1.932,3.098,4.545,3.102,7.479C30.234,213.14,29.062,215.753,27.136,217.685z M85.68,217.609c-12.53,0-22.686-10.161-22.686-22.682c0-12.53,10.157-22.69,22.686-22.69c12.526,0,22.683,10.161,22.683,22.69C108.363,207.448,98.206,217.609,85.68,217.609z"/>
-              <path d="M85.023,185.507c-4.904,0-8.881,3.98-8.881,8.885s3.977,8.878,8.881,8.878c4.902,0,8.878-3.973,8.878-8.878S89.925,185.507,85.023,185.507z"/>
-            </svg>
+    
+    <!-- Tackle Menu -->
+    <div id="tackle-menu">
+      <div class="card" style="margin-top:20px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('lures')">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="font-size:32px; background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border);">🐟</div>
+          <div>
+            <div style="font-size:16px; font-weight:500; color:var(--text);">Bait &amp; Lure Advisor</div>
+            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Get recommendations based on weather and water</div>
           </div>
-          <div class="fish-name">Bait &amp; Lures</div>
-          <div class="fish-sub">Advisor</div>
         </div>
-        <div class="fish-card" onclick="showTackleSection('line')" style="cursor:pointer;text-align:center;padding:24px 12px">
-          <div style="margin-bottom:8px;display:flex;justify-content:center">
-            <svg viewBox="0 0 266.135 266.135" class="fill-svg" style="width:36px;height:36px;color:var(--green)">
-              <path d="M192.74,69.067c-2.035-5.479-8.13-8.267-13.613-6.263c-0.243,0.09-24.958,8.93-76.52,9.209C57.153,72.247,22.52,60.912,21.919,60.71c-5.556-1.877-11.563,1.113-13.435,6.659c-1.872,5.551,1.108,11.571,6.654,13.442c1.522,0.515,37.371,12.422,85.967,12.422c0.536,0,1.077,0,1.613-0.005c55.897-0.306,82.71-10.131,83.818-10.545C192.004,80.625,194.77,74.543,192.74,69.067z"/>
-              <path d="M192.74,99.243c-2.035-5.479-8.13-8.272-13.613-6.263c-0.243,0.091-24.958,8.93-76.52,9.212C57.153,102.43,22.52,91.087,21.919,90.885c-5.556-1.872-11.563,1.113-13.435,6.662c-1.872,5.551,1.108,11.568,6.654,13.439c1.522,0.516,37.371,12.425,85.967,12.425c0.536,0,1.077,0,1.613-0.005c55.897-0.308,82.71-10.134,83.818-10.548C192.004,110.795,194.77,104.719,192.74,99.243z"/>
-              <path d="M179.126,123.15c-0.243,0.09-24.958,8.93-76.52,9.206c-45.547,0.073-80.082-11.104-80.688-11.306c-5.556-1.872-11.563,1.113-13.435,6.659c-1.872,5.553,1.108,11.568,6.654,13.437c1.522,0.523,37.365,12.422,85.952,12.422c0.541,0,1.083,0,1.628,0c55.897-0.305,82.71-10.128,83.818-10.553c5.468-2.051,8.233-8.124,6.203-13.603C190.705,123.935,184.61,121.146,179.126,123.15z"/>
-              <path d="M15.144,204.76c1.522,0.518,37.365,12.422,85.952,12.422c0.541,0,1.082,0,1.628-0.005c55.898-0.3,82.705-10.128,83.824-10.542c5.463-2.057,8.223-8.13,6.192-13.608c-2.029-5.474-8.119-8.254-13.607-6.266c-0.249,0.093-24.959,8.927-76.52,9.207c-0.5,0.005-0.987,0.005-1.481,0.005c-44.778,0-78.612-11.112-79.207-11.309c-5.556-1.87-11.563,1.118-13.435,6.658C6.618,196.879,9.598,202.886,15.144,204.76z"/>
-              <path d="M0.005,32.483c0,5.856,3.997,13.22,9.421,15.431c12.821,5.225,40.242,12.8,91.249,12.658c50.05,0.143,78.011-7.609,91.153-12.831c5.442-2.165,9.518-9.396,9.518-15.252V20.041c0-1.326-0.249-2.465-0.652-3.441c0-0.018,0.021-0.028,0.021-0.044c0-7.493-44.791-13.566-100.044-13.566C45.42,2.989,0.632,9.063,0.632,16.556c0,0.011,0.015,0.034,0.015,0.044C0.243,17.576,0,18.71,0,20.036v12.448H0.005z M100.675,12.056c20.247,0,36.661,3.229,36.661,7.2c0,3.982-16.415,7.2-36.661,7.2c-20.254,0-36.661-3.218-36.661-7.2C64.015,15.285,80.421,12.056,100.675,12.056z"/>
-              <path d="M201.346,235.057v-12.448c0-5.856-4.241-8.445-9.725-6.379c-14.137,5.308-43.921,13.82-90.946,14.576c-47.02-0.756-76.81-9.269-90.946-14.576c-5.483-2.066-9.724,0.522-9.724,6.379v12.448c0,5.856,3.997,13.22,9.421,15.426c12.821,5.22,40.242,12.801,91.249,12.661c50.05,0.14,78.011-7.607,91.153-12.837C197.276,248.143,201.346,240.913,201.346,235.057z"/>
-              <path d="M213.592,215.132c1.372,28.174,33.674,44.506,37.35,46.276c1.481,0.715,3.045,1.046,4.578,1.046c3.945,0,7.726-2.206,9.553-5.991c2.553-5.261,0.348-11.604-4.914-14.156c-6.845-3.335-24.74-14.897-25.383-28.205c-2.609-53.78-32.777-61.848-50.522-61.879c-0.006,0-0.011,0-0.016,0c-1.491,0-2.91,0.321-4.194,0.87c-0.311,0.083-0.616,0.124-0.917,0.232c-0.243,0.089-24.958,8.933-76.52,9.207c-45.547,0.472-80.082-11.106-80.688-11.304c-5.556-1.869-11.563,1.118-13.435,6.659c-1.872,5.551,1.108,11.567,6.654,13.432c1.522,0.519,37.365,12.428,85.952,12.428c0.541,0,1.083,0,1.628-0.005c51.72-0.285,78.49-8.705,83.088-10.289C193.734,173.645,211.708,176.332,213.592,215.132z"/>
-            </svg>
+      </div>
+      <div class="card" style="margin-top:16px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('line')">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="font-size:32px; background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border);">🧵</div>
+          <div>
+            <div style="font-size:16px; font-weight:500; color:var(--text);">Line Calculator</div>
+            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Calculate braid equivalents for mono/fluoro and rods</div>
           </div>
-          <div class="fish-name">Line &amp; Spool</div>
-          <div class="fish-sub">Calculator</div>
         </div>
       </div>
     </div>
@@ -527,51 +511,98 @@
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Bait &amp; Lure Advisor</div>
-        <div style="font-size:10px;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 8px;opacity:0.8">BETA</div>
+          <div style="font-size:10px;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 8px;opacity:0.8">BETA</div>
+        </div>
+        
+        <div id="lure-weather-status" class="db-form-subtitle" style="margin-bottom:16px">
+          ⚠️ Use GPS or search a location first to auto-fill local weather and seasons.
+        </div>
+
+        <label class="db-label">Target Species
+          <select id="lure-species">
+            <option value="bass">Largemouth / Smallmouth Bass</option>
+            <option value="catfish">Catfish</option>
+            <option value="panfish">Panfish / Bluegill / Crappie</option>
+            <option value="trout">Trout</option>
+            <option value="walleye">Walleye</option>
+            <option value="pike">Pike / Muskie</option>
+          </select>
+        </label>
+
+        <label class="db-label">Water Clarity
+          <select id="lure-clarity">
+            <option value="clear">Clear (Visibility > 4ft)</option>
+            <option value="stained" selected>Stained (Visibility 1-4ft)</option>
+            <option value="muddy">Muddy (Visibility < 1ft)</option>
+          </select>
+        </label>
+
+        <label class="db-label">Target Depth
+          <select id="lure-depth">
+            <option value="shallow">Shallow (0-5 ft)</option>
+            <option value="mid" selected>Mid-depth (5-15 ft)</option>
+            <option value="deep">Deep (15+ ft)</option>
+          </select>
+        </label>
+
+        <label class="db-label">Water Environment
+          <select id="lure-env">
+            <option value="lake">Lake / Pond</option>
+            <option value="river">River / Creek (Current)</option>
+          </select>
+        </label>
+
+        <button class="db-submit-btn" style="margin-top:16px" onclick="generateLureRecs()">Get Recommendation</button>
       </div>
-      
-      <div id="lure-weather-status" class="db-form-subtitle" style="margin-bottom:16px">
-        ⚠️ Use GPS or search a location first to auto-fill local weather and seasons.
-      </div>
 
-      <label class="db-label">Target Species
-        <select id="lure-species">
-          <option value="bass">Largemouth / Smallmouth Bass</option>
-          <option value="catfish">Catfish</option>
-          <option value="panfish">Panfish / Bluegill / Crappie</option>
-          <option value="trout">Trout</option>
-          <option value="walleye">Walleye</option>
-          <option value="pike">Pike / Muskie</option>
-        </select>
-      </label>
-
-      <label class="db-label">Water Clarity
-        <select id="lure-clarity">
-          <option value="clear">Clear (Visibility > 4ft)</option>
-          <option value="stained" selected>Stained (Visibility 1-4ft)</option>
-          <option value="muddy">Muddy (Visibility < 1ft)</option>
-        </select>
-      </label>
-
-      <label class="db-label">Target Depth
-        <select id="lure-depth">
-          <option value="shallow">Shallow (0-5 ft)</option>
-          <option value="mid" selected>Mid-depth (5-15 ft)</option>
-          <option value="deep">Deep (15+ ft)</option>
-        </select>
-      </label>
-
-      <label class="db-label">Water Environment
-        <select id="lure-env">
-          <option value="lake">Lake / Pond</option>
-          <option value="river">River / Creek (Current)</option>
-        </select>
-      </label>
-
-      <button class="db-submit-btn" style="margin-top:16px" onclick="generateLureRecs()">Get Recommendation</button>
+      <div id="lure-results"></div>
     </div>
 
-    <div id="lure-results"></div>
+    <!-- Line Section -->
+    <div id="tackle-line" style="display:none">
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">Line Calculator</div>
+          <div style="font-size:10px;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 8px;opacity:0.8">BETA</div>
+        </div>
+        
+        <div class="db-form-subtitle" style="margin-bottom:16px;color:var(--amber-dark);background:var(--amber-light);padding:10px;border-radius:var(--radius);line-height:1.4">
+          ⚠️ It is not recommended to go over your rod's weight rating, as this may cause damage to the rod if snagged or overloaded. It is recommended to attach a leader of Mono or Fluorocarbon at or below your rod's maximum weight.
+        </div>
+
+        <div style="font-size:15px;font-weight:500;margin-bottom:12px">Rod Rating to Braid Equivalent</div>
+        <label class="db-label">Rod Min Weight (lbs)
+          <input type="number" id="line-rod-min" placeholder="e.g. 8" />
+        </label>
+        <label class="db-label">Rod Max Weight (lbs)
+          <input type="number" id="line-rod-max" placeholder="e.g. 15" />
+        </label>
+        <button class="db-submit-btn" style="margin-top:8px" onclick="calcRodBraid()">Calculate Equivalents</button>
+        <div id="line-rod-result" style="margin-top:12px;font-size:13px"></div>
+
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+          <div style="font-size:15px;font-weight:500;margin-bottom:12px">Mono to Braid Equivalent</div>
+          <label class="db-label">Current Mono/Fluoro Weight (lbs)
+            <select id="line-mono-weight">
+              <option value="2">2 lb</option>
+              <option value="4">4 lb</option>
+              <option value="6">6 lb</option>
+              <option value="8">8 lb</option>
+              <option value="10">10 lb</option>
+              <option value="12">12 lb</option>
+              <option value="14">14 lb</option>
+              <option value="17">17 lb</option>
+              <option value="20">20 lb</option>
+              <option value="25">25 lb</option>
+              <option value="30">30 lb</option>
+            </select>
+          </label>
+          <button class="db-submit-btn" style="margin-top:8px" onclick="calcMonoBraid()">Get Braid Equivalent</button>
+          <div id="line-mono-result" style="margin-top:12px;font-size:13px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="tab-settings" class="tab-panel">
@@ -611,6 +642,12 @@
         </label>
       </div>
 
+    </div>
+    
+    <div class="footer" style="margin-top:0; border-top:none;">
+      <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
+      <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.68.0</p>
     </div>
   </div>
 
@@ -684,7 +721,7 @@ window.addEventListener('popstate', e => {
 
 // On load, check if there's a hash
 const _initTab = location.hash.replace('#', '') || 'solunar';
-if (['solunar','lakes','lures','settings'].includes(_initTab)) {
+if (['solunar','lakes','tackle','settings'].includes(_initTab)) {
   switchTab(_initTab, false);
   history.replaceState({ tab: _initTab }, '', '#' + _initTab);
 } else {
