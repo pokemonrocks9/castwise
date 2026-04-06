@@ -487,7 +487,11 @@
     <div id="tackle-menu">
       <div class="card" style="margin-top:20px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('lures')">
         <div style="display:flex; align-items:center; gap:16px;">
-          <div style="font-size:32px; background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border);">🐟</div>
+          <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border); display:flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;color:var(--text)">
+              <path d="M12 2v2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v10a4 4 0 1 0 8 0v-2h-2"/><path d="M10 9L6 7"/><path d="M10 11L5 10"/><path d="M10 13L6 13"/>
+            </svg>
+          </div>
           <div>
             <div style="font-size:16px; font-weight:500; color:var(--text);">Bait &amp; Lure Advisor</div>
             <div style="font-size:13px; color:var(--text3); margin-top:4px;">Get recommendations based on weather and water</div>
@@ -496,7 +500,11 @@
       </div>
       <div class="card" style="margin-top:16px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('line')">
         <div style="display:flex; align-items:center; gap:16px;">
-          <div style="font-size:32px; background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border);">🧵</div>
+          <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border); display:flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;color:var(--text)">
+              <path d="M6 4h12"/><path d="M6 20h12"/><rect x="8" y="4" width="8" height="16" rx="1"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/>
+            </svg>
+          </div>
           <div>
             <div style="font-size:16px; font-weight:500; color:var(--text);">Line Calculator</div>
             <div style="font-size:13px; color:var(--text3); margin-top:4px;">Calculate braid equivalents for mono/fluoro and rods</div>
@@ -571,18 +579,30 @@
           ⚠️ It is not recommended to go over your rod's weight rating, as this may cause damage to the rod if snagged or overloaded. It is recommended to attach a leader of Mono or Fluorocarbon at or below your rod's maximum weight.
         </div>
 
-        <div style="font-size:15px;font-weight:500;margin-bottom:12px">Rod Rating to Braid Equivalent</div>
-        <label class="db-label">Rod Min Weight (lbs)
-          <input type="number" id="line-rod-min" placeholder="e.g. 8" />
-        </label>
-        <label class="db-label">Rod Max Weight (lbs)
-          <input type="number" id="line-rod-max" placeholder="e.g. 15" />
-        </label>
-        <button class="db-submit-btn" style="margin-top:8px" onclick="calcRodBraid()">Calculate Equivalents</button>
+        <div style="font-size:15px;font-weight:500;margin-bottom:12px">Combo Balancer</div>
+        <div style="display:flex;gap:10px;margin-bottom:8px">
+          <label class="db-label" style="flex:1">Rod Min (lb)
+            <input type="number" id="line-rod-min" placeholder="e.g. 8" />
+          </label>
+          <label class="db-label" style="flex:1">Rod Max (lb)
+            <input type="number" id="line-rod-max" placeholder="e.g. 15" />
+          </label>
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-bottom:8px">
+          <label class="db-label" style="flex:1">Reel Min (lb)
+            <input type="number" id="line-reel-min" placeholder="e.g. 10" />
+          </label>
+          <label class="db-label" style="flex:1">Reel Max (lb)
+            <input type="number" id="line-reel-max" placeholder="e.g. 20" />
+          </label>
+        </div>
+        <button class="db-submit-btn" style="margin-top:8px" onclick="calcComboLine()">Calculate Setup</button>
         <div id="line-rod-result" style="margin-top:12px;font-size:13px"></div>
-
+        
         <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-          <div style="font-size:15px;font-weight:500;margin-bottom:12px">Mono to Braid Equivalent</div>
+          <div style="font-size:15px;font-weight:500;margin-bottom:4px">Mono to Braid Equivalent</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-style:italic">* Equivalents are estimates and may vary by manufacturer.</div>
           <label class="db-label">Current Mono/Fluoro Weight (lbs)
             <select id="line-mono-weight">
               <option value="2">2 lb</option>
@@ -647,7 +667,7 @@
     <div class="footer" style="margin-top:0; border-top:none;">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.68.0</p>
+      <p id="app-version-display" style="margin-top:10px;font-size:10px;opacity:0.4">v0.57.0</p>
     </div>
   </div>
 
@@ -697,7 +717,10 @@ let appData = null;
 let selectedDay = 0;
 
 function switchTab(tab, pushHistory = true) {
-  if (tab === currentTab) return;
+  if (tab === currentTab) {
+    if (tab === 'tackle') showTackleMenu(); // Tap tackle again to go to menu
+    return;
+  }
   currentTab = tab;
 
   // Update panels
@@ -2106,7 +2129,7 @@ function showTackleSection(sec) {
 
 // ── Line Calculator Engine ────────────────────────────────────────────────────
 const BRAID_EQUIV = {
-  2: 8, 4: 10, 6: 20, 8: 30, 10: 40, 12: 50, 14: 50, 15: 65, 17: 65, 20: 80, 25: 100, 30: 150
+  2: 10, 4: 15, 6: 20, 8: 30, 10: 40, 12: 50, 14: 65, 15: 65, 17: 65, 20: 80, 25: 100, 30: 150
 };
 function getBraidEquiv(mono) {
   if (!mono) return 0;
@@ -2116,15 +2139,36 @@ function getBraidEquiv(mono) {
   return BRAID_EQUIV[closest] || (mono * 4);
 }
 
-function calcRodBraid() {
-  const min = parseInt(document.getElementById('line-rod-min').value) || 0;
-  const max = parseInt(document.getElementById('line-rod-max').value) || 0;
+function calcComboLine() {
+  const rMin = parseInt(document.getElementById('line-rod-min').value) || 0;
+  const rMax = parseInt(document.getElementById('line-rod-max').value) || 0;
+  const sMin = parseInt(document.getElementById('line-reel-min').value) || 0;
+  const sMax = parseInt(document.getElementById('line-reel-max').value) || 0;
   const res = document.getElementById('line-rod-result');
-  if (!min && !max) { res.innerHTML = '<div class="err-msg" style="margin-bottom:0">⚠️ Please enter at least one rod weight</div>'; return; }
-  const bMin = getBraidEquiv(min);
-  const bMax = getBraidEquiv(max);
-  res.innerHTML = `<div class="db-row"><b>Recommended Braid:</b> ${min ? bMin+'lb' : '0lb'} ${min && max ? '-' : ''} ${max ? bMax+'lb' : ''}</div>
-    <div class="db-notes">This braid has a similar thickness to the rod's recommended mono rating, allowing for maximum spool capacity and proper casting.</div>`;
+  
+  if (!rMin && !rMax && !sMin && !sMax) { res.innerHTML = '<div class="err-msg" style="margin-bottom:0">⚠️ Please enter rod and/or reel ratings.</div>'; return; }
+
+  // Calculate safe overlap between rod and reel capacities
+  let minMono = Math.max(rMin || sMin, sMin || rMin);
+  let maxMono = Math.min(rMax || sMax || 999, sMax || rMax || 999);
+  if (maxMono === 999) maxMono = minMono;
+
+  if (minMono > maxMono) {
+    res.innerHTML = `<div class="err-msg" style="margin-bottom:0">⚠️ Unbalanced Setup. Your rod's max (${rMax}lb) is lower than your reel's min (${sMin}lb) or vice versa.</div>`;
+    return;
+  }
+
+  const bMin = getBraidEquiv(minMono);
+  const bMax = getBraidEquiv(maxMono);
+  let monoStr = minMono === maxMono ? `${minMono}lb` : `${minMono}lb - ${maxMono}lb`;
+  let braidStr = bMin === bMax ? `${bMin}lb` : `${bMin}lb - ${bMax}lb`;
+
+  res.innerHTML = `
+    <div class="db-row" style="margin-top:12px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Recommended Mono/Fluoro:</div><div style="color:var(--green);font-weight:500;font-size:18px">${monoStr}</div></div>
+    <div class="db-row" style="margin-top:10px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Recommended Braid:</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">${braidStr}</div></div>
+    <div class="db-notes" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      This mono rating balances your rod and reel limits. The braid rating provides equivalent thickness to cast smoothly without digging into the spool.
+    </div>`;
 }
 
 function calcMonoBraid() {
@@ -2291,6 +2335,16 @@ document.getElementById('installPwaBtn')?.addEventListener('click', async () => 
   }
   deferredPrompt = null;
 });
+
+// ── Sync version from Service Worker ───────────────────────────────────────────
+fetch('sw.js').then(r => r.text()).then(text => {
+  // Extract the version string using a regex
+  const match = text.match(/const VERSION\s*=\s*'([^']+)'/);
+  if (match && match[1]) {
+    const vEl = document.getElementById('app-version-display');
+    if (vEl) vEl.textContent = match[1];
+  }
+}).catch(() => {}); // Fails silently and leaves the HTML fallback if offline
 
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
