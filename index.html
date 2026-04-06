@@ -6,7 +6,14 @@
   <title>CastWise — Free Fishing Intelligence</title>
   <meta name="description" content="Free solunar calendar, nearby lakes, fish activity and catch rate estimates. No subscription needed." />
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <meta name="theme-color" content="#1D9E75" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CastWise" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1D9E75" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CastWise" />
@@ -408,7 +415,7 @@
     /* ── Bottom nav ── */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
-  height: calc(58px + env(safe-area-inset-bottom));
+      height: 58px;
       background: var(--bg);
       border-top: 1px solid var(--border);
       display: flex;
@@ -426,7 +433,7 @@
       transition: color .15s;
       -webkit-tap-highlight-color: transparent;
     }
-.nav-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .nav-btn svg { width: 22px; height: 22px; }
     .nav-btn.active { color: var(--text); }
     .nav-btn.active svg { stroke: var(--text); }
     .nav-btn svg { stroke: var(--text3); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s; }
@@ -443,7 +450,7 @@
       .day-card { flex: 0 0 68px; }
     }
     /* Always add bottom nav padding */
-.app { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .app { padding-bottom: 80px; }
   </style>
 </head>
 <body>
@@ -474,7 +481,7 @@
     <div class="footer">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.60.0</p>
+      <p style="margin-top:10px;font-size:10px;opacity:0.4">v0.53.0</p>
     </div>
   </div>
 
@@ -544,14 +551,6 @@
       </svg>
       <div style="font-size:20px;font-weight:600;color:var(--text)">Settings</div>
       <div style="font-size:14px;color:var(--text3)">Coming soon</div>
-
-      <!-- PWA Install Button -->
-      <div style="width:100%; max-width:300px; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
-        <button id="installPwaBtn" style="width:100%; background:var(--green); color:#fff; border:none; border-radius:var(--radius); padding:12px; font-size:15px; font-weight:500; font-family:'DM Sans', sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          Install CastWise App
-        </button>
-      </div>
 
       <!-- New setting for automatic location -->
       <div style="width:100%; max-width:300px; margin-top:20px; text-align:left;">
@@ -2157,30 +2156,10 @@ if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true') {
 } else {
   setContent('<div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">🛰️ Tap the satellite for GPS, or enter a city / zip to get started</div>');
 }
-
-// ── PWA Install Logic ──────────────────────────────────────────────────────────
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); // Stop Chrome from automatically showing the banner
-  deferredPrompt = e;
-  const wrap = document.getElementById('installPwaWrap');
-  if (wrap) wrap.style.display = 'block'; // Show our custom install button
-});
-
-document.getElementById('installPwaBtn')?.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') {
-    document.getElementById('installPwaWrap').style.display = 'none';
-  }
-  deferredPrompt = null;
-});
-
 // ── Register service worker ────────────────────────────────────────────────────
+// Use absolute path for consistent scope and consolidate registration
 if ('serviceWorker' in navigator) {
-
-  navigator.serviceWorker.register('sw.js').then(reg => {
+  navigator.serviceWorker.register('/sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
   }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
