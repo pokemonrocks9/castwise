@@ -576,7 +576,7 @@
         </div>
         
         <div class="db-form-subtitle" style="margin-bottom:16px;color:var(--amber-dark);background:var(--amber-light);padding:10px;border-radius:var(--radius);line-height:1.4">
-          ⚠️ It is not recommended to go over your rod's weight rating, as this may cause damage to the rod if snagged or overloaded. It is recommended to attach a leader of Mono or Fluorocarbon at or below your rod's maximum weight.
+          ⚠️ It is not recommended to go over your rod's weight rating, as this may cause damage to the rod if snagged or overloaded. If you are using braid above the rod limit, it is recommended to attach a leader of Mono or Fluorocarbon at or below your rod's maximum weight.
         </div>
 
         <div style="font-size:15px;font-weight:500;margin-bottom:12px">Combo Balancer</div>
@@ -2177,8 +2177,11 @@ function calcComboLine() {
 function calcMonoBraid() {
   const val = parseInt(document.getElementById('line-mono-weight').value);
   const braid = getBraidEquiv(val);
-  document.getElementById('line-mono-result').innerHTML = `<div class="db-row"><b>Equivalent Braid:</b> ~${braid}lb</div>
-    <div class="db-notes">Provides the same spool capacity and casting profile as ${val}lb mono.</div>`;
+  document.getElementById('line-mono-result').innerHTML = `
+    <div class="db-row" style="margin-top:12px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Equivalent Braid:</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">~${braid}lb</div></div>
+    <div class="db-notes" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      Provides the same spool capacity and casting profile as ${val}lb mono.
+    </div>`;
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
