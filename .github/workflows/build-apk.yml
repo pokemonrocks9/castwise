@@ -88,9 +88,11 @@ jobs:
         # Overwrite generated Android fallback icons with our high-res icon
         find app/src/main/res/mipmap-* -name "*.png" -exec cp ../../../icons/icon-512.png {} \;
         
-        # Fix white borders on Adaptive Icons (Pixel devices) by matching the background to the app theme color
-        find app/src/main/res/values* -name "colors.xml" -exec sed -i 's/name="ic_launcher_background">[^<]*</name="ic_launcher_background">#1D9E75</g' {} + || true
-        find app/src/main/res -name "ic_launcher_background.xml" -exec sh -c 'echo "<?xml version=\"1.0\" encoding=\"utf-8\"?><color xmlns:android=\"http://schemas.android.com/apk/res/android\" android:color=\"#1D9E75\"/>" > "$1"' _ {} \; || true
+        # Fix white borders on Adaptive Icons by explicitly defining the green background and overwriting the XML
+        mkdir -p app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26
+        echo '<?xml version="1.0" encoding="utf-8"?><color xmlns:android="http://schemas.android.com/apk/res/android" android:color="#1D9E75"/>' > app/src/main/res/drawable/ic_launcher_bg.xml
+        echo '<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@drawable/ic_launcher_bg"/><foreground android:drawable="@mipmap/ic_launcher"/></adaptive-icon>' > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+        echo '<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@drawable/ic_launcher_bg"/><foreground android:drawable="@mipmap/ic_launcher"/></adaptive-icon>' > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
         
         # Inject Location Permissions for Android WebView/TWA fallback
         sed -i '/<application/i \    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' app/src/main/AndroidManifest.xml
