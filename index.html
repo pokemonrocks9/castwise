@@ -493,8 +493,21 @@
             </svg>
           </div>
           <div>
-            <div style="font-size:16px; font-weight:500; color:var(--text);">Bait &amp; Lure Advisor</div>
-            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Get recommendations based on weather and water</div>
+            <div style="font-size:16px; font-weight:500; color:var(--text);">Lure &amp; Rig Advisor</div>
+            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Get lure and rig setups based on weather and water</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('bait')">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border); display:flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;color:var(--text)">
+              <path d="M12 4v11a4 4 0 0 0 8 0V11"/><circle cx="12" cy="2" r="2"/>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:16px; font-weight:500; color:var(--text);">Bait Advisor</div>
+            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Find the best live and prepared baits by species</div>
           </div>
         </div>
       </div>
@@ -518,7 +531,7 @@
       <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="card-title" style="margin-bottom:0">Bait &amp; Lure Advisor</div>
+          <div class="card-title" style="margin-bottom:0">Lure &amp; Rig Advisor</div>
           <div style="font-size:10px;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 8px;opacity:0.8">BETA</div>
         </div>
         
@@ -564,6 +577,31 @@
       </div>
 
       <div id="lure-results"></div>
+    </div>
+
+    <!-- Bait Section -->
+    <div id="tackle-bait" style="display:none">
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">Bait Advisor</div>
+          <div style="font-size:10px;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 8px;opacity:0.8">BETA</div>
+        </div>
+        
+        <label class="db-label">Target Species
+          <select id="bait-species">
+            <option value="bass">Largemouth / Smallmouth Bass</option>
+            <option value="catfish">Catfish</option>
+            <option value="panfish">Panfish / Bluegill / Crappie</option>
+            <option value="trout">Trout</option>
+            <option value="walleye">Walleye</option>
+            <option value="pike">Pike / Muskie</option>
+          </select>
+        </label>
+
+        <button class="db-submit-btn" style="margin-top:16px" onclick="generateBaitRecs()">Get Bait Recommendation</button>
+      </div>
+      <div id="bait-results"></div>
     </div>
 
     <!-- Line Section -->
@@ -2032,19 +2070,19 @@ function generateLureRecs() {
 
   // 3. Species-Specific Overrides
   if (species === 'catfish') {
-    // Catfish bypass color/lure rules
-    recType = 'Cut bait (shad/bluegill), Chicken Liver, Stink Bait, or Nightcrawlers';
-    recColor = 'N/A (Catfish hunt by scent, not sight)';
+    // Catfish focus on rigs over lures
+    recType = env === 'river' ? 'Santee Cooper Rig or 3-Way Rig' : 'Carolina Rig or Slip Sinker Rig';
+    recColor = 'Use brightly colored beads or small peg floats on your rig to keep the bait off the bottom';
     recWeight = env === 'river' ? 'Slip Sinker Rig with 1oz to 3oz No-Roll sinker' : 'Slip Sinker Rig with 1/2oz to 1oz Egg Sinker';
     recTech = 'Cast out to drop-offs, deep holes, or channel swings and let it sit on the bottom. Keep a tight line to watch for bites.';
-    reason = `Catfish rely heavily on smell, so live or cut bait is essential. The ${env === 'river' ? 'no-roll sinker keeps your bait pinned in the current' : 'egg sinker lets the fish take the bait without feeling resistance'}.`;
+    reason = `The ${env === 'river' ? 'no-roll sinker keeps your rig pinned in the current' : 'egg sinker lets the fish take it without feeling resistance'}. Use these rigs in combination with your preferred bait.`;
   } 
   else if (species === 'panfish') {
     // Panfish simplified rules
-    recType = depth === 'shallow' ? 'Live bait (red worm/wax worm) or micro-jig' : '1/32oz to 1/16oz micro-jig or inline spinner';
-    recColor = clarity === 'muddy' ? 'Chartreuse, Pink, or White (if using jigs)' : 'Natural colors or actual live bait';
+    recType = depth === 'shallow' ? '1/64oz to 1/32oz Micro-jig under a float' : '1/32oz to 1/16oz Micro-jig or Inline Spinner';
+    recColor = clarity === 'muddy' ? 'Chartreuse, Pink, or White' : 'Natural colors (Black, Brown, Olive)';
     recWeight = depth === 'shallow' ? 'Small float/bobber rig with a split shot (size BB)' : 'Light tackle (2-4lb line) with a small snap swivel';
-    recTech = depth === 'shallow' ? 'Cast near cover/weeds and watch the float.' : 'Cast and retrieve very slowly, occasionally twitching the rod tip.';
+    recTech = depth === 'shallow' ? 'Cast near cover/weeds and twitch the float slightly.' : 'Cast and retrieve very slowly, occasionally twitching the rod tip.';
     reason = 'Panfish have small mouths, so downsizing your presentation is key. They often hang around structure like docks, brush, or lily pads.';
   }
   else if (species === 'trout') {
@@ -2052,11 +2090,11 @@ function generateLureRecs() {
     recTech = env === 'river' ? 'Cast upstream and retrieve slightly faster than the current.' : 'Steady retrieve with occasional pauses to let the spinner flutter down.';
     reason = `Trout are visual feeders. In ${clarity} water with ${isSunny ? 'sun' : 'clouds'}, the ${recColor} color will trigger reaction strikes.`;
     if (depth === 'deep' && env === 'lake') {
-      recType = 'PowerBait or floating dough bait';
-      recColor = 'Chartreuse, Rainbow, or bright fluorescent colors';
-      recWeight = 'Slip Sinker Rig (1/8oz to 1/4oz egg sinker) with a small size 10 treble hook';
-      recTech = 'Cast out and let it sit. The sinker stays on the bottom while the dough bait floats 18-24 inches above it.';
-      reason = 'When trout are deep in lakes, they often cruise just off the bottom looking for food.';
+      recType = 'Bottom Float Rig (Carolina Rig style for dough baits)';
+      recColor = 'Use with brightly colored floating dough baits';
+      recWeight = 'Slip Sinker Rig (1/8oz to 1/4oz egg sinker) with a small size 10 to 14 treble hook';
+      recTech = 'Cast out and let it sit. The sinker stays on the bottom while the floating bait rests 18-24 inches above it.';
+      reason = 'When trout are deep in lakes, they cruise just off the bottom looking for food. This rig keeps your offering right in their face.';
     }
   }
   else if (species === 'walleye') {
@@ -2117,15 +2155,72 @@ function generateLureRecs() {
   resEl.style.display = 'block';
 }
 
+// ── Bait Recommendation Engine ────────────────────────────────────────────────
+function generateBaitRecs() {
+  const resEl = document.getElementById('bait-results');
+  const species = document.getElementById('bait-species').value;
+  
+  let topBait = '';
+  let altBait = '';
+  let presentation = '';
+  let reason = '';
+
+  if (species === 'catfish') {
+    topBait = 'Cut Bait (Shad, Bluegill, Skipjack) or Live Bait';
+    altBait = 'Stink bait, punch bait, chicken livers, or hotdogs';
+    presentation = 'Hook through the back or snout for live bait, or thread onto a circle hook for cut/prepared bait. Leave hook point exposed.';
+    reason = 'Catfish hunt primarily by scent. Fresh cut bait is unbeatable for larger blue and flathead catfish, while channel catfish will eagerly take stink baits and hotdogs.';
+  } else if (species === 'bass') {
+    topBait = 'Live Shad, Shiners, or Golden Roaches';
+    altBait = 'Nightcrawlers or Crawfish';
+    presentation = 'Nose-hook baitfish on a circle hook or weedless hook. Can be fished under a slip bobber or free-lined.';
+    reason = 'Bass are sight-feeders that key in on struggling baitfish. A lively shiner presents a natural, irresistible target.';
+  } else if (species === 'panfish') {
+    topBait = 'Live Crickets or Red Wigglers (Worms)';
+    altBait = 'Wax worms, mealworms, or small bread balls';
+    presentation = 'Thread onto a size 8 to 12 long-shank hook under a small bobber, leaving a bit of the worm dangling to wiggle.';
+    reason = 'Panfish have tiny mouths and feed primarily on small insects and invertebrates. Live worms provide both scent and action.';
+  } else if (species === 'trout') {
+    topBait = 'Live Nightcrawlers, Red Worms, or Salmon Eggs';
+    altBait = 'PowerBait (Dough), corn, or mini marshmallows';
+    presentation = 'Thread worms onto a size 8 to 10 hook. For dough baits, mold it completely over a small treble hook so it floats.';
+    reason = 'Stocked trout are raised on pellets and will aggressively hit PowerBait or corn. Wild trout prefer natural presentations like worms or insects.';
+  } else if (species === 'walleye') {
+    topBait = 'Live Leeches or Nightcrawlers';
+    altBait = 'Fathead Minnows or Shiners';
+    presentation = 'Thread onto a crawler harness (spinner rig) or a colored jig head. Hook minnows through the lips.';
+    reason = 'Walleye respond well to slow, natural presentations right on the bottom. The scent and wiggle of a live leech or crawler is highly effective.';
+  } else if (species === 'pike') {
+    topBait = 'Large Live or Dead Suckers, Chubs, or Smelt';
+    altBait = 'Large dead baitfish (Herring, Cisco) beneath a tip-up or large float';
+    presentation = 'Use a quick-strike rig with wire leader. Hook live bait lightly under the dorsal fin so it swims naturally.';
+    reason = 'Pike are apex predators that want a large meal for their effort. A large, struggling baitfish emits vibrations that trigger their lateral lines.';
+  }
+
+  let html = `
+    <div class="card" style="border-color: var(--green);">
+      <div class="card-title" style="color: var(--green); margin-bottom: 8px;">Top Bait Recommendations</div>
+      <div class="db-row" style="margin-top:8px"><span style="font-weight:600;display:block;margin-bottom:2px">Primary Bait</span>${topBait}</div>
+      <div class="db-row" style="margin-top:8px"><span style="font-weight:600;display:block;margin-bottom:2px">Alternative / Prepared Bait</span>${altBait}</div>
+      <div class="db-row" style="margin-top:8px"><span style="font-weight:600;display:block;margin-bottom:2px">Presentation / Rigging</span>${presentation}</div>
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border2); font-size:13px; color:var(--text2); font-style:italic;">" ${reason} "</div>
+    </div>`;
+
+  resEl.innerHTML = html;
+  resEl.style.display = 'block';
+}
+
 // ── Tackle Menu Routing ───────────────────────────────────────────────────────
 function showTackleMenu() {
   document.getElementById('tackle-menu').style.display = 'block';
   document.getElementById('tackle-lures').style.display = 'none';
+  document.getElementById('tackle-bait').style.display = 'none';
   document.getElementById('tackle-line').style.display = 'none';
 }
 function showTackleSection(sec) {
   document.getElementById('tackle-menu').style.display = 'none';
   document.getElementById('tackle-lures').style.display = sec === 'lures' ? 'block' : 'none';
+  document.getElementById('tackle-bait').style.display = sec === 'bait' ? 'block' : 'none';
   document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
 }
 
