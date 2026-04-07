@@ -528,7 +528,7 @@
 
     <!-- Lures Section -->
     <div id="tackle-lures" style="display:none">
-      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Lure &amp; Rig Advisor</div>
@@ -581,7 +581,7 @@
 
     <!-- Bait Section -->
     <div id="tackle-bait" style="display:none">
-      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Bait Advisor</div>
@@ -606,7 +606,7 @@
 
     <!-- Line Section -->
     <div id="tackle-line" style="display:none">
-      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="showTackleMenu()">← Back to Tackle Box</button>
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Line Calculator</div>
@@ -755,10 +755,11 @@ function timeoutSignal(ms) {
 let currentTab = 'solunar';
 let appData = null;
 let selectedDay = 0;
+let appNavigated = false;
 
 function switchTab(tab, pushHistory = true) {
   if (tab === currentTab) {
-    if (tab === 'tackle') showTackleMenu(); // Tap tackle again to go to menu
+    if (tab === 'tackle' && pushHistory) showTackleMenu(true); // Tap tackle again to go to menu
     return;
   }
   currentTab = tab;
@@ -770,7 +771,11 @@ function switchTab(tab, pushHistory = true) {
   document.getElementById('nav-' + tab)?.classList.add('active');
 
   // Push history so back button works
-  if (pushHistory) history.pushState({ tab }, '', '#' + tab);
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab }, '', '#' + tab);
+    if (tab === 'tackle') showTackleMenu(false); // Reset to menu when navigating from another tab
+  }
 
   // If switching to lakes and we have data, make sure lakes are rendered
   if (tab === 'lakes' && appData?.lakes) renderLakes();
@@ -779,16 +784,34 @@ function switchTab(tab, pushHistory = true) {
 // Handle back button / swipe back
 window.addEventListener('popstate', e => {
   const tab = e.state?.tab || 'solunar';
+  const sub = e.state?.sub || null;
+  
   switchTab(tab, false);
+  
+  if (tab === 'tackle') {
+    if (sub) showTackleSection(sub, false);
+    else showTackleMenu(false);
+  }
 });
 
 // On load, check if there's a hash
-const _initTab = location.hash.replace('#', '') || 'solunar';
-if (['solunar','lakes','tackle','settings'].includes(_initTab)) {
-  switchTab(_initTab, false);
-  history.replaceState({ tab: _initTab }, '', '#' + _initTab);
+const _hash = location.hash.replace('#', '');
+let _initTab = 'solunar';
+let _initSub = null;
+
+if (_hash.startsWith('tackle-')) {
+  _initTab = 'tackle';
+  _initSub = _hash.replace('tackle-', '');
+} else if (['solunar','lakes','tackle','settings'].includes(_hash)) {
+  _initTab = _hash;
+}
+
+switchTab(_initTab, false);
+if (_initTab === 'tackle' && _initSub) {
+  showTackleSection(_initSub, false);
+  history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
 } else {
-  history.replaceState({ tab: 'solunar' }, '', '#solunar');
+  history.replaceState({ tab: _initTab }, '', '#' + _initTab);
 }
 
 // ── Lake database cache (loaded from worker on startup) ───────────────────────
@@ -2211,17 +2234,29 @@ function generateBaitRecs() {
 }
 
 // ── Tackle Menu Routing ───────────────────────────────────────────────────────
-function showTackleMenu() {
+function showTackleMenu(pushHistory = true) {
   document.getElementById('tackle-menu').style.display = 'block';
   document.getElementById('tackle-lures').style.display = 'none';
   document.getElementById('tackle-bait').style.display = 'none';
   document.getElementById('tackle-line').style.display = 'none';
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: 'tackle' }, '', '#tackle');
+  }
 }
-function showTackleSection(sec) {
+function showTackleSection(sec, pushHistory = true) {
   document.getElementById('tackle-menu').style.display = 'none';
   document.getElementById('tackle-lures').style.display = sec === 'lures' ? 'block' : 'none';
   document.getElementById('tackle-bait').style.display = sec === 'bait' ? 'block' : 'none';
   document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: 'tackle', sub: sec }, '', '#tackle-' + sec);
+  }
+}
+function handleTackleBack() {
+  if (appNavigated) history.back();
+  else showTackleMenu(true);
 }
 
 // ── Line Calculator Engine ────────────────────────────────────────────────────
