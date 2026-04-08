@@ -639,7 +639,7 @@
         
         <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
           <div style="font-size:15px;font-weight:500;margin-bottom:4px">Mono to Braid Equivalent</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-style:italic">* Equivalents are estimated using PowerPro specifications and may vary by manufacturer.</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-style:italic">* Equivalents are estimated based on diameter and may vary by manufacturer.</div>
           <label class="db-label">Current Mono/Fluoro Weight (lbs)
             <select id="line-mono-weight">
               <option value="1">1 lb</option>
@@ -655,6 +655,19 @@
               <option value="30">30 lb</option>
               <option value="50">50 lb</option>
               <option value="80">80 lb</option>
+            </select>
+          </label>
+          <label class="db-label">Braid Brand
+            <select id="line-braid-brand" onchange="calcMonoBraid(); calcComboLine();">
+              <option value="Generic (Range)">Generic (Range)</option>
+              <option value="PowerPro">PowerPro</option>
+              <option value="Bullbuster">Bullbuster</option>
+              <option value="Spiderwire Stealth">Spiderwire Stealth</option>
+              <option value="Sufix 832">Sufix 832</option>
+              <option value="Berkley Fireline">Berkley Fireline</option>
+              <option value="Daiwa J-Braid">Daiwa J-Braid</option>
+              <option value="Berkley X9">Berkley X9</option>
+              <!-- Add more brands here as data becomes available -->
             </select>
           </label>
           <button class="db-submit-btn" style="margin-top:8px" onclick="calcMonoBraid()">Get Braid Equivalent</button>
@@ -2259,16 +2272,93 @@ function handleTackleBack() {
 }
 
 // ── Line Calculator Engine ────────────────────────────────────────────────────
-const BRAID_EQUIV = {
-  1: 8, 2: 10, 4: 15, 6: 20, 8: 30, 10: 40, 12: 50, 16: 65, 18: 80, 20: 100, 30: 150, 50: 200, 80: 250
+// Data based on common diameter equivalencies.
+// For brands with specific data, min/max are the same. For generic, a range is provided.
+const BRAID_EQUIV_DATA = {
+  'Generic (Range)': {
+    1: { min: 6, max: 8 },
+    2: { min: 8, max: 10 },
+    4: { min: 10, max: 15 },
+    6: { min: 15, max: 20 },
+    8: { min: 20, max: 30 },
+    10: { min: 30, max: 40 },
+    12: { min: 40, max: 50 },
+    16: { min: 50, max: 65 },
+    18: { min: 65, max: 80 },
+    20: { min: 80, max: 100 },
+    30: { min: 100, max: 150 },
+    50: { min: 150, max: 200 },
+    80: { min: 200, max: 250 }
+  },
+  'PowerPro': {
+    1: { min: 8, max: 8 }, 2: { min: 10, max: 10 }, 4: { min: 15, max: 15 },
+    6: { min: 20, max: 20 }, 8: { min: 30, max: 30 }, 10: { min: 40, max: 40 },
+    12: { min: 50, max: 50 }, 16: { min: 65, max: 65 }, 18: { min: 80, max: 80 },
+    20: { min: 100, max: 100 }, 30: { min: 150, max: 150 }, 50: { min: 200, max: 200 },
+    80: { min: 250, max: 250 }
+  },
+  'Bullbuster': { // User provided values
+    6: { min: 20, max: 20 }, 8: { min: 30, max: 30 }, 12: { min: 40, max: 40 },
+    15: { min: 50, max: 50 }, 20: { min: 65, max: 65 }, 30: { min: 80, max: 80 },
+    40: { min: 100, max: 100 }, 50: { min: 130, max: 130 }, 60: { min: 200, max: 200 }
+  },
+  'Spiderwire Stealth': {
+    4: { min: 10, max: 10 }, 6: { min: 15, max: 15 }, 8: { min: 20, max: 20 },
+    10: { min: 30, max: 30 }, 12: { min: 40, max: 40 }, 14: { min: 50, max: 50 },
+    17: { min: 65, max: 65 }, 20: { min: 80, max: 80 }, 30: { min: 100, max: 100 }
+  },
+  'Sufix 832': {
+    4: { min: 10, max: 10 }, 6: { min: 15, max: 15 }, 8: { min: 20, max: 20 },
+    10: { min: 30, max: 30 }, 12: { min: 40, max: 40 }, 14: { min: 50, max: 50 },
+    17: { min: 65, max: 65 }, 20: { min: 80, max: 80 }, 30: { min: 100, max: 100 }
+  },
+  'Berkley Fireline': { // Fused line, diameter equivalencies can differ slightly
+    4: { min: 10, max: 10 }, 6: { min: 14, max: 14 }, 8: { min: 20, max: 20 },
+    10: { min: 30, max: 30 }, 12: { min: 40, max: 40 }, 14: { min: 50, max: 50 },
+    20: { min: 60, max: 60 }
+  },
+  'Daiwa J-Braid': {
+    4: { min: 10, max: 10 }, 6: { min: 15, max: 15 }, 8: { min: 20, max: 20 },
+    10: { min: 30, max: 30 }, 12: { min: 40, max: 40 }, 14: { min: 50, max: 50 },
+    17: { min: 65, max: 65 }, 20: { min: 80, max: 80 }, 30: { min: 100, max: 100 }
+  },
+  'Berkley X9': { // Often similar to PowerPro
+    1: { min: 8, max: 8 }, 2: { min: 10, max: 10 }, 4: { min: 15, max: 15 },
+    6: { min: 20, max: 20 }, 8: { min: 30, max: 30 }, 10: { min: 40, max: 40 },
+    12: { min: 50, max: 50 }, 16: { min: 65, max: 65 }, 18: { min: 80, max: 80 },
+    20: { min: 100, max: 100 }, 30: { min: 150, max: 150 }, 50: { min: 200, max: 200 },
+    80: { min: 250, max: 250 }
+  }
 };
-function getBraidEquiv(mono) {
-  if (!mono) return 0;
-  if (mono < 1) return 5;
-  const keys = Object.keys(BRAID_EQUIV).map(Number).sort((a,b)=>a-b);
-  let closest = keys[keys.length-1];
-  for(let k of keys) { if (mono <= k) { closest = k; break; } }
-  return BRAID_EQUIV[closest] || (mono * 4);
+
+function getBraidEquiv(mono, brand) {
+  if (!mono || mono <= 0) return { min: 0, max: 0 };
+
+  const brandData = BRAID_EQUIV_DATA[brand] || BRAID_EQUIV_DATA['Generic (Range)'];
+  const monoKeys = Object.keys(brandData).map(Number).sort((a, b) => a - b);
+
+  let closestMonoKey = monoKeys[0];
+  for (let i = 0; i < monoKeys.length; i++) {
+    if (mono <= monoKeys[i]) {
+      closestMonoKey = monoKeys[i];
+      break;
+    }
+    if (i === monoKeys.length - 1) { // If mono is greater than all keys, use the largest
+      closestMonoKey = monoKeys[i];
+    }
+  }
+
+  let braidEquiv = brandData[closestMonoKey];
+
+  // Ensure it's always an object with min/max
+  if (braidEquiv && typeof braidEquiv === 'object' && 'min' in braidEquiv && 'max' in braidEquiv) {
+    return { min: braidEquiv.min, max: braidEquiv.max };
+  } else if (typeof braidEquiv === 'number') {
+    return { min: braidEquiv, max: braidEquiv };
+  }
+
+  // Fallback to generic if brand data is malformed or not found for some reason
+  return BRAID_EQUIV_DATA['Generic (Range)'][closestMonoKey] || { min: mono * 4, max: mono * 5 };
 }
 
 function calcComboLine() {
@@ -2277,6 +2367,7 @@ function calcComboLine() {
   const sMin = parseInt(document.getElementById('line-reel-min').value) || 0;
   const sMax = parseInt(document.getElementById('line-reel-max').value) || 0;
   const res = document.getElementById('line-rod-result');
+  const brand = document.getElementById('line-braid-brand').value;
   
   if (!rMin && !rMax && !sMin && !sMax) { res.innerHTML = '<div class="err-msg" style="margin-bottom:0">⚠️ Please enter rod and/or reel ratings.</div>'; return; }
 
@@ -2290,14 +2381,25 @@ function calcComboLine() {
     return;
   }
 
-  const bMin = getBraidEquiv(minMono);
-  const bMax = getBraidEquiv(maxMono);
   let monoStr = minMono === maxMono ? `${minMono}lb` : `${minMono}lb - ${maxMono}lb`;
-  let braidStr = bMin === bMax ? `${bMin}lb` : `${bMin}lb - ${bMax}lb`;
+
+  // Calculate braid equivalency for the min and max mono values
+  const braidEquivMin = getBraidEquiv(minMono, brand);
+  const braidEquivMax = getBraidEquiv(maxMono, brand);
+
+  const combinedMinBraid = braidEquivMin.min;
+  const combinedMaxBraid = braidEquivMax.max;
+
+  let braidStr;
+  if (combinedMinBraid === combinedMaxBraid) {
+    braidStr = `~${combinedMinBraid}lb`;
+  } else {
+    braidStr = `~${combinedMinBraid}lb - ${combinedMaxBraid}lb`;
+  }
 
   res.innerHTML = `
     <div class="db-row" style="margin-top:12px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Recommended Mono/Fluoro:</div><div style="color:var(--green);font-weight:500;font-size:18px">${monoStr}</div></div>
-    <div class="db-row" style="margin-top:10px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Recommended Braid:</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">${braidStr}</div></div>
+    <div class="db-row" style="margin-top:10px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Recommended Braid (${brand}):</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">${braidStr}</div></div>
     <div class="db-notes" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
       This mono rating balances your rod and reel limits. The braid rating provides equivalent thickness to cast smoothly without digging into the spool.
     </div>`;
@@ -2305,11 +2407,21 @@ function calcComboLine() {
 
 function calcMonoBraid() {
   const val = parseInt(document.getElementById('line-mono-weight').value);
-  const braid = getBraidEquiv(val);
-  document.getElementById('line-mono-result').innerHTML = `
-    <div class="db-row" style="margin-top:12px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Equivalent Braid:</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">~${braid}lb</div></div>
+  const brand = document.getElementById('line-braid-brand').value;
+  const braidEquiv = getBraidEquiv(val, brand);
+  const resEl = document.getElementById('line-mono-result');
+
+  let braidStr;
+  if (braidEquiv.min === braidEquiv.max) {
+    braidStr = `~${braidEquiv.min}lb`;
+  } else {
+    braidStr = `~${braidEquiv.min}lb - ${braidEquiv.max}lb`;
+  }
+
+  resEl.innerHTML = `
+    <div class="db-row" style="margin-top:12px;font-size:14px;"><div style="font-weight:600;color:var(--text);margin-bottom:2px">Equivalent Braid (${brand}):</div><div style="color:var(--blue-mid);font-weight:500;font-size:18px">${braidStr}</div></div>
     <div class="db-notes" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-      Provides the same spool capacity and casting profile as ${val}lb mono.
+      Provides similar diameter and spool capacity as ${val}lb mono.
     </div>`;
 }
 
@@ -2435,6 +2547,13 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('castwise_theme', e.target.value);
       document.documentElement.setAttribute('data-theme', e.target.value);
     });
+  }
+
+  // Initial calculation for line calculator when the page loads
+  // This ensures the default values are displayed correctly.
+  const monoWeightSelect = document.getElementById('line-mono-weight');
+  if (monoWeightSelect) {
+    calcMonoBraid();
   }
 });
 
