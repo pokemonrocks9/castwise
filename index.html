@@ -1779,7 +1779,12 @@ async function submitLakeInfo(lakeName, id, btn) {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Submit failed');
+    if (!res.ok) {
+      if (data.error && data.error.includes('does not match')) {
+        throw new Error('Database sync conflict. Please refresh and try again.');
+      }
+      throw new Error(data.error || 'Submit failed');
+    }
 
     // Update local cache so UI reflects immediately
     if (!lakeDB[lakeName]) lakeDB[lakeName] = {};
@@ -1804,8 +1809,6 @@ async function submitLakeInfo(lakeName, id, btn) {
   } catch (e) {
     if (e.message.includes('does not match')) {
       status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
-      btn.disabled = false;
-      btn.textContent = 'Submit';
       return;
     }
     btn.disabled = false;
@@ -1950,7 +1953,10 @@ function renderFilteredLakes() {
           </div>
         </div>
       </div>
-      ${_noFish ? '<div style="padding:8px 0;font-size:13px;color:var(--red-dark)">This water is not open for public fishing.</div>' : `<div class="db-section">${lakeDBCard(lk.name, _rec)}</div>`}
+      <div class="db-section">
+        ${_noFish ? '<div style="padding:4px 0 12px;font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : ''}
+        ${lakeDBCard(lk.name, _rec)}
+      </div>
       ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
@@ -2051,10 +2057,19 @@ async function submitNewLake() {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Submit failed');
+    if (!res.ok) {
+      if (data.error && data.error.includes('does not match')) {
+        throw new Error('Database sync conflict. Please refresh and try again.');
+      }
+      throw new Error(data.error || 'Submit failed');
+    }
 
     // Add to local community lakes cache so it shows immediately
-    communityLakes.push({ name, lat: appData.userLat, lon: appData.userLon, type, confirmed: false });
+    const newLake = { name, lat: appData.userLat, lon: appData.userLon, type, dist: 0, source: 'community', confirmed: false };
+    communityLakes.push(newLake);
+    if (appData && appData.lakes) {
+      appData.lakes.push(newLake);
+    }
     renderLakes();
     status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
   } catch (e) {
