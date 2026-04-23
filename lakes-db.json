@@ -113,8 +113,7 @@
     "pending": null
   },
   "Owens Lake": {
-    "confirmed": null,
-    "pending": {
+    "confirmed": {
       "noFishing": true,
       "payToFish": false,
       "pier": false,
@@ -125,10 +124,9 @@
       "closedDays": [],
       "submittedBy": "anonymous",
       "submittedAt": "2026-04-23",
-      "voteCount": 0,
-      "votes": [
-        "6f1a931e01b5ce8d"
-      ]
-    }
+      "confirmedBy": "Owner",
+      "confirmedAt": "2026-04-23"
+    },
+    "pending": null
   }
 }
