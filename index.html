@@ -1802,6 +1802,12 @@ async function submitLakeInfo(lakeName, id, btn) {
     renderLakes();
     status.textContent = '✅ Submitted! Thanks for contributing.';
   } catch (e) {
+    if (e.message.includes('does not match')) {
+      status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+      return;
+    }
     btn.disabled = false;
     btn.textContent = 'Submit';
     status.textContent = '⚠️ ' + e.message;
@@ -2052,6 +2058,10 @@ async function submitNewLake() {
     renderLakes();
     status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
   } catch (e) {
+    if (e.message.includes('does not match')) {
+      status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
+      return;
+    }
     status.textContent = '⚠️ ' + e.message;
   }
 }
