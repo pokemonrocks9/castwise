@@ -2220,22 +2220,25 @@ function updateMapMarkers() {
   map.eachLayer((layer) => {
     if (layer instanceof L.CircleMarker) map.removeLayer(layer);
   });
+  mapMarkers = {};
 
   appData.lakes.forEach(lk => {
-    const isNoFish = lk.noFishing === true;
-    const color = isNoFish ? '#A32D2D' : '#1D9E75';
+    const _noFish = isNoFish(lk.name);
+    const _isCommunity = lk.source === 'community' || isCommunityLake(lk.name);
+    const _communityData = getCommunityLake(lk.name);
+    const _confirmed = _communityData?.confirmed;
+
+    const color = _noFish ? '#A32D2D' : (_isCommunity && !_confirmed ? '#BA7517' : '#1D9E75');
     
-    L.circleMarker([lk.lat, lk.lon], {
+    const marker = L.circleMarker([lk.lat, lk.lon], {
       radius: 6,
       fillColor: color,
       color: '#fff',
       weight: 2,
       opacity: 1,
       fillOpacity: 0.8
-    })
-    .addTo(map)
-    .bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`);
-    
+    }).addTo(map).bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`);
+
     mapMarkers[lk.name] = marker;
   });
 }
@@ -2243,16 +2246,10 @@ function updateMapMarkers() {
 function renderMapList() {
   const el = document.getElementById('map-list');
   if (!el || !appData?.lakes) return;
-  
+
+  const d = appData.days[selectedDay];
   let h = '<div style="padding:16px"><div class="section-label">Lakes in view</div>';
-  appData.lakes.forEach(lk => {
-    h += `
-      <div class="lake-item" style="cursor:pointer; padding:10px; margin-bottom:8px;" onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon})">
-        <div style="font-weight:500; font-size:14px;">${lk.name}</div>
-        <div style="font-size:12px; color:var(--text3);">${lk.dist} mi away</div>
-      </div>
-    `;
-  });
+  h += renderLakeListHTML(appData.lakes, d, true);
   h += '</div>';
   el.innerHTML = h;
 }
