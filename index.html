@@ -313,6 +313,21 @@
       background: var(--green-light);
       box-shadow: 0 0 0 1px var(--green);
     }
+    /* ── Fish ID Tab ── */
+    .fish-id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fish-id-card { 
+      background: var(--bg); border: 1px solid var(--border); 
+      border-radius: var(--radius-lg); padding: 10px; cursor: pointer;
+      transition: transform 0.1s; display: flex; flex-direction: column;
+    }
+    .fish-id-card:active { transform: scale(0.98); }
+    .fish-id-photo-wrap { 
+      background: var(--bg2); border-radius: 8px; 
+      height: 100px; overflow: hidden; margin-bottom: 8px; 
+      position: relative;
+    }
+    .fish-id-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .fish-id-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 32px; background: var(--green-light); }
     .lake-badge {
       display: inline-flex; align-items: center; gap: 4px;
       font-size: 10px; font-weight: 500; padding: 2px 7px;
@@ -505,6 +520,22 @@
     <div id="lakes-tab-content">
       <div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-fish" class="tab-panel">
+    <div id="fish-search-wrap" style="padding: 16px 16px 0; display: none;">
+      <div class="loc-bar">
+        <svg class="loc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px;">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="fishSearchIn" placeholder="Search species..." oninput="filterFishidex()" autocomplete="off" />
+      </div>
+    </div>
+    <div id="fish-tab-content">
+      <div class="empty" style="padding:40px 20px;font-size:14px;text-align:center">
+        🛰️ Tap the satellite for GPS, or enter a city / zip to see common fish in your area
       </div>
     </div>
   </div>
@@ -761,6 +792,10 @@
       <svg viewBox="0 0 24 24"><path d="M3 17c3-3 5-5 9-5s6 2 9 5"/><path d="M3 11c3-3 5-5 9-5s6 2 9 5"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
       Lakes
     </button>
+    <button class="nav-btn" id="nav-fish" onclick="switchTab('fish')">
+      <svg viewBox="0 0 24 24"><path d="M22,12C22,12 19,8 14,8C11.5,8 9.2,9 7.5,10.6C6,9 3,9 3,9C3,9 4,12 3,15C3,15 6,15 7.5,13.4C9.2,15 11.5,16 14,16C19,16 22,12 22,12M15,10A1,1 0 1,1 14,11A1,1 0 0,1 15,10Z"/></svg>
+      Fishidex
+    </button>
     <button class="nav-btn" id="nav-tackle" onclick="switchTab('tackle')">
       <svg viewBox="0 0 1024 1024" class="fill-svg">
         <path d="M745.124 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H745.124c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M158.127 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H158.127c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M402.709 560.377h244.582c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H402.709c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458"/>
@@ -821,6 +856,9 @@ function switchTab(tab, pushHistory = true) {
 
   // If switching to lakes and we have data, make sure lakes are rendered
   if (tab === 'lakes' && appData?.lakes) renderLakes();
+
+  // If switching to fish and we have data
+  if (tab === 'fish' && appData) renderFishTab();
 }
 
 // Handle back button / swipe back
@@ -844,7 +882,7 @@ let _initSub = null;
 if (_hash.startsWith('tackle-')) {
   _initTab = 'tackle';
   _initSub = _hash.replace('tackle-', '');
-} else if (['solunar','lakes','tackle','settings'].includes(_hash)) {
+} else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
   _initTab = _hash;
 }
 
@@ -1158,74 +1196,6 @@ async function fetchInatFish(lat, lon, radiusKm = 8) {
 }
 
 // ── Toggle iNat fish panel for a lake card ────────────────────────────────────
-async function toggleFish(lakeIdx) {
-  const toggle  = document.getElementById(`ft-${lakeIdx}`);
-  const list    = document.getElementById(`fl-${lakeIdx}`);
-  const isOpen  = list.classList.contains('open');
-
-  // Close if already open
-  if (isOpen) {
-    list.classList.remove('open');
-    toggle.classList.remove('open');
-    return;
-  }
-
-  // Open and load if not yet loaded
-  toggle.classList.add('open');
-  list.classList.add('open');
-
-  if (list.dataset.loaded) return; // already fetched
-  list.dataset.loaded = 'true';
-
-  const { lat, lon } = appData.lakes[lakeIdx];
-  list.innerHTML = `<div class="inat-loading">Loading real fish sightings…</div>`;
-
-  try {
-    const fish = await fetchInatFish(lat, lon);
-    if (fish.length >= 3) {
-      // Real iNat data
-      let h = fish.map(f => `
-        <div class="inat-fish-row">
-          ${f.photo
-            ? `<img class="inat-fish-photo" src="${f.photo}" alt="${f.common}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-            : ''}
-          <div class="inat-fish-photo-placeholder" style="${f.photo ? 'display:none' : ''}">🐟</div>
-          <div class="inat-fish-info">
-            <div class="inat-fish-common">${f.common}</div>
-            <div class="inat-fish-sci">${f.sci}</div>
-          </div>
-          <div class="inat-fish-count">${f.count} obs</div>
-        </div>`).join('');
-      h += `<div class="inat-source">Sightings via <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a></div>`;
-      list.innerHTML = h;
-    } else {
-      // Sparse — fall back to regional model
-      renderFallbackFish(list, lakeIdx);
-    }
-  } catch (e) {
-    renderFallbackFish(list, lakeIdx);
-  }
-}
-
-function renderFallbackFish(container, lakeIdx) {
-  const d = appData.days[selectedDay];
-  let h = d.fish.map(f => {
-    const pct = Math.round(f.rate * 100);
-    return `
-      <div class="inat-fish-row">
-        <div class="inat-fish-photo-placeholder">🐟</div>
-        <div class="inat-fish-info">
-          <div class="inat-fish-common">${f.name}</div>
-          <div class="inat-fish-sci">Est. activity</div>
-        </div>
-        <div class="inat-fish-count">${pct}%</div>
-      </div>`;
-  }).join('');
-
-  h += `<div class="inat-fallback-note">No local sightings data — showing regional estimates</div>`;
-  container.innerHTML = h;
-}
-
 // ── Load all data ─────────────────────────────────────────────────────────────
 // Weather loads first and renders immediately — lakes load in background
 async function loadData(lat, lon, locName) {
@@ -1259,6 +1229,7 @@ async function loadData(lat, lon, locName) {
     appData = { days, lakes: [], locName, userLat: lat, userLon: lon };
     selectedDay = 0;
     render();
+    if (currentTab === 'fish') renderFishTab();
     // Fetch lakes + lakeDB in parallel, render only after both are ready
     Promise.all([
       fetchLakes(lat, lon),
@@ -2017,11 +1988,6 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       <div class="db-section">
         ${_noFish ? '<div style="font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
       </div>
-      ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="event.stopPropagation(); toggleFish(${idx})">
-        <span class="fish-toggle-label">Fish species near this lake</span>
-        <span class="fish-toggle-arrow">▼</span>
-      </div>
-      <div class="inat-fish-list" id="fl-${idx}"></div>`}
     </div>`;
   });
 
@@ -2057,6 +2023,92 @@ function renderLakes() {
 
   lakeFilter = 'all';
   renderFilteredLakes();
+}
+
+// ── Fish ID Tab ──────────────────────────────────────────────────────────────
+let currentFishList = [];
+
+async function renderFishTab() {
+  const el = document.getElementById('fish-tab-content');
+  const searchWrap = document.getElementById('fish-search-wrap');
+  if (!el || !appData) return;
+
+  el.innerHTML = `<div class="loading"><div class="spinner"></div>Finding fish in ${appData.locName}...</div>`;
+  if (searchWrap) searchWrap.style.display = 'none';
+
+  try {
+    const fish = await fetchInatFish(appData.userLat, appData.userLon, 40);
+    currentFishList = fish.length > 0 ? fish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
+    if (searchWrap) searchWrap.style.display = 'block';
+    displayFishList(currentFishList);
+  } catch (e) {
+    currentFishList = FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
+    if (searchWrap) searchWrap.style.display = 'block';
+    displayFishList(currentFishList);
+  }
+}
+
+function displayFishList(list) {
+  const el = document.getElementById('fish-tab-content');
+  if (!el) return;
+  
+  const isFallback = list.length > 0 && list[0].sci === 'Estimated regional presence';
+  const label = isFallback ? 'Regional fish species' : 'Fish sightings in your area';
+
+  let h = `<div class="section-label" style="padding:16px 16px 8px">${label}</div>`;
+  
+  if (list.length > 0) {
+    h += '<div class="fish-id-grid" style="padding: 0 16px 16px;">';
+    list.forEach(f => {
+      const thumb = f.photo || '';
+      const large = thumb ? thumb.replace('square', 'medium') : '';
+      const onclick = thumb ? `onclick="expandFishPhoto('${f.common.replace(/'/g,"\\'")}', '${large}')"` : '';
+      h += `
+        <div class="fish-id-card" ${onclick}>
+          <div class="fish-id-photo-wrap">
+            ${thumb ? `<img src="${thumb}" alt="${f.common}" loading="lazy">` : '<div class="fish-id-placeholder">🐟</div>'}
+          </div>
+          <div style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.common}</div>
+          <div style="font-size:11px; color:var(--text3); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.sci}</div>
+        </div>`;
+    });
+    h += '</div>';
+    if (!isFallback) {
+      h += '<div class="inat-source" style="padding:0 16px 16px">Identification data via <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a></div>';
+    } else {
+      h += '<div class="inat-fallback-note" style="padding:0 16px 16px">Showing regional estimates due to low local data.</div>';
+    }
+  } else {
+    h += '<div class="empty">No fish found matching your search.</div>';
+  }
+  el.innerHTML = h;
+}
+
+function filterFishidex() {
+  const q = document.getElementById('fishSearchIn').value.toLowerCase().trim();
+  if (!q) {
+    displayFishList(currentFishList);
+    return;
+  }
+  const filtered = currentFishList.filter(f => 
+    f.common.toLowerCase().includes(q) || 
+    f.sci.toLowerCase().includes(q)
+  );
+  displayFishList(filtered);
+}
+
+function expandFishPhoto(name, url) {
+  if (!url) return;
+  const overlay = document.createElement('div');
+  overlay.style = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;`;
+  overlay.onclick = () => overlay.remove();
+
+  overlay.innerHTML = `
+    <div style="color:#fff; font-size:18px; font-weight:500; margin-bottom:16px;">${name}</div>
+    <img src="${url}" style="max-width:100%; max-height:75vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="color:rgba(255,255,255,0.6); font-size:13px; margin-top:20px;">Tap anywhere to close</div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 // ── Add missing lake form ─────────────────────────────────────────────────────
