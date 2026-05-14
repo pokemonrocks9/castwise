@@ -2874,11 +2874,23 @@ function getAndLoadLocation() {
     if (input.value === 'Getting your location…') input.value = '';
   };
 
-  const onSuccess = pos => {
+  const onSuccess = async pos => {
     if (isDone) return;
+
+    let detectedState = null;
+    try {
+      // Reverse geocode to detect state for official regulation links
+      // Using zoom=5 to prioritize administrative/state level data
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1&zoom=5`, { signal: timeoutSignal(4000) });
+      const data = await res.json();
+      const stateName = data.address?.state;
+      if (stateName) detectedState = STATE_NAME_TO_ABBR[stateName] || stateName;
+    } catch (err) {
+      console.warn('State detection failed during GPS lookup:', err);
+    }
+
     finish();
-    // For GPS, we don't have the state code immediately, but loadData will handle coordinates
-    loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby');
+    loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby', detectedState);
   };
 
   const onFail = (error) => {
