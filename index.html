@@ -100,6 +100,7 @@
       flex-direction: column;
     }
     #map-canvas { flex: 1; width: 100%; }
+    #map-list { height: 50%; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--border); }
 
     /* ── Header ── */
     .header { margin-bottom: 20px; }
@@ -464,7 +465,8 @@
       <div style="font-weight: 500;">Lake Map <span style="font-size: 10px; color: var(--green); border: 1px solid var(--green); padding: 1px 5px; border-radius: 10px; margin-left: 4px;">BETA</span></div>
       <button class="btn" onclick="closeMap()">Close</button>
     </div>
-    <div id="map-canvas"></div>
+    <div id="map-canvas" style="height: 50%; flex: none;"></div>
+    <div id="map-list"></div>
     <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text3); background: var(--bg2);">
       Long-press (or right-click) anywhere to drop a pin for a new lake
     </div>
@@ -789,6 +791,7 @@ let currentTab = 'solunar';
 let appData = null;
 let selectedDay = 0;
 let appNavigated = false;
+let updatingLakeLocation = null;
 let map = null;
 
 function switchTab(tab, pushHistory = true) {
@@ -1040,8 +1043,8 @@ async function fetchWeather(lat, lon) {
 // Add any lake here that NHD misses or names differently from what locals use.
 // coords: approximate center of the lake
 const PINNED_LAKES = [
-  { name: 'High Point City Lake',  lat: 35.9397, lon: -80.0283, type: 'lake / pond' },
-  { name: 'Kernersville Lake',     lat: 36.1185, lon: -80.0717, type: 'lake / pond' },
+  { name: 'High Point City Lake',  lat: 35.9912, lon: -79.9855, type: 'lake / pond' },
+  { name: 'Kernersville Lake',     lat: 36.1578, lon: -80.0441, type: 'lake / pond' },
 ];
 
 // ── Community-submitted lakes cache ──────────────────────────────────────────
@@ -1961,7 +1964,13 @@ function renderFilteredLakes() {
     const badge     = _noFish
       ? `<div class="lake-badge lake-badge-nofish">🚫 No fishing</div>`
       : _isCommunity && !_confirmed
-      ? `<div class="lake-badge lake-badge-community">📍 Community submitted · unverified</div>`
+      ? `
+        <div class="lake-badge lake-badge-community">📍 Community submitted · unverified</div>
+        <div style="margin-bottom:10px">
+          <p style="font-size:11px; color:var(--text2); margin-bottom:6px;">Is the map pin wrong? You can update it.</p>
+          <button class="btn" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="startLocationUpdate('${lk.name.replace(/'/g,"\\'")}')">Update Map Location</button>
+        </div>
+      `
       : '';
 
     h += `<div class="${lakeClass}">
@@ -1979,10 +1988,8 @@ function renderFilteredLakes() {
         </div>
       </div>
       <div class="db-section">
-        ${_noFish ? '<div style="padding:4px 0 12px;font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : ''}
-        ${lakeDBCard(lk.name, _rec)}
+        ${_noFish ? '<div style="padding:4px 0 8px;font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
       </div>
-      ${_noFish ? '<div style="padding:8px 0;font-size:13px;color:var(--red-dark)">This water is not open for public fishing.</div>' : `<div class="db-section">${lakeDBCard(lk.name, _rec)}</div>`}
       ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
@@ -2133,10 +2140,20 @@ function openMap() {
     // Long-press / Right-click logic
     map.on('contextmenu', (e) => {
       const { lat, lng } = e.latlng;
-      if (confirm(`Drop a pin here to add a new lake?`)) {
-        closeMap();
-        // Open the form with these specific coordinates
-        setTimeout(() => showAddLakeForm(lat, lng), 300);
+      
+      if (updatingLakeLocation) {
+        if (confirm(`Update location for "${updatingLakeLocation}" to here?`)) {
+          const lakeName = updatingLakeLocation;
+          updatingLakeLocation = null;
+          closeMap();
+          submitLocationUpdate(lakeName, lat, lng);
+        }
+      } else {
+        if (confirm(`Drop a pin here to add a new lake?`)) {
+          closeMap();
+          // Open the form with these specific coordinates
+          setTimeout(() => showAddLakeForm(lat, lng), 300);
+        }
       }
     });
   } else {
@@ -2145,6 +2162,7 @@ function openMap() {
 
   // Render existing lakes as dots
   updateMapMarkers();
+  renderMapList();
   
   // Force Leaflet to recalculate size since it was hidden
   setTimeout(() => map.invalidateSize(), 100);
@@ -2152,8 +2170,40 @@ function openMap() {
 
 function closeMap() {
   document.getElementById('map-overlay').style.display = 'none';
+  updatingLakeLocation = null;
 }
 
+function startLocationUpdate(lakeName) {
+  updatingLakeLocation = lakeName;
+  openMap();
+  // Show an alert to guide the user
+  alert(`Right-click (or long-press on mobile) on the map at the correct spot for "${lakeName}" to update its location.`);
+}
+
+async function submitLocationUpdate(name, lat, lon) {
+  try {
+    const res = await fetch(`${WORKER_URL}/update-lake-location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, lat, lon }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Update failed');
+
+    // Update local cache
+    const cl = communityLakes.find(l => l.name === name);
+    if (cl) { cl.lat = lat; cl.lon = lon; }
+    const lk = appData?.lakes.find(l => l.name === name);
+    if (lk) { lk.lat = lat; lk.lon = lon; }
+
+    renderLakes();
+    alert(`✅ Location updated for "${name}". It will reflect for everyone soon.`);
+  } catch (e) {
+    alert('⚠️ ' + e.message);
+  }
+}
+
+let mapMarkers = {};
 function updateMapMarkers() {
   if (!map || !appData?.lakes) return;
   
@@ -2176,7 +2226,33 @@ function updateMapMarkers() {
     })
     .addTo(map)
     .bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`);
+    
+    mapMarkers[lk.name] = marker;
   });
+}
+
+function renderMapList() {
+  const el = document.getElementById('map-list');
+  if (!el || !appData?.lakes) return;
+  
+  let h = '<div style="padding:16px"><div class="section-label">Lakes in view</div>';
+  appData.lakes.forEach(lk => {
+    h += `
+      <div class="lake-item" style="cursor:pointer; padding:10px; margin-bottom:8px;" onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon})">
+        <div style="font-weight:500; font-size:14px;">${lk.name}</div>
+        <div style="font-size:12px; color:var(--text3);">${lk.dist} mi away</div>
+      </div>
+    `;
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function focusLakeOnMap(name, lat, lon) {
+  if (!map) return;
+  map.setView([lat, lon], 14);
+  const marker = mapMarkers[name];
+  if (marker) marker.openPopup();
 }
 
 // ── Lure & Bait Recommendation Engine ─────────────────────────────────────────
