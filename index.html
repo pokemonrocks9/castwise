@@ -2080,21 +2080,19 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
   filtered.forEach((lk, idx) => {
     const topFish = dayData.fish.slice(0, 3).map(f => f.name.split(' ').pop()).join(', ');
     const _dbEntry = getDBEntry(lk.name);
-    const _hasPrices = _dbEntry && (
-      (_dbEntry.bankPrices||[]).length ||
-      (_dbEntry.launchPrices||[]).length ||
-      (_dbEntry.boatRentals||[]).length
+    const _hasFreeOption = _dbEntry && _dbEntry.payToFish !== true && (
+      (_dbEntry.bankFishing === true && (_dbEntry.bankPrices || []).length === 0) ||
+      (_dbEntry.boatLaunch === true && (_dbEntry.launchPrices || []).length === 0)
     );
-    const _isFree = _dbEntry && (
-      _dbEntry.payToFish === false &&
-      !(_dbEntry.bankPrices||[]).length &&
-      !(_dbEntry.launchPrices||[]).length &&
-      !(_dbEntry.boatRentals||[]).length
+    const _hasPaidOption = _dbEntry && (
+      _dbEntry.payToFish === true ||
+      (_dbEntry.bankPrices || []).length > 0 ||
+      (_dbEntry.launchPrices || []).length > 0
     );
-    const priceBadge = _hasPrices
-      ? '<span class="tag tag-paid">💰 Paid</span>'
-      : _isFree
+    const priceBadge = _hasFreeOption
       ? '<span class="tag tag-free">🆓 Free</span>'
+      : _hasPaidOption
+      ? '<span class="tag tag-paid">💰 Paid</span>'
       : '';
     const _rec = getDBRecord(lk.name);
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
