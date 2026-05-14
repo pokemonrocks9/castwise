@@ -1043,8 +1043,8 @@ async function fetchWeather(lat, lon) {
 // Add any lake here that NHD misses or names differently from what locals use.
 // coords: approximate center of the lake
 const PINNED_LAKES = [
-  { name: 'High Point City Lake',  lat: 35.9912, lon: -79.9855, type: 'lake / pond' },
-  { name: 'Kernersville Lake',     lat: 36.1578, lon: -80.0441, type: 'lake / pond' },
+  { name: 'High Point City Lake',  lat: 35.9868, lon: -79.9835, type: 'lake / pond' },
+  { name: 'Kernersville Lake',     lat: 36.1521, lon: -80.0515, type: 'lake / pond' },
 ];
 
 // ── Community-submitted lakes cache ──────────────────────────────────────────
@@ -1913,6 +1913,11 @@ function renderFilteredLakes() {
   if (!el) return;
   const { lakes } = appData;
   const d = appData.days[selectedDay];
+  el.innerHTML = renderLakeListHTML(lakes, d, false);
+}
+
+function renderLakeListHTML(lakes, dayData, isMapMode) {
+  if (!lakes.length) return '<div class="empty">No lakes found in this area.</div>';
 
   const filtered = lakes.filter(lk => {
     if (lakeFilter === 'all') return true;
@@ -1921,14 +1926,11 @@ function renderFilteredLakes() {
     return data.accessType === lakeFilter;
   });
 
-  if (!filtered.length) {
-    el.innerHTML = `<div class="empty">No lakes tagged as "${lakeFilter}" yet — try All, or submit info for a lake to tag it.</div>`;
-    return;
-  }
+  if (!filtered.length) return `<div class="empty">No lakes found for this filter.</div>`;
 
   let h = '';
   filtered.forEach((lk, idx) => {
-    const topFish = d.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+    const topFish = dayData.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
     const _dbEntry = getDBEntry(lk.name);
     const _hasPrices = _dbEntry && (
       (_dbEntry.bankPrices||[]).length ||
@@ -1961,6 +1963,11 @@ function renderFilteredLakes() {
                     : _isCommunity && !_confirmed ? 'lake-ico lake-ico-community'
                     : 'lake-ico';
     const icoEmoji  = _noFish ? '🚫' : '🎣';
+
+    // Map list click handler
+    const onclick = isMapMode ? `onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon})"` : '';
+    const cursor = isMapMode ? 'style="cursor:pointer"' : '';
+
     const badge     = _noFish
       ? `<div class="lake-badge lake-badge-nofish">🚫 No fishing</div>`
       : _isCommunity && !_confirmed
@@ -1973,7 +1980,7 @@ function renderFilteredLakes() {
       `
       : '';
 
-    h += `<div class="${lakeClass}">
+    h += `<div class="${lakeClass}" ${onclick} ${cursor}>
       <div class="lake-header">
         <div class="${icoClass}">${icoEmoji}</div>
         <div style="flex:1;min-width:0">
@@ -1988,7 +1995,7 @@ function renderFilteredLakes() {
         </div>
       </div>
       <div class="db-section">
-        ${_noFish ? '<div style="padding:4px 0 8px;font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
+        ${_noFish ? '<div style="font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
       </div>
       ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
@@ -1997,10 +2004,12 @@ function renderFilteredLakes() {
       <div class="inat-fish-list" id="fl-${idx}"></div>`}
     </div>`;
   });
-  // Add lake submission button at bottom
-  h += `<button class="add-lake-btn" onclick="showAddLakeForm()">📍 Don't see your lake? Add it</button><div id="add-lake-form-wrap"></div>`;
-  el.innerHTML = h;
-} // end _unused_renderLakes
+
+  if (!isMapMode) {
+    h += `<button class="add-lake-btn" onclick="showAddLakeForm()">📍 Don't see your lake? Add it</button><div id="add-lake-form-wrap"></div>`;
+  }
+  return h;
+}
 
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
