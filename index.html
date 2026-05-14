@@ -321,6 +321,14 @@
       transition: transform 0.1s; display: flex; flex-direction: column;
     }
     .fish-id-card:active { transform: scale(0.98); }
+    .fish-id-card.reg-none { border-color: var(--green); border-width: 2px; }
+    .fish-id-card.reg-limit { border-color: #f59e0b; border-width: 2px; }
+    .fish-id-card.reg-prohibited { border-color: var(--red-dark); border-width: 2px; }
+    .reg-badge {
+      font-size: 9px; font-weight: 600; padding: 2px 6px;
+      border-radius: 4px; margin-top: 5px; display: inline-block;
+      text-transform: uppercase; letter-spacing: 0.02em;
+    }
     .fish-id-photo-wrap { 
       background: var(--bg2); border-radius: 8px; 
       height: 100px; overflow: hidden; margin-bottom: 8px; 
@@ -776,6 +784,11 @@
     </div>
     
     <div class="footer" style="margin-top:0; border-top:none;">
+      <div style="background:var(--red-light); color:var(--red-dark); padding:12px; border-radius:var(--radius); margin: 0 16px 20px; font-size:11px; line-height:1.4; text-align:left;">
+        <strong>Legal Disclaimer:</strong> Fishing regulations (colors and labels) are provided for reference only and are <u>not guaranteed</u> to be accurate or up-to-date. Laws vary by body of water, season, and method. 
+        Always consult your local Department of Natural Resources (DNR) or Wildlife Commission for official regulations before keeping any fish.
+      </div>
+
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
       <p id="app-version-display" style="margin-top:10px;font-size:10px;opacity:0.4">v0.57.0</p>
@@ -918,6 +931,81 @@ const FISH = [
   { name: 'Yellow Perch',    peak: [4,5,10,11],      tr: [55,72], base: 0.50 },
   { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.42 },
 ];
+
+// ── Fishing Regulation Mappings ─────────────────────────────────────────────
+const FISH_REGS = {
+  'Largemouth Bass': { cls: 'reg-limit', label: 'Size & Bag limits' },
+  'Smallmouth Bass': { cls: 'reg-limit', label: 'Size & Bag limits' },
+  'Crappie':         { cls: 'reg-limit', label: 'Bag limits apply' },
+  'Walleye':         { cls: 'reg-limit', label: 'Size & Bag limits' },
+  'Trout':           { cls: 'reg-limit', label: 'Season & Bag limits' },
+  'Muskellunge':     { cls: 'reg-limit', label: 'Trophy Size limits' },
+  'Northern Pike':   { cls: 'reg-limit', label: 'Size & Bag limits' },
+  'Sturgeon':        { cls: 'reg-prohibited', label: 'Prohibited / C&R Only' }
+};
+
+function getRegInfo(name) {
+  if (!name) return { cls: 'reg-none', label: 'General Rules' };
+  const n = name.toLowerCase();
+  for (const [key, val] of Object.entries(FISH_REGS)) {
+    if (n.includes(key.toLowerCase())) return val;
+  }
+  return { cls: 'reg-none', label: 'General Rules' };
+}
+
+// ── State Regulation Directories ───────────────────────────────────────────
+const STATE_REGS_LINKS = {
+  'AL': 'https://www.outdooralabama.com/fishing/freshwater-fishing-digest',
+  'AK': 'https://www.adfg.alaska.gov/index.cfm?adfg=fishregulations.main',
+  'AZ': 'https://www.azgfd.com/fishing/regulations/',
+  'AR': 'https://www.agfc.com/en/fishing/general-fishing-regulations/',
+  'CA': 'https://wildlife.ca.gov/Regulations',
+  'CO': 'https://cpw.state.co.us/thingstodo/Pages/FishingRulReg.aspx',
+  'CT': 'https://portal.ct.gov/DEEP/Fishing/CT-Fishing-Guide',
+  'DE': 'https://dnrec.alpha.delaware.gov/fish-wildlife/fishing/regulations/',
+  'FL': 'https://myfwc.com/fishing/freshwater/regulations/',
+  'GA': 'https://georgiawildlife.com/fishing/regulations',
+  'HI': 'https://dlnr.hawaii.gov/dar/fishing/fishing-regulations/',
+  'ID': 'https://idfg.idaho.gov/fish/rules',
+  'IL': 'https://www.ifishillinois.org/regulations/index.html',
+  'IN': 'https://www.in.gov/dnr/fish-and-wildlife/fishing/fishing-guide-and-regulations/',
+  'IA': 'https://www.iowadnr.gov/Fishing/Fishing-Regulations',
+  'KS': 'https://ksoutdoors.com/Fishing/Fishing-Regulations',
+  'KY': 'https://fw.ky.gov/Fish/Pages/Fishing-Regs.aspx',
+  'LA': 'https://www.wlf.louisiana.gov/page/recreational-freshwater-fishing-regulations',
+  'ME': 'https://www.maine.gov/ifw/fishing-boating/fishing/laws-rules/index.html',
+  'MD': 'https://dnr.maryland.gov/fisheries/Pages/regulations/index.aspx',
+  'MA': 'https://www.mass.gov/freshwater-fishing-regulations',
+  'MI': 'https://www.michigan.gov/dnr/managing-resources/laws/fishing-regs',
+  'MN': 'https://www.dnr.state.mn.us/regulations/fishing/index.html',
+  'MS': 'https://www.mdwfp.com/fish-sw/fishing-rules-regs/',
+  'MO': 'https://mdc.mo.gov/fishing/regulations',
+  'MT': 'https://fwp.mt.gov/fish/regulations',
+  'NE': 'https://outdoornebraska.gov/fishingregulations/',
+  'NV': 'https://ndow.org/get-outside/fishing/fishing-regulations/',
+  'NH': 'https://www.wildlife.state.nh.us/fishing/publications.html',
+  'NJ': 'https://www.nj.gov/dep/fgw/njregs.htm#fishing',
+  'NM': 'https://www.wildlife.state.nm.us/fishing/regulations/',
+  'NY': 'https://www.dec.ny.gov/outdoor/7917.html',
+  'NC': 'https://www.ncwildlife.org/Fishing/Fishing-Regulations',
+  'ND': 'https://gf.nd.gov/fishing/regulations-guide',
+  'OH': 'https://ohiodnr.gov/wps/portal/gov/odnr/buy-and-apply/hunting-fishing-boating/fishing-resources/fishing-regulations',
+  'OK': 'https://www.wildlifedepartment.com/fishing/regs',
+  'OR': 'https://myodfw.com/fishing/regulations',
+  'PA': 'https://www.fishandboat.com/LearningCenter/FAQs/Pages/FishingRegs.aspx',
+  'RI': 'http://www.dem.ri.gov/programs/bnatres/fishwild/fishregs.htm',
+  'SC': 'https://www.dnr.sc.gov/regs/fishing.html',
+  'SD': 'https://gfp.sd.gov/fishing-regulations/',
+  'TN': 'https://www.tn.gov/twra/fishing/regulations.html',
+  'TX': 'https://tpwd.texas.gov/regulations/outdoor-annual/fishing/',
+  'UT': 'https://wildlife.utah.gov/guidebooks.html',
+  'VT': 'https://vtfishandwildlife.com/fish/fishing-regulations',
+  'VA': 'https://dwr.virginia.gov/fishing/regulations/',
+  'WA': 'https://wdfw.wa.gov/fishing/regulations',
+  'WV': 'https://wvdnr.gov/fishing/fishing-regulations/',
+  'WI': 'https://dnr.wisconsin.gov/topic/fishing/regulations',
+  'WY': 'https://wgfd.wyo.gov/Fishing-and-Boating/Fishing-Regulations'
+};
 
 // ── Moon phase ─────────────────────────────────────────────────────────────────
 function moonPhase(date) {
@@ -1064,6 +1152,7 @@ async function geocode(q) {
     return {
       lat:  parseFloat(place.latitude),
       lon:  parseFloat(place.longitude),
+      state: place['state abbreviation'],
       name: `${place['place name']}, ${place['state abbreviation']}`,
     };
   }
@@ -1226,7 +1315,7 @@ async function loadData(lat, lon, locName) {
       };
     });
     // Render weather/solunar immediately — don't wait on lakes
-    appData = { days, lakes: [], locName, userLat: lat, userLon: lon };
+    appData = { days, lakes: [], locName, userLat: lat, userLon: lon, state: null };
     selectedDay = 0;
     render();
     if (currentTab === 'fish') renderFishTab();
@@ -2055,21 +2144,44 @@ function displayFishList(list) {
   const isFallback = list.length > 0 && list[0].sci === 'Estimated regional presence';
   const label = isFallback ? 'Regional fish species' : 'Fish sightings in your area';
 
-  let h = `<div class="section-label" style="padding:16px 16px 8px">${label}</div>`;
+  // Detect state for official link
+  let stateLink = '';
+  if (appData.state && STATE_REGS_LINKS[appData.state]) {
+    stateLink = `
+      <a href="${STATE_REGS_LINKS[appData.state]}" target="_blank" class="btn" style="text-decoration:none; display:flex; align-items:center; gap:6px; margin: 0 16px 16px; font-size:12px; justify-content:center; background:var(--blue-light); border-color:var(--blue-mid); color:var(--blue-mid);">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        Official ${appData.state} Regulations
+      </a>
+    `;
+  }
+
+  let h = `
+    <div class="section-label" style="padding:16px 16px 8px">${label}</div>
+    ${stateLink}
+    <div style="display:flex; gap:12px; margin-bottom:12px; font-size:10px; padding:0 16px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--green);"></span> No Regulation</div>
+      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Size/Bag Limit</div>
+      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--red-dark);"></span> Prohibited</div>
+    </div>
+  `;
   
   if (list.length > 0) {
     h += '<div class="fish-id-grid" style="padding: 0 16px 16px;">';
     list.forEach(f => {
+      const reg = getRegInfo(f.common);
       const thumb = f.photo || '';
       const large = thumb ? thumb.replace('square', 'medium') : '';
       const onclick = thumb ? `onclick="expandFishPhoto('${f.common.replace(/'/g,"\\'")}', '${large}')"` : '';
       h += `
-        <div class="fish-id-card" ${onclick}>
+        <div class="fish-id-card ${reg.cls}" ${onclick}>
           <div class="fish-id-photo-wrap">
             ${thumb ? `<img src="${thumb}" alt="${f.common}" loading="lazy">` : '<div class="fish-id-placeholder">🐟</div>'}
           </div>
           <div style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.common}</div>
           <div style="font-size:11px; color:var(--text3); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.sci}</div>
+          <div class="reg-badge" style="color: ${reg.cls === 'reg-limit' ? 'var(--amber-dark)' : reg.cls === 'reg-prohibited' ? 'var(--red-dark)' : 'var(--green-dark)'}; background: ${reg.cls === 'reg-limit' ? 'var(--amber-light)' : reg.cls === 'reg-prohibited' ? 'var(--red-light)' : 'var(--green-light)'};">
+            ${reg.label}
+          </div>
         </div>`;
     });
     h += '</div>';
@@ -2750,7 +2862,8 @@ function getAndLoadLocation() {
   const onSuccess = pos => {
     if (isDone) return;
     finish();
-    loadData(pos.coords.latitude, pos.coords.longitude, 'Your location');
+    // For GPS, we don't have the state code immediately, but loadData will handle coordinates
+    loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby');
   };
 
   const onFail = (error) => {
@@ -2810,7 +2923,9 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
   const v = e.target.value.trim();
   if (!v) return;
   try {
-    const { lat, lon, name } = await geocode(v);
+    const { lat, lon, name, state } = await geocode(v);
+    // Pass state to appData
+    if (appData) appData.state = state;
     loadData(lat, lon, name);
   } catch (err) {
     const msg = `<div class="err-msg">⚠️ ${err.message}. Try a city and state like "Nashville, TN" or a 5-digit zip code.</div>`;
