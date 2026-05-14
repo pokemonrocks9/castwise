@@ -308,6 +308,11 @@
     .lake-item.lake-no-fish   { border-color: #A32D2D; border-width: 2px; opacity: 0.8; }
     .lake-ico.lake-ico-community { background: var(--amber-light); }
     .lake-ico.lake-ico-no-fish   { background: var(--red-light); }
+    .lake-item.active-highlight { 
+      border-color: var(--green); 
+      background: var(--green-light);
+      box-shadow: 0 0 0 1px var(--green);
+    }
     .lake-badge {
       display: inline-flex; align-items: center; gap: 4px;
       font-size: 10px; font-weight: 500; padding: 2px 7px;
@@ -1956,6 +1961,20 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     const _communityData = getCommunityLake(lk.name);
     const _confirmed = _communityData?.confirmed;
 
+    // Navigate button only for map view and public lakes
+    const _canNavigate = (_dbEntry?.accessType === 'public' || _dbEntry?.accessType === 'park') && !_noFish;
+    let navigateBtn = '';
+    if (isMapMode && _canNavigate) {
+      navigateBtn = `
+        <button class="btn btn-primary" style="margin-top:12px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" 
+          onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${lk.lat},${lk.lon}', '_blank')">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="stroke: white;">
+            <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+          </svg>
+          Navigate
+        </button>`;
+    }
+
     const lakeClass = _noFish ? 'lake-item lake-no-fish'
                     : _isCommunity && !_confirmed ? 'lake-item lake-community'
                     : 'lake-item';
@@ -1965,8 +1984,9 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     const icoEmoji  = _noFish ? '🚫' : '🎣';
 
     // Map list click handler
-    const onclick = isMapMode ? `onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon})"` : '';
+    const onclick = isMapMode ? `onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon}, false)"` : '';
     const cursor = isMapMode ? 'style="cursor:pointer"' : '';
+    const itemId = isMapMode ? `id="map-item-${lk.name.replace(/[^a-z0-9]/gi,'-')}"` : '';
 
     const badge     = _noFish
       ? `<div class="lake-badge lake-badge-nofish">🚫 No fishing</div>`
@@ -1980,7 +2000,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       `
       : '';
 
-    h += `<div class="${lakeClass}" ${onclick} ${cursor}>
+    h += `<div ${itemId} class="${lakeClass}" ${onclick} ${cursor}>
       <div class="lake-header">
         <div class="${icoClass}">${icoEmoji}</div>
         <div style="flex:1;min-width:0">
@@ -2002,6 +2022,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
         <span class="fish-toggle-arrow">▼</span>
       </div>
       <div class="inat-fish-list" id="fl-${idx}"></div>`}
+      ${navigateBtn}
     </div>`;
   });
 
@@ -2237,7 +2258,9 @@ function updateMapMarkers() {
       weight: 2,
       opacity: 1,
       fillOpacity: 0.8
-    }).addTo(map).bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`);
+    }).addTo(map)
+      .bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`)
+      .on('click', () => focusLakeOnMap(lk.name, lk.lat, lk.lon, true));
 
     mapMarkers[lk.name] = marker;
   });
@@ -2254,11 +2277,27 @@ function renderMapList() {
   el.innerHTML = h;
 }
 
-function focusLakeOnMap(name, lat, lon) {
+function focusLakeOnMap(name, lat, lon, fromMarker = false) {
   if (!map) return;
   map.setView([lat, lon], 14);
   const marker = mapMarkers[name];
   if (marker) marker.openPopup();
+
+  // Handle highlighting in the list
+  const listEl = document.getElementById('map-list');
+  if (listEl) {
+    listEl.querySelectorAll('.lake-item').forEach(el => el.classList.remove('active-highlight'));
+    
+    const safeId = name.replace(/[^a-z0-9]/gi,'-');
+    const targetItem = document.getElementById(`map-item-${safeId}`);
+    
+    if (targetItem) {
+      targetItem.classList.add('active-highlight');
+      if (fromMarker) {
+        targetItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
 }
 
 // ── Lure & Bait Recommendation Engine ─────────────────────────────────────────
