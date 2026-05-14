@@ -514,18 +514,21 @@
 
   <!-- Map Overlay (Beta) -->
   <div id="map-overlay">
-    <div style="padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg);">
-      <div class="header" style="margin-bottom:12px">
-        <div class="logo" style="font-size: 24px;">Cast<span>Wise</span></div>
-      </div>
-      <div class="loc-wrap" style="margin-bottom:0">
-        <div class="loc-bar">
-          <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
-          </svg>
-          <input type="text" class="loc-in" placeholder="Search location on map..." autocomplete="off" />
+    <div style="border-bottom: 1px solid var(--border); background: var(--bg);">
+      <div style="max-width: 520px; margin: 0 auto; padding: 20px 16px 0;">
+        <div class="header">
+          <div class="logo">Cast<span>Wise</span></div>
+          <div class="tagline">Free fishing intelligence — no subscription ever</div>
         </div>
-        <button class="btn btn-gps" title="Use my location">🛰️</button>
+        <div class="loc-wrap">
+          <div class="loc-bar">
+            <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
+            </svg>
+            <input type="text" class="loc-in" placeholder="City, state or zip — press Enter" autocomplete="off" />
+          </div>
+          <button class="btn btn-gps" title="Use my location">🛰️</button>
+        </div>
       </div>
     </div>
     <div id="map-canvas" style="height: 50%; flex: none;"></div>
