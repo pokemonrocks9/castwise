@@ -314,7 +314,7 @@
       box-shadow: 0 0 0 1px var(--green);
     }
     /* ── Fish ID Tab ── */
-    .fish-id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fish-id-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .fish-id-card { 
       background: var(--bg); border: 1px solid var(--border); 
       border-radius: var(--radius-lg); padding: 10px; cursor: pointer;
@@ -1177,12 +1177,12 @@ async function fetchLakes(lat, lon) {
 
 // ── iNaturalist fish species for a location ───────────────────────────────────
 // Uses /observations/species_counts — one call, deduped species with counts + photos
-async function fetchInatFish(lat, lon, radiusKm = 8) {
+async function fetchInatFish(lat, lon, radiusKm = 8, perPage = 30) {
   const url = `https://api.inaturalist.org/v1/observations/species_counts`
     + `?lat=${lat}&lng=${lon}&radius=${radiusKm}`
     + `&iconic_taxa=Actinopterygii`   // all ray-finned fish
     + `&quality_grade=research`       // community-verified only
-    + `&per_page=15`;
+    + `&per_page=${perPage}`;
   const res = await fetch(url, { signal: timeoutSignal(8000) });
   if (!res.ok) throw new Error(`iNat ${res.status}`);
   const data = await res.json();
@@ -2037,7 +2037,7 @@ async function renderFishTab() {
   if (searchWrap) searchWrap.style.display = 'none';
 
   try {
-    const fish = await fetchInatFish(appData.userLat, appData.userLon, 40);
+    const fish = await fetchInatFish(appData.userLat, appData.userLon, 40, 50);
     currentFishList = fish.length > 0 ? fish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
     if (searchWrap) searchWrap.style.display = 'block';
     displayFishList(currentFishList);
