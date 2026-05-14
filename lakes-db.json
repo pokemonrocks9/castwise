@@ -110,7 +110,32 @@
       "confirmedBy": "Owner",
       "confirmedAt": "2026-03-29"
     },
-    "pending": null
+    "pending": {
+      "noFishing": false,
+      "accessType": "park",
+      "payToFish": false,
+      "catchRules": "catch-and-keep",
+      "bankFishing": true,
+      "pier": true,
+      "bankPrices": [],
+      "boatLaunch": false,
+      "launchPrices": [],
+      "boatRentals": [
+        {
+          "type": "rowboat",
+          "price": 5,
+          "per": "3 hours"
+        }
+      ],
+      "hours": [],
+      "closedDays": [],
+      "submittedBy": "anonymous",
+      "submittedAt": "2026-05-14",
+      "voteCount": 0,
+      "votes": [
+        "44dc47d6f2662027"
+      ]
+    }
   },
   "Owens Lake": {
     "confirmed": {
