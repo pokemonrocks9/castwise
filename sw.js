@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.83.0';
+const VERSION = 'v0.84.0';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -26,7 +26,8 @@ self.addEventListener('fetch', e => {
     'open-meteo.com', 'hydro.nationalmap.gov', 'workers.dev',
     'inaturalist.org', 'zippopotam.us', 'geonames.org',
     'overpass-api.de', 'nominatim.openstreetmap.org',
-    'discord.com', 'github.com', 'geocoding-api.open-meteo.com',
+    'discord.com', 'github.com', 'geocoding-api.open-meteo.com', 
+    'tile.openstreetmap.org', 'unpkg.com'
   ].some(h => url.hostname.includes(h));
 
   if (isAPI) {
