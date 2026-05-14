@@ -496,13 +496,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 3000;
       cursor: pointer;
-      transition: transform 0.1s;
+      transition: transform 0.1s, background-color 0.2s;
       -webkit-tap-highlight-color: transparent;
     }
     .map-fab:active { transform: scale(0.92); }
     .map-fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .map-fab .icon-close { display: none; }
+    body.map-active .map-fab { background: var(--red-dark); }
+    body.map-active .map-fab .icon-map { display: none; }
+    body.map-active .map-fab .icon-close { display: block; }
   </style>
 </head>
 <body>
@@ -510,9 +514,19 @@
 
   <!-- Map Overlay (Beta) -->
   <div id="map-overlay">
-    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
-      <div style="font-weight: 500;">Lake Map <span style="font-size: 10px; color: var(--green); border: 1px solid var(--green); padding: 1px 5px; border-radius: 10px; margin-left: 4px;">BETA</span></div>
-      <button class="btn" onclick="closeMap()">Close</button>
+    <div style="padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg);">
+      <div class="header" style="margin-bottom:12px">
+        <div class="logo" style="font-size: 24px;">Cast<span>Wise</span></div>
+      </div>
+      <div class="loc-wrap" style="margin-bottom:0">
+        <div class="loc-bar">
+          <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
+          </svg>
+          <input type="text" class="loc-in" placeholder="Search location on map..." autocomplete="off" />
+        </div>
+        <button class="btn btn-gps" title="Use my location">🛰️</button>
+      </div>
     </div>
     <div id="map-canvas" style="height: 50%; flex: none;"></div>
     <div id="map-list"></div>
@@ -531,9 +545,9 @@
       <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
       </svg>
-      <input type="text" id="locIn" placeholder="City, state or zip — press Enter" autocomplete="off" />
+      <input type="text" id="locIn" class="loc-in" placeholder="City, state or zip — press Enter" autocomplete="off" />
     </div>
-    <button class="btn" id="btnGPS" title="Use my location" autocomplete="off">🛰️</button>
+    <button class="btn btn-gps" id="btnGPS" title="Use my location" autocomplete="off">🛰️</button>
   </div>
 
   <!-- Tab panels -->
@@ -551,8 +565,12 @@
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
       </div>
     </div>
-    <button class="map-fab" onclick="openMap()" title="View Map">
-      <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+    <button class="map-fab" onclick="toggleMap()" title="View Map">
+      <svg class="icon-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+      <svg class="icon-close" viewBox="0 0 24 24">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
     </button>
   </div>
 
@@ -907,12 +925,14 @@ window.addEventListener('popstate', e => {
   if (sub !== 'map') {
     const mapOverlay = document.getElementById('map-overlay');
     if (mapOverlay) mapOverlay.style.display = 'none';
+    document.body.classList.remove('map-active');
     updatingLakeLocation = null;
   }
   if (sub !== 'photo') {
     const photoOverlay = document.getElementById('fish-photo-overlay');
     if (photoOverlay) photoOverlay.remove();
   }
+  if (sub === 'map') openMap(false);
 
   switchTab(tab, false);
   
@@ -1344,6 +1364,8 @@ async function loadData(lat, lon, locName, state = null) {
   if (lakesTab) lakesTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
   try {
     const wx = await fetchWeather(lat, lon);
+    document.querySelectorAll('.loc-in').forEach(i => i.value = locName);
+    
     const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(); date.setDate(date.getDate() + i);
@@ -1369,6 +1391,11 @@ async function loadData(lat, lon, locName, state = null) {
     selectedDay = 0;
     render();
     if (currentTab === 'fish') renderFishTab();
+
+    if (map && document.body.classList.contains('map-active')) {
+      map.setView([lat, lon], 12);
+    }
+
     // Fetch lakes + lakeDB in parallel, render only after both are ready
     Promise.all([
       fetchLakes(lat, lon),
@@ -2161,6 +2188,11 @@ function renderLakes() {
 
   lakeFilter = 'all';
   renderFilteredLakes();
+
+  if (document.body.classList.contains('map-active')) {
+    updateMapMarkers();
+    renderMapList();
+  }
 }
 
 // ── Fish ID Tab ──────────────────────────────────────────────────────────────
@@ -2373,12 +2405,23 @@ async function submitNewLake() {
 }
 
 // ── Map Functions ────────────────────────────────────────────────────────────
-function openMap() {
+function toggleMap() {
+  if (document.body.classList.contains('map-active')) {
+    closeMap();
+  } else {
+    openMap();
+  }
+}
+
+function openMap(pushHistory = true) {
   const overlay = document.getElementById('map-overlay');
   overlay.style.display = 'flex';
+  document.body.classList.add('map-active');
   
-  appNavigated = true;
-  history.pushState({ tab: currentTab, sub: 'map' }, '', '#map');
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: currentTab, sub: 'map' }, '', '#map');
+  }
 
   const centerLat = appData?.userLat || 39.8283;
   const centerLon = appData?.userLon || -98.5795;
@@ -2426,6 +2469,7 @@ function closeMap() {
     history.back();
   } else {
     document.getElementById('map-overlay').style.display = 'none';
+    document.body.classList.remove('map-active');
     updatingLakeLocation = null;
   }
 }
@@ -2900,27 +2944,26 @@ let isLocationPending = false;
 
 function getAndLoadLocation() {
   if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
-  const btn = document.getElementById('btnGPS');
-  const input = document.getElementById('locIn');
+  const btns = document.querySelectorAll('.btn-gps');
+  const inputs = document.querySelectorAll('.loc-in');
 
   // Prevent double clicks and concurrent hardware lockups
-  if (isLocationPending || btn.disabled) return; 
+  if (isLocationPending) return; 
   isLocationPending = true;
 
-  btn.textContent = '⏳';
-  btn.disabled = true;
-  input.value = 'Getting your location…';
-  input.disabled = true;
+  btns.forEach(b => { b.textContent = '⏳'; b.disabled = true; });
+  inputs.forEach(i => { i.value = 'Getting your location…'; i.disabled = true; });
 
   let isDone = false;
 
   const finish = () => {
     isDone = true;
     isLocationPending = false;
-    btn.textContent = '🛰️';
-    btn.disabled = false;
-    input.disabled = false;
-    if (input.value === 'Getting your location…') input.value = '';
+    btns.forEach(b => { b.textContent = '🛰️'; b.disabled = false; });
+    inputs.forEach(i => { 
+      i.disabled = false;
+      if (i.value === 'Getting your location…') i.value = '';
+    });
   };
 
   const onSuccess = async pos => {
@@ -2992,10 +3035,13 @@ window.addEventListener('pageshow', (e) => {
 forceUnlockUI(); // Run immediately on load to clear state
 
 // Modify existing btnGPS event listener to use the new function
-document.getElementById('btnGPS').addEventListener('click', getAndLoadLocation);
 
-document.getElementById('locIn').addEventListener('keydown', async e => {
-  if (e.key !== 'Enter') return;
+document.addEventListener('click', e => {
+  if (e.target.closest('.btn-gps')) getAndLoadLocation();
+});
+
+document.addEventListener('keydown', async e => {
+  if (e.key !== 'Enter' || !e.target.classList.contains('loc-in')) return;
   const v = e.target.value.trim();
   if (!v) return;
   try {
@@ -3008,6 +3054,7 @@ document.getElementById('locIn').addEventListener('keydown', async e => {
     if (lakesTab) lakesTab.innerHTML = msg;
   }
 });
+
 
 // Add event listener for the new auto-location toggle and initialize its state
 document.addEventListener('DOMContentLoaded', () => {
