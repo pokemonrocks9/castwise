@@ -99,7 +99,14 @@
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
     }
-    #map-canvas { flex: 1; width: 100%; }
+    #map-canvas {
+      height: 50%;
+      width: calc(100% - 32px);
+      margin: 16px auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border2);
+      overflow: hidden;
+    }
     #map-list { height: 50%; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--border); }
 
     /* ── Header ── */
@@ -515,12 +522,8 @@
   <!-- Map Overlay (Beta) -->
   <div id="map-overlay">
     <div style="border-bottom: 1px solid var(--border); background: var(--bg);">
-      <div style="max-width: 520px; margin: 0 auto; padding: 20px 16px 0;">
-        <div class="header">
-          <div class="logo">Cast<span>Wise</span></div>
-          <div class="tagline">Free fishing intelligence — no subscription ever</div>
-        </div>
-        <div class="loc-wrap">
+      <div style="max-width: 520px; margin: 0 auto; padding: 16px 16px 12px;">
+        <div class="loc-wrap" style="margin-bottom: 0;">
           <div class="loc-bar">
             <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
               <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
@@ -531,7 +534,7 @@
         </div>
       </div>
     </div>
-    <div id="map-canvas" style="height: 50%; flex: none;"></div>
+    <div id="map-canvas"></div>
     <div id="map-list"></div>
     <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text3); background: var(--bg2);">
       Long-press (or right-click) anywhere to drop a pin for a new lake
