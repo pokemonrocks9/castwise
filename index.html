@@ -1935,7 +1935,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
 
   let h = '';
   filtered.forEach((lk, idx) => {
-    const topFish = dayData.fish.slice(0, 2).map(f => f.name.split(' ').pop()).join(', ');
+    const topFish = dayData.fish.slice(0, 3).map(f => f.name.split(' ').pop()).join(', ');
     const _dbEntry = getDBEntry(lk.name);
     const _hasPrices = _dbEntry && (
       (_dbEntry.bankPrices||[]).length ||
@@ -1966,12 +1966,11 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     let navigateBtn = '';
     if (isMapMode && _canNavigate) {
       navigateBtn = `
-        <button class="btn btn-primary" style="margin-top:12px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" 
+        <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;" 
           onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${lk.lat},${lk.lon}', '_blank')">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="stroke: white;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
           </svg>
-          Navigate
         </button>`;
     }
 
@@ -2013,16 +2012,16 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
             ${priceBadge}
           </div>
         </div>
+        ${navigateBtn}
       </div>
       <div class="db-section">
         ${_noFish ? '<div style="font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
       </div>
-      ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="toggleFish(${idx})">
+      ${_noFish ? '' : `<div class="fish-toggle" id="ft-${idx}" onclick="event.stopPropagation(); toggleFish(${idx})">
         <span class="fish-toggle-label">Fish species near this lake</span>
         <span class="fish-toggle-arrow">▼</span>
       </div>
       <div class="inat-fish-list" id="fl-${idx}"></div>`}
-      ${navigateBtn}
     </div>`;
   });
 
