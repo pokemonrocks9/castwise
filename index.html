@@ -791,7 +791,7 @@
 
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
-      <p id="app-version-display" style="margin-top:10px;font-size:10px;opacity:0.4">v0.57.0</p>
+      <p id="app-version-display" style="margin-top:10px;font-size:10px;opacity:0.4">v--</p>
     </div>
   </div>
 
@@ -2302,11 +2302,16 @@ async function submitNewLake() {
   const type        = document.getElementById('new-lake-type')?.value;
   const submittedBy = document.getElementById('new-lake-submitter')?.value.trim();
   const status      = document.getElementById('new-lake-status');
-  const lat         = parseFloat(document.getElementById('new-lake-lat')?.value);
-  const lon         = parseFloat(document.getElementById('new-lake-lon')?.value);
+  const latRaw      = document.getElementById('new-lake-lat')?.value;
+  const lonRaw      = document.getElementById('new-lake-lon')?.value;
+  const lat         = latRaw ? parseFloat(latRaw) : null;
+  const lon         = lonRaw ? parseFloat(lonRaw) : null;
 
   if (!name) { status.textContent = '⚠️ Please enter a lake name.'; return; }
-  if (!lat || !lon) { status.textContent = '⚠️ Coordinates missing. Try using the GPS button or Map pin.'; return; }
+  if (lat === null || isNaN(lat) || lon === null || isNaN(lon)) { 
+    status.textContent = '⚠️ Coordinates missing. Try using the GPS button or Map pin.'; 
+    return; 
+  }
 
   status.textContent = 'Submitting…';
 
