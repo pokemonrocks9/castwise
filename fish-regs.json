@@ -37,8 +37,8 @@
   },
   "Channel Catfish:all": {
     "confirmed": {
-      "sizeRules": "No state-wide size limit.",
-      "bagRules": "Generally no bag limits. Local park and management area rules may apply.",
+      "sizeRules": "No size limit.",
+      "bagRules": "No bag limit. Local park and management area rules may apply.",
       "region": "all",
       "submittedBy": "system",
       "submittedAt": "2026-05-15"
@@ -136,8 +136,8 @@
   },
   "Yellow Perch:all": {
     "confirmed": {
-      "sizeRules": "Commonly no size limit.",
-      "bagRules": "25-50 fish daily limit in managed northern lakes.",
+      "sizeRules": "No size limit.",
+      "bagRules": "No bag limit in most regions. (25-50 fish daily in some northern states).",
       "region": "all",
       "submittedBy": "system",
       "submittedAt": "2026-05-15"
@@ -163,8 +163,8 @@
   },
   "Redear Sunfish:all": {
     "confirmed": {
-      "sizeRules": "Aggregate panfish size rules apply.",
-      "bagRules": "Aggregate panfish bag limits apply (often 20-50 fish).",
+      "sizeRules": "No size limit.",
+      "bagRules": "Aggregate panfish bag limits apply.",
       "region": "all",
       "submittedBy": "system",
       "submittedAt": "2026-05-15"
