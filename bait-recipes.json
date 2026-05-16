@@ -11,5 +11,22 @@
     },
     "pending": null,
     "discordMsgId": null
+  },
+  "Catfish Crack Chicken": {
+    "confirmed": null,
+    "pending": {
+      "name": "Catfish Crack Chicken",
+      "species": "Catfish",
+      "hook": "5/0 Circle Hook",
+      "ingredients": "2 chicken breasts\n2 tbsp garlic powder\n2 tbsp worcestershire sauce \n1 packet of cherry koolaid",
+      "process": "1. Cut the chicken into 1 inch cubes\n2. Throw them in a container\n3. Throw on the worcestershire sauce, garlic powder, and koolaid.\n4. Close the container and shake to coat evenly.\n5. Let the chicken sit in a sealed container overnight.",
+      "submittedBy": "Admin",
+      "submittedAt": "2026-05-16",
+      "voteCount": 0,
+      "votes": [
+        "61421c8fe2daf5b8"
+      ]
+    },
+    "discordMsgId": "1505037705292152973"
   }
 }
