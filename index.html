@@ -2955,6 +2955,7 @@ function showTackleMenu(pushHistory = true) {
   document.getElementById('tackle-lures').style.display = 'none';
   document.getElementById('tackle-bait').style.display = 'none';
   document.getElementById('tackle-line').style.display = 'none';
+  document.getElementById('tackle-recipes').style.display = 'none';
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle' }, '', '#tackle');
