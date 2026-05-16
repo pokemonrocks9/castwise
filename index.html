@@ -340,6 +340,7 @@
     .fish-id-card.reg-none { border-color: var(--border2); border-width: 1px; }
     .fish-id-card.reg-data { border-color: var(--green); border-width: 2px; }
     .fish-id-card.reg-limit { border-color: #f59e0b; border-width: 2px; }
+    .fish-id-card.reg-pending { border-color: var(--border2); border-width: 1px; }
     .fish-id-card.reg-prohibited { border-color: var(--red-dark); border-width: 2px; }
     .reg-badge {
       font-size: 9px; font-weight: 600; padding: 2px 6px;
@@ -1028,6 +1029,7 @@ function getRegInfo(species) {
   const data = fishRegs[key] || fishRegs[fallback];
 
   if (data && (data.confirmed || data.pending)) {
+    const isUnconfirmed = !data.confirmed;
     const active = data.confirmed || data.pending;
 
     const isNoLimit = (s) => {
@@ -1039,14 +1041,22 @@ function getRegInfo(species) {
     const hasSize = !!active.sizeRules && !isNoLimit(active.sizeRules);
     const hasBag = !!active.bagRules && !isNoLimit(active.bagRules);
 
-    if (hasSize && hasBag) return { cls: 'reg-limit', label: 'Both Limits' };
-    if (hasSize) return { cls: 'reg-limit', label: 'Size Limit' };
-    if (hasBag) return { cls: 'reg-limit', label: 'Bag Limit' };
+    let cls = isUnconfirmed ? 'reg-pending' : 'reg-data';
+    let label = 'No Limits';
+
+    if (hasSize && hasBag) {
+      if (!isUnconfirmed) cls = 'reg-limit';
+      label = 'Both Limits';
+    } else if (hasSize) {
+      if (!isUnconfirmed) cls = 'reg-limit';
+      label = 'Size Limit';
+    } else if (hasBag) {
+      if (!isUnconfirmed) cls = 'reg-limit';
+      label = 'Bag Limit';
+    }
     
-    return { 
-      cls: 'reg-data', 
-      label: 'No Limits' 
-    };
+    if (isUnconfirmed) label += ' (Sug.)';
+    return { cls, label };
   }
   return { cls: 'reg-none', label: 'No data yet' };
 }
@@ -2305,7 +2315,7 @@ function displayFishList(list) {
           </div>
           <div style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.common}</div>
           <div style="font-size:11px; color:var(--text3); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f.sci}</div>
-          <div class="reg-badge" style="color: ${reg.cls === 'reg-limit' ? 'var(--amber-dark)' : reg.cls === 'reg-prohibited' ? 'var(--red-dark)' : 'var(--green-dark)'}; background: ${reg.cls === 'reg-limit' ? 'var(--amber-light)' : reg.cls === 'reg-prohibited' ? 'var(--red-light)' : 'var(--green-light)'};">
+          <div class="reg-badge" style="color: ${reg.cls === 'reg-limit' ? 'var(--amber-dark)' : reg.cls === 'reg-prohibited' ? 'var(--red-dark)' : (reg.cls === 'reg-none' || reg.cls === 'reg-pending') ? 'var(--text2)' : 'var(--green-dark)'}; background: ${reg.cls === 'reg-limit' ? 'var(--amber-light)' : reg.cls === 'reg-prohibited' ? 'var(--red-light)' : (reg.cls === 'reg-none' || reg.cls === 'reg-pending') ? 'var(--gray-100)' : 'var(--green-light)'};">
             ${reg.label}
           </div>
         </div>`;
