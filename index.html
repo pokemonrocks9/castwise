@@ -417,7 +417,7 @@
     .db-form { background: var(--bg2); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
     .db-form-title { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
     .db-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text2); margin-bottom: 8px; }
-    .db-label select, .db-label input {
+    .db-label select, .db-label input, .db-label textarea {
       font-size: 13px; padding: 7px 10px; border-radius: var(--radius);
       border: 1px solid var(--border2); background: var(--bg);
       color: var(--text); font-family: 'DM Sans', sans-serif; outline: none;
@@ -2441,10 +2441,10 @@ function toggleFishRegForm(species, region) {
       <div class="db-form-title">Propose Regulation Update</div>
       <div class="db-form-subtitle">Add size limits, bag limits, or season dates for <b>${species}</b> in <b>${region}</b>.</div>
       <label class="db-label">Size & Gear Rules
-        <textarea id="freg-size" style="width:100%; height:60px; padding:10px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit; margin-bottom:10px;" placeholder="e.g. Minimum 12 inches. Single hook only."></textarea>
+        <textarea id="freg-size" style="width:100%; height:60px; margin-bottom:10px;" placeholder="e.g. Minimum 12 inches. Single hook only."></textarea>
       </label>
       <label class="db-label">Bag & Harvest Limits
-        <textarea id="freg-bag" style="width:100%; height:60px; padding:10px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="e.g. 5 per day. Season: April - November."></textarea>
+        <textarea id="freg-bag" style="width:100%; height:60px;" placeholder="e.g. 5 per day. Season: April - November."></textarea>
       </label>
       <button class="db-submit-btn" onclick="submitFishReg('${species}', '${region}', this)">Submit for Review</button>
       <div id="freg-status" class="db-form-status"></div>
@@ -3026,8 +3026,8 @@ function toggleBaitRecipeForm() {
       <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" /></label>
       <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" /></label>
       <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" /></label>
-      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:80px; width:100%; padding:8px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="List your ingredients here..."></textarea></label>
-      <label class="db-label">Process <textarea id="brec-process" style="height:100px; width:100%; padding:8px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="Step by step instructions..."></textarea></label>
+      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:80px; width:100%;" placeholder="List your ingredients here..."></textarea></label>
+      <label class="db-label">Process <textarea id="brec-process" style="height:100px; width:100%;" placeholder="Step by step instructions..."></textarea></label>
       <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" /></label>
       <button class="db-submit-btn" onclick="submitBaitRecipe(this)">Submit Recipe</button>
       <div id="brec-status" class="db-form-status"></div>
