@@ -997,8 +997,31 @@ window.addEventListener('popstate', e => {
     else showTackleMenu(false);
   }
 });
+// ── Lake database cache (loaded from worker on startup) ───────────────────────
+let lakeDB = {};
+let fishRegs = {};
+let baitRecipes = {};
+let lakeDBReady; // promise — resolves when DB is loaded (or failed)
+function loadLakeDB() {
+  const fetchJSON = async (path) => {
+    try {
+      const res = await fetch(`${WORKER_URL}/${path}`, { signal: timeoutSignal(5000) });
+      return res.ok ? await res.json() : null;
+    } catch { return null; }
+  };
 
-// On load, check if there's a hash
+  lakeDBReady = Promise.all([
+    fetchJSON('db').then(d => { if(d) lakeDB = d; }),
+    fetchJSON('fish-regs').then(d => { if(d) fishRegs = d; }),
+    fetchJSON('bait-recipes').then(d => { if(d) baitRecipes = d; })
+  ]);
+  
+  return lakeDBReady;
+}
+
+loadLakeDB();
+
+// ── Hash Routing logic (Initialize after function definitions) ───────────────
 const _hash = location.hash.replace('#', '');
 let _initTab = 'solunar';
 let _initSub = null;
@@ -1016,25 +1039,6 @@ if (_initTab === 'tackle' && _initSub) {
   history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
 } else {
   history.replaceState({ tab: _initTab }, '', '#' + _initTab);
-}
-
-// ── Lake database cache (loaded from worker on startup) ───────────────────────
-let lakeDB = {};
-let fishRegs = {};
-let baitRecipes = {};
-let lakeDBReady; // promise — resolves when DB is loaded (or failed)
-function loadLakeDB() {
-  lakeDBReady = (async () => {
-    try {
-      const res = await fetch(`${WORKER_URL}/db`, { signal: timeoutSignal(5000) });
-      if (res.ok) lakeDB = await res.json();
-      const fres = await fetch(`${WORKER_URL}/fish-regs`, { signal: timeoutSignal(5000) });
-      if (fres.ok) fishRegs = await fres.json();
-      const bres = await fetch(`${WORKER_URL}/bait-recipes`, { signal: timeoutSignal(5000) });
-      if (bres.ok) baitRecipes = await bres.json();
-    } catch { /* non-fatal */ }
-  })();
-  return lakeDBReady;
 }
 
 // ── Fish database ──────────────────────────────────────────────────────────────
@@ -2980,7 +2984,11 @@ function renderBaitRecipes() {
   
   const keys = Object.keys(baitRecipes);
   if (!keys.length) {
-    el.innerHTML = '<div class="empty">No homemade bait recipes yet. Be the first to share one!</div>';
+    el.innerHTML = '<div class="loading"><div class="spinner"></div>Finding recipes…</div>';
+    lakeDBReady.then(() => {
+      if (Object.keys(baitRecipes).length > 0) renderBaitRecipes();
+      else el.innerHTML = '<div class="empty">No homemade bait recipes yet. Be the first to share one!</div>';
+    });
     return;
   }
 
@@ -3368,8 +3376,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── Load lake DB in background on startup ────────────────────────────────────
-loadLakeDB();
 loadCommunityLakes();
 
 // ── Show prompt on load — no automatic location grab ─────────────────────────
@@ -3413,7 +3419,6 @@ fetch('sw.js').then(r => r.text()).then(text => {
 
 // ── Register service worker ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-
   navigator.serviceWorker.register('sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
