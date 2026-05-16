@@ -1404,7 +1404,9 @@ async function loadData(lat, lon, locName, state = null) {
   document.getElementById('locIn').value = locName;
   setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
   const lakesTab = document.getElementById('lakes-tab-content');
+  const fishTab = document.getElementById('fish-tab-content');
   if (lakesTab) lakesTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
+  if (fishTab) fishTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding common fish in your area…</div>';
   try {
     const wx = await fetchWeather(lat, lon);
     document.querySelectorAll('.loc-in').forEach(i => i.value = locName);
@@ -1430,7 +1432,7 @@ async function loadData(lat, lon, locName, state = null) {
       };
     });
     // Render weather/solunar immediately — don't wait on lakes
-    appData = { days, lakes: [], locName, userLat: lat, userLon: lon, state };
+    appData = { days, lakes: [], locName, userLat: lat, userLon: lon, state, inatFish: null };
     selectedDay = 0;
     render();
     if (currentTab === 'fish') renderFishTab();
@@ -1439,18 +1441,24 @@ async function loadData(lat, lon, locName, state = null) {
       map.setView([lat, lon], 12);
     }
 
-    // Fetch lakes + lakeDB in parallel, render only after both are ready
+    // Fetch lakes + lakeDB + inatFish in parallel, render only after ready
     Promise.all([
       fetchLakes(lat, lon),
       lakeDBReady,
-    ]).then(([lakes]) => {
+      fetchInatFish(lat, lon, 40, 50).catch(() => [])
+    ]).then(([lakes, _, inatFish]) => {
       if (appData) {
         appData.lakes = lakes;
+        appData.inatFish = inatFish.length > 0 ? inatFish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
         renderLakes();
+        if (currentTab === 'fish') renderFishTab();
       }
     }).catch(() => {
-      // If lakes fail but lakeDB is fine, still render empty state
-      if (appData) renderLakes();
+      if (appData) {
+        appData.inatFish = appData.inatFish || FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
+        renderLakes();
+        if (currentTab === 'fish') renderFishTab();
+      }
     });
   } catch (e) {
     setContent(`<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`);
@@ -2239,23 +2247,20 @@ function renderLakes() {
 // ── Fish ID Tab ──────────────────────────────────────────────────────────────
 let currentFishList = [];
 
-async function renderFishTab() {
+function renderFishTab() {
   const el = document.getElementById('fish-tab-content');
   const searchWrap = document.getElementById('fish-search-wrap');
   if (!el || !appData) return;
 
-  el.innerHTML = `<div class="loading"><div class="spinner"></div>Finding fish in ${appData.locName}...</div>`;
-  if (searchWrap) searchWrap.style.display = 'none';
-
-  try {
-    const fish = await fetchInatFish(appData.userLat, appData.userLon, 40, 50);
-    currentFishList = fish.length > 0 ? fish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
+  if (appData.inatFish) {
+    currentFishList = appData.inatFish;
     if (searchWrap) searchWrap.style.display = 'block';
     displayFishList(currentFishList);
-  } catch (e) {
-    currentFishList = FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
-    if (searchWrap) searchWrap.style.display = 'block';
-    displayFishList(currentFishList);
+  } else {
+    if (searchWrap) searchWrap.style.display = 'none';
+    if (!el.querySelector('.spinner')) {
+      el.innerHTML = `<div class="loading"><div class="spinner"></div>Finding common fish in your area…</div>`;
+    }
   }
 }
 
