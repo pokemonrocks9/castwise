@@ -169,5 +169,14 @@
       "submittedBy": "system",
       "submittedAt": "2026-05-15"
     }
+  },
+  "Catfish:all": {
+    "confirmed": {
+      "sizeRules": "No size limit.",
+      "bagRules": "No bag limit.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
   }
 }
