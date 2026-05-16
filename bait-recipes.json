@@ -13,8 +13,7 @@
     "discordMsgId": null
   },
   "Catfish Crack Chicken": {
-    "confirmed": null,
-    "pending": {
+    "confirmed": {
       "name": "Catfish Crack Chicken",
       "species": "Catfish",
       "hook": "5/0 Circle Hook",
@@ -25,8 +24,11 @@
       "voteCount": 0,
       "votes": [
         "61421c8fe2daf5b8"
-      ]
+      ],
+      "confirmedBy": "Owner",
+      "confirmedAt": "2026-05-16"
     },
+    "pending": null,
     "discordMsgId": "1505037705292152973"
   }
 }
