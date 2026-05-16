@@ -1014,7 +1014,7 @@ function loadLakeDB() {
 const FISH = [
   { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.45 },
   { name: 'Crappie',         peak: [3,4,5,10,11],    tr: [55,75], base: 0.55 },
-  { name: 'Catfish',         peak: [5,6,7,8,9],      tr: [65,85], base: 0.40 },
+  { name: 'Channel Catfish', peak: [5,6,7,8,9],      tr: [65,85], base: 0.40 },
   { name: 'Bluegill',        peak: [5,6,7,8],        tr: [65,85], base: 0.60 },
   { name: 'Rainbow Trout',   peak: [3,4,5,10,11,12], tr: [45,65], base: 0.38 },
   { name: 'Walleye',         peak: [4,5,6,9,10,11],  tr: [55,72], base: 0.35 },
@@ -1029,8 +1029,15 @@ function getRegInfo(species) {
 
   if (data && (data.confirmed || data.pending)) {
     const active = data.confirmed || data.pending;
-    const hasSize = !!active.sizeRules && !active.sizeRules.toLowerCase().includes('no size limit');
-    const hasBag = !!active.bagRules && !active.bagRules.toLowerCase().includes('no bag limit');
+
+    const isNoLimit = (s) => {
+      if (!s) return true;
+      const l = s.toLowerCase();
+      return l.includes('no limit') || l.includes('none') || l.includes('no size') || l.includes('no bag');
+    };
+
+    const hasSize = !!active.sizeRules && !isNoLimit(active.sizeRules);
+    const hasBag = !!active.bagRules && !isNoLimit(active.bagRules);
 
     if (hasSize && hasBag) return { cls: 'reg-limit', label: 'Both Limits' };
     if (hasSize) return { cls: 'reg-limit', label: 'Size Limit' };
