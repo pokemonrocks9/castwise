@@ -1309,10 +1309,28 @@ async function geocode(q) {
     };
   }
 
-  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`, { signal: timeoutSignal(8000) });
+    let searchName = q, filterState = null;
+    if (q.includes(',')) {
+      const parts = q.split(',').map(p => p.trim());
+      searchName = parts[0];
+      filterState = parts[1].toUpperCase();
+    }
+
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=20&language=en&format=json`, { signal: timeoutSignal(8000) });
   const data = await res.json();
   if (!data.results || !data.results.length) throw new Error('Location not found — try "City, ST" format');
-  const r = data.results.find(x => x.country_code === 'US') || data.results[0];
+
+    let r;
+    if (filterState) {
+      r = data.results.find(x => {
+        if (x.country_code !== 'US') return false;
+        const abbr = (x.admin1 ? STATE_NAME_TO_ABBR[x.admin1] : '') || '';
+        return abbr.toUpperCase() === filterState || (x.admin1 && x.admin1.toUpperCase() === filterState);
+      });
+    }
+
+    if (!r) r = data.results.find(x => x.country_code === 'US') || data.results[0];
+
   const state = r.country_code === 'US' ? (STATE_NAME_TO_ABBR[r.admin1] || r.admin1) : null;
   return { lat: r.latitude, lon: r.longitude, name: `${r.name}, ${r.admin1 || r.country}`, state };
 }
