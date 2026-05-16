@@ -2354,9 +2354,13 @@ function renderFishRegs(species) {
   const container = document.getElementById('fd-regs-content');
   const region = appData?.state || 'all';
   const key = `${species}:${region}`;
-  const data = fishRegs[key];
+  const fallback = `${species}:all`;
+  const data = fishRegs[key] || fishRegs[fallback];
   
-  let html = `<div class="section-label">Fishing Regulations (${region})</div>`;
+  // Show which region's data we are actually displaying
+  const displayRegion = fishRegs[key] ? region : (fishRegs[fallback] ? 'General' : region);
+  
+  let html = `<div class="section-label">Fishing Regulations (${displayRegion})</div>`;
   
   if (data && (data.confirmed || data.pending)) {
     const active = data.confirmed || data.pending;
