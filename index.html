@@ -663,6 +663,21 @@
           </div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px; cursor:pointer; transition: background 0.2s;" onclick="showTackleSection('recipes')">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px solid var(--border); display:flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;color:var(--text)">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+              <path d="M8 7h6"></path><path d="M8 11h8"></path><path d="M8 15h5"></path>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:16px; font-weight:500; color:var(--text);">Homemade Baits</div>
+            <div style="font-size:13px; color:var(--text3); margin-top:4px;">Community-submitted bait recipes and concoctions</div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Lures Section -->
@@ -814,6 +829,14 @@
           <div id="line-mono-result" style="margin-top:12px;font-size:13px"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Recipes Section -->
+    <div id="tackle-recipes" style="display:none">
+      <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
+      <div id="bait-recipe-list"></div>
+      <button class="add-lake-btn" style="margin-top:20px" onclick="toggleBaitRecipeForm()">🍯 Share a bait recipe</button>
+      <div id="bait-recipe-form-wrap"></div>
     </div>
   </div>
 
@@ -998,6 +1021,7 @@ if (_initTab === 'tackle' && _initSub) {
 // ── Lake database cache (loaded from worker on startup) ───────────────────────
 let lakeDB = {};
 let fishRegs = {};
+let baitRecipes = {};
 let lakeDBReady; // promise — resolves when DB is loaded (or failed)
 function loadLakeDB() {
   lakeDBReady = (async () => {
@@ -1006,6 +1030,8 @@ function loadLakeDB() {
       if (res.ok) lakeDB = await res.json();
       const fres = await fetch(`${WORKER_URL}/fish-regs`, { signal: timeoutSignal(5000) });
       if (fres.ok) fishRegs = await fres.json();
+      const bres = await fetch(`${WORKER_URL}/bait-recipes`, { signal: timeoutSignal(5000) });
+      if (bres.ok) baitRecipes = await bres.json();
     } catch { /* non-fatal */ }
   })();
   return lakeDBReady;
@@ -2939,10 +2965,100 @@ function showTackleSection(sec, pushHistory = true) {
   document.getElementById('tackle-lures').style.display = sec === 'lures' ? 'block' : 'none';
   document.getElementById('tackle-bait').style.display = sec === 'bait' ? 'block' : 'none';
   document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
+  document.getElementById('tackle-recipes').style.display = sec === 'recipes' ? 'block' : 'none';
+  if (sec === 'recipes') renderBaitRecipes();
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle', sub: sec }, '', '#tackle-' + sec);
   }
+}
+
+function renderBaitRecipes() {
+  const el = document.getElementById('bait-recipe-list');
+  if (!el) return;
+  
+  const keys = Object.keys(baitRecipes);
+  if (!keys.length) {
+    el.innerHTML = '<div class="empty">No homemade bait recipes yet. Be the first to share one!</div>';
+    return;
+  }
+
+  let html = '<div class="section-label" style="margin-top:10px">Bait Recipes</div>';
+  keys.forEach(key => {
+    const data = baitRecipes[key];
+    const active = data.confirmed || data.pending;
+    html += `
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div>
+            <div style="font-size:17px; font-weight:600; color:var(--text);">${active.name}</div>
+            <div style="font-size:12px; color:var(--green); font-weight:500;">Targets: ${active.species}</div>
+          </div>
+          ${data.confirmed ? '<span class="db-badge db-confirmed">Verified</span>' : '<span class="db-badge db-unconfirmed">Suggested</span>'}
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:4px;">Hook Recommendation</div>
+          <div style="font-size:14px; color:var(--text);">${active.hook || 'Any standard hook'}</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:4px;">Ingredients</div>
+          <div style="font-size:14px; color:var(--text); white-space:pre-line;">${active.ingredients}</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:4px;">Process</div>
+          <div style="font-size:14px; color:var(--text); line-height:1.5; white-space:pre-line;">${active.process}</div>
+        </div>
+        <div class="db-meta">Shared by ${active.submittedBy} · ${active.submittedAt}</div>
+        ${data.pending && !data.confirmed ? `<button class="db-vote-btn" style="margin-top:12px; width:100%;" onclick="voteBaitRecipe('${key.replace(/'/g,"\\'")}', this)">Confirm this works (${data.pending.voteCount}/5)</button>` : ''}
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+function toggleBaitRecipeForm() {
+  const wrap = document.getElementById('bait-recipe-form-wrap');
+  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="db-form" style="margin-top:16px;">
+      <div class="db-form-title">Share Your Secret Recipe</div>
+      <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" /></label>
+      <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" /></label>
+      <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" /></label>
+      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:80px; width:100%; padding:8px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="List your ingredients here..."></textarea></label>
+      <label class="db-label">Process <textarea id="brec-process" style="height:100px; width:100%; padding:8px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="Step by step instructions..."></textarea></label>
+      <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" /></label>
+      <button class="db-submit-btn" onclick="submitBaitRecipe(this)">Submit Recipe</button>
+      <div id="brec-status" class="db-form-status"></div>
+    </div>
+  `;
+}
+
+async function submitBaitRecipe(btn) {
+  const payload = {
+    name: document.getElementById('brec-name').value.trim(),
+    species: document.getElementById('brec-species').value.trim(),
+    hook: document.getElementById('brec-hook').value.trim(),
+    ingredients: document.getElementById('brec-ingredients').value.trim(),
+    process: document.getElementById('brec-process').value.trim(),
+    submittedBy: document.getElementById('brec-sub').value.trim()
+  };
+  if (!payload.name || !payload.ingredients || !payload.process) return;
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  try {
+    const res = await fetch(`${WORKER_URL}/submit-bait-recipe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (res.ok) { document.getElementById('brec-status').textContent = '✅ Recipe submitted for review!'; setTimeout(() => { document.getElementById('bait-recipe-form-wrap').innerHTML = ''; loadLakeDB().then(renderBaitRecipes); }, 2000); }
+  } catch { btn.disabled = false; btn.textContent = 'Submit Recipe'; }
+}
+
+async function voteBaitRecipe(name, btn) {
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${WORKER_URL}/vote-bait-recipe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    const data = await res.json();
+    if (data.status === 'voted') btn.textContent = `Voted (${data.voteCount}/5)`;
+    else if (data.status === 'auto_confirmed') { btn.textContent = '✅ Verified!'; loadLakeDB().then(renderBaitRecipes); }
+  } catch { btn.disabled = false; }
 }
 function handleTackleBack() {
   if (appNavigated) history.back();
