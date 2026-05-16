@@ -1,0 +1,154 @@
+{
+  "Largemouth Bass:NC": {
+    "confirmed": {
+      "rules": "Daily limit: 5. Minimum size: 14 inches (with exceptions for 2 fish in some waters).",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Smallmouth Bass:NC": {
+    "confirmed": {
+      "rules": "Daily limit: 5. Minimum size: 12 inches.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Black Crappie:NC": {
+    "confirmed": {
+      "rules": "Daily limit: 20. Minimum size: 8 inches in managed Piedmont reservoirs.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "White Crappie:NC": {
+    "confirmed": {
+      "rules": "Daily limit: 20. Minimum size: 8 inches in managed Piedmont reservoirs.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Channel Catfish:all": {
+    "confirmed": {
+      "rules": "Generally no bag or size limits on state waters. Local park and management area rules may apply.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Blue Catfish:all": {
+    "confirmed": {
+      "rules": "No state-wide limits. Often considered invasive in some regions, check local advisories.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Flathead Catfish:all": {
+    "confirmed": {
+      "rules": "Generally no bag or size limits. Highly migratory, check local river specific rules.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Bluegill:NC": {
+    "confirmed": {
+      "rules": "No size limit. Combined sunfish daily limit: 30 fish total.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Rainbow Trout:NC": {
+    "confirmed": {
+      "rules": "General Hatchery Supported: 7 fish per day, no size limit. Single-hook artificial only in wild waters.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Brown Trout:NC": {
+    "confirmed": {
+      "rules": "General Hatchery Supported: 7 fish per day, no size limit.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Walleye:NC": {
+    "confirmed": {
+      "rules": "Daily limit: 8 fish. No minimum size limit (except in specific reservoirs).",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Striped Bass:NC": {
+    "confirmed": {
+      "rules": "Inland Waters: 4 fish per day, 20-inch minimum size.",
+      "region": "NC",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Spotted Bass:all": {
+    "confirmed": {
+      "rules": "Often follows same rules as Largemouth Bass in many states, check local limits.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Muskellunge:all": {
+    "confirmed": {
+      "rules": "Typically highly regulated. Common: 1 fish per day, 40-inch minimum size. Check local seasonal closures.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Northern Pike:all": {
+    "confirmed": {
+      "rules": "Check local region. Often 2-5 fish per day with slot limits (e.g., none kept between 22-26 inches).",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Yellow Perch:all": {
+    "confirmed": {
+      "rules": "Commonly no size limit, 25-50 fish daily limit in managed northern lakes.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Common Carp:all": {
+    "confirmed": {
+      "rules": "No limit. Considered invasive/rough fish in most US states. Bowfishing allowed in most areas.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Green Sunfish:all": {
+    "confirmed": {
+      "rules": "No limit in most regions. Often classified under general 'Sunfish/Panfish' aggregate limits.",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  },
+  "Redear Sunfish:all": {
+    "confirmed": {
+      "rules": "Aggregate panfish limits apply (often 20-50 fish depending on state).",
+      "region": "all",
+      "submittedBy": "system",
+      "submittedAt": "2026-05-15"
+    }
+  }
+}
