@@ -1348,6 +1348,8 @@ async function fetchWeather(lat, lon) {
 const PINNED_LAKES = [
   { name: 'High Point City Lake',  lat: 35.9974, lon: -79.9488, type: 'lake / pond' },
   { name: 'Kernersville Lake',     lat: 36.1541, lon: -80.1004, type: 'lake / pond' },
+  { name: 'High Rock Lake',        lat: 35.6541, lon: -80.2452, type: 'reservoir' },
+  { name: 'Badin Lake',            lat: 35.4495, lon: -80.1212, type: 'reservoir' },
 ];
 
 // ── Community-submitted lakes cache ──────────────────────────────────────────
@@ -1394,7 +1396,7 @@ async function fetchLakes(lat, lon) {
       where, geometry: bbox, geometryType: 'esriGeometryEnvelope',
       inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
       outFields: 'GNIS_NAME,FTYPE,FCODE', returnGeometry: 'true',
-      resultRecordCount: '60', f: 'json',
+      resultRecordCount: '150', f: 'json',
     });
     try {
       const res = await fetch(`${BASE}?${p}`, { signal: timeoutSignal(12000) });
