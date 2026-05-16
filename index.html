@@ -109,6 +109,15 @@
     }
     #map-list { height: 50%; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--border); }
 
+    #fish-detail-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 4000; background: var(--bg); display: none;
+      flex-direction: column; overflow-y: auto;
+    }
+    .fish-detail-hero { width: 100%; height: 250px; background: var(--bg2); position: relative; }
+    .fish-detail-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .fish-detail-body { padding: 20px 16px; max-width: 520px; margin: 0 auto; width: 100%; }
+
     /* ── Header ── */
     .header { margin-bottom: 20px; }
     .logo { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1; }
@@ -328,7 +337,8 @@
       transition: transform 0.1s; display: flex; flex-direction: column;
     }
     .fish-id-card:active { transform: scale(0.98); }
-    .fish-id-card.reg-none { border-color: var(--green); border-width: 2px; }
+    .fish-id-card.reg-none { border-color: var(--border2); border-width: 1px; }
+    .fish-id-card.reg-data { border-color: var(--green); border-width: 2px; }
     .fish-id-card.reg-limit { border-color: #f59e0b; border-width: 2px; }
     .fish-id-card.reg-prohibited { border-color: var(--red-dark); border-width: 2px; }
     .reg-badge {
@@ -518,6 +528,19 @@
 </head>
 <body>
 <div class="app">
+
+  <!-- Fish Detail Overlay -->
+  <div id="fish-detail-overlay">
+    <div class="fish-detail-hero">
+      <button onclick="history.back()" style="position:absolute; top:16px; left:16px; background:rgba(0,0,0,0.5); border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;">✕</button>
+      <img id="fd-img" src="" alt="">
+    </div>
+    <div class="fish-detail-body">
+      <div id="fd-common" class="logo" style="font-size:24px; margin-bottom:4px;"></div>
+      <div id="fd-sci" style="font-style:italic; color:var(--text3); margin-bottom:20px;"></div>
+      <div id="fd-regs-content"></div>
+    </div>
+  </div>
 
   <!-- Map Overlay (Beta) -->
   <div id="map-overlay">
@@ -934,10 +957,13 @@ window.addEventListener('popstate', e => {
     document.body.classList.remove('map-active');
     updatingLakeLocation = null;
   }
-  if (sub !== 'photo') {
-    const photoOverlay = document.getElementById('fish-photo-overlay');
-    if (photoOverlay) photoOverlay.remove();
+  const fdOverlay = document.getElementById('fish-detail-overlay');
+  if (sub !== 'fish-detail') {
+    if (fdOverlay) fdOverlay.style.display = 'none';
+  } else {
+    if (fdOverlay) fdOverlay.style.display = 'flex';
   }
+
   if (sub === 'map') openMap(false);
 
   switchTab(tab, false);
@@ -970,12 +996,15 @@ if (_initTab === 'tackle' && _initSub) {
 
 // ── Lake database cache (loaded from worker on startup) ───────────────────────
 let lakeDB = {};
+let fishRegs = {};
 let lakeDBReady; // promise — resolves when DB is loaded (or failed)
 function loadLakeDB() {
   lakeDBReady = (async () => {
     try {
       const res = await fetch(`${WORKER_URL}/db`, { signal: timeoutSignal(5000) });
       if (res.ok) lakeDB = await res.json();
+      const fres = await fetch(`${WORKER_URL}/fish-regs`, { signal: timeoutSignal(5000) });
+      if (fres.ok) fishRegs = await fres.json();
     } catch { /* non-fatal */ }
   })();
   return lakeDBReady;
@@ -992,26 +1021,27 @@ const FISH = [
   { name: 'Yellow Perch',    peak: [4,5,10,11],      tr: [55,72], base: 0.50 },
   { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.42 },
 ];
+function getRegInfo(species) {
+  const region = appData?.state || 'all';
+  const key = `${species}:${region}`;
+  const fallback = `${species}:all`;
+  const data = fishRegs[key] || fishRegs[fallback];
 
-// ── Fishing Regulation Mappings ─────────────────────────────────────────────
-const FISH_REGS = {
-  'Largemouth Bass': { cls: 'reg-limit', label: 'Size & Bag limits' },
-  'Smallmouth Bass': { cls: 'reg-limit', label: 'Size & Bag limits' },
-  'Crappie':         { cls: 'reg-limit', label: 'Bag limits apply' },
-  'Walleye':         { cls: 'reg-limit', label: 'Size & Bag limits' },
-  'Trout':           { cls: 'reg-limit', label: 'Season & Bag limits' },
-  'Muskellunge':     { cls: 'reg-limit', label: 'Trophy Size limits' },
-  'Northern Pike':   { cls: 'reg-limit', label: 'Size & Bag limits' },
-  'Sturgeon':        { cls: 'reg-prohibited', label: 'Prohibited / C&R Only' }
-};
+  if (data && (data.confirmed || data.pending)) {
+    const active = data.confirmed || data.pending;
+    const hasSize = !!active.sizeRules && !active.sizeRules.toLowerCase().includes('no size limit');
+    const hasBag = !!active.bagRules && !active.bagRules.toLowerCase().includes('no bag limit');
 
-function getRegInfo(name) {
-  if (!name) return { cls: 'reg-none', label: 'General Rules' };
-  const n = name.toLowerCase();
-  for (const [key, val] of Object.entries(FISH_REGS)) {
-    if (n.includes(key.toLowerCase())) return val;
+    if (hasSize && hasBag) return { cls: 'reg-limit', label: 'Both Limits' };
+    if (hasSize) return { cls: 'reg-limit', label: 'Size Limit' };
+    if (hasBag) return { cls: 'reg-limit', label: 'Bag Limit' };
+    
+    return { 
+      cls: 'reg-data', 
+      label: 'No Limits' 
+    };
   }
-  return { cls: 'reg-none', label: 'General Rules' };
+  return { cls: 'reg-none', label: 'No data yet' };
 }
 
 // ── State Regulation Directories ───────────────────────────────────────────
@@ -2254,8 +2284,8 @@ function displayFishList(list) {
     list.forEach(f => {
       const reg = getRegInfo(f.common);
       const thumb = f.photo || '';
-      const large = thumb ? thumb.replace('square', 'medium') : '';
-      const onclick = thumb ? `onclick="expandFishPhoto('${f.common.replace(/'/g,"\\'")}', '${large}')"` : '';
+      const large = thumb ? thumb.replace('square', 'large') : '';
+      const onclick = `onclick="showFishDetail('${f.common.replace(/'/g,"\\'")}', '${f.sci.replace(/'/g,"\\'")}', '${large}')"`;
       h += `
         <div class="fish-id-card ${reg.cls}" ${onclick}>
           <div class="fish-id-photo-wrap">
@@ -2294,21 +2324,125 @@ function filterFishidex() {
   displayFishList(filtered);
 }
 
-function expandFishPhoto(name, url) {
-  if (!url) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'fish-photo-overlay';
-  overlay.style = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;`;
-  overlay.onclick = () => history.back();
+function showFishDetail(common, sci, imgUrl) {
+  const overlay = document.getElementById('fish-detail-overlay');
+  overlay.style.display = 'flex';
+  
+  document.getElementById('fd-img').src = imgUrl || '';
+  document.getElementById('fd-common').textContent = common;
+  document.getElementById('fd-sci').textContent = sci;
+  
+  renderFishRegs(common);
 
-  overlay.innerHTML = `
-    <div style="color:#fff; font-size:18px; font-weight:500; margin-bottom:16px;">${name}</div>
-    <img src="${url}" style="max-width:100%; max-height:75vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-    <div style="color:rgba(255,255,255,0.6); font-size:13px; margin-top:20px;">Tap anywhere or swipe back to close</div>
-  `;
-  document.body.appendChild(overlay);
   appNavigated = true;
-  history.pushState({ tab: currentTab, sub: 'photo' }, '', '#photo');
+  history.pushState({ tab: currentTab, sub: 'fish-detail', common, sci, imgUrl }, '', '#fish-detail');
+}
+
+function renderFishRegs(species) {
+  const container = document.getElementById('fd-regs-content');
+  const region = appData?.state || 'all';
+  const key = `${species}:${region}`;
+  const data = fishRegs[key];
+  
+  let html = `<div class="section-label">Fishing Regulations (${region})</div>`;
+  
+  if (data && (data.confirmed || data.pending)) {
+    const active = data.confirmed || data.pending;
+    html += `
+      <div class="card" style="border-left: 4px solid var(--green);">
+        ${data.confirmed ? '<div class="db-badge db-confirmed" style="margin-bottom:8px">Verified Rule</div>' : '<div class="db-badge db-unconfirmed" style="margin-bottom:8px">Community Suggested</div>'}
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Size & Gear Rules</div>
+          <div style="font-size:15px; line-height:1.5; color:var(--text);">${active.sizeRules || 'No size limit recorded.'}</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Bag & Harvest Limits</div>
+          <div style="font-size:15px; line-height:1.5; color:var(--text);">${active.bagRules || 'No bag limit recorded.'}</div>
+        </div>
+        <div class="db-meta">Updated ${active.submittedAt}</div>
+        ${data.pending && data.confirmed ? `<div class="db-pending-notice">🔔 Update pending (${data.pending.voteCount}/5 votes)</div>` : ''}
+        ${data.pending && !data.confirmed ? `<button class="db-vote-btn" style="margin-top:10px" onclick="voteFishReg('${key}', this)">Confirm this is correct (${data.pending.voteCount}/5)</button>` : ''}
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="card db-empty">
+        <p class="db-empty-text">No community-verified regulations for this region yet.</p>
+      </div>
+    `;
+  }
+
+  html += `
+    <button class="db-edit-btn" onclick="toggleFishRegForm('${species}', '${region}')">Suggest / Edit Regulations</button>
+    <div id="fish-reg-form-wrap" style="margin-top:10px"></div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+function toggleFishRegForm(species, region) {
+  const wrap = document.getElementById('fish-reg-form-wrap');
+  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
+  
+  wrap.innerHTML = `
+    <div class="db-form">
+      <div class="db-form-title">Propose Regulation Update</div>
+      <div class="db-form-subtitle">Add size limits, bag limits, or season dates for <b>${species}</b> in <b>${region}</b>.</div>
+      <label class="db-label">Size & Gear Rules
+        <textarea id="freg-size" style="width:100%; height:60px; padding:10px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit; margin-bottom:10px;" placeholder="e.g. Minimum 12 inches. Single hook only."></textarea>
+      </label>
+      <label class="db-label">Bag & Harvest Limits
+        <textarea id="freg-bag" style="width:100%; height:60px; padding:10px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg); font-family:inherit;" placeholder="e.g. 5 per day. Season: April - November."></textarea>
+      </label>
+      <button class="db-submit-btn" onclick="submitFishReg('${species}', '${region}', this)">Submit for Review</button>
+      <div id="freg-status" class="db-form-status"></div>
+    </div>
+  `;
+}
+
+async function submitFishReg(species, region, btn) {
+  const sizeRules = document.getElementById('freg-size').value.trim();
+  const bagRules = document.getElementById('freg-bag').value.trim();
+  if (!sizeRules && !bagRules) return;
+  
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/submit-fish-reg`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ species, region, sizeRules, bagRules })
+    });
+    if (res.ok) {
+      document.getElementById('freg-status').textContent = '✅ Submitted! Waiting for community votes.';
+      const wrap = document.getElementById('fish-reg-form-wrap');
+      setTimeout(() => { wrap.innerHTML = ''; loadLakeDB().then(() => renderFishRegs(species)); }, 2000);
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+  }
+}
+
+async function voteFishReg(key, btn) {
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${WORKER_URL}/vote-fish-reg`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+    if (data.status === 'voted') {
+      btn.textContent = `Voted (${data.voteCount}/5)`;
+    } else if (data.status === 'auto_confirmed') {
+      btn.textContent = '✅ Verified!';
+      loadLakeDB().then(() => renderFishRegs(key.split(':')[0]));
+    }
+  } catch {
+    btn.disabled = false;
+  }
 }
 
 // ── Add missing lake form ─────────────────────────────────────────────────────
