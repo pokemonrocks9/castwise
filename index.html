@@ -101,7 +101,10 @@
       flex-direction: column;
     }
     #bait-recipe-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      position: fixed; 
+      top: 100px; /* Stay below the app header */
+      left: 0; right: 0; 
+      bottom: calc(58px + env(safe-area-inset-bottom)); /* Stay above bottom nav */
       z-index: 4000; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding-top: 20px;
     }
@@ -530,6 +533,9 @@
     .fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .fab .icon-close { display: none; }
     .map-fab .icon-close { display: none; }
+    body.bait-form-active #bait-fab { background: var(--red-dark); }
+    body.bait-form-active #bait-fab .icon-plus { display: none; }
+    body.bait-form-active #bait-fab .icon-close { display: block; }
     body.map-active .map-fab { background: var(--red-dark); }
     body.map-active .map-fab .icon-map { display: none; }
     body.map-active .map-fab .icon-close { display: block; }
@@ -975,6 +981,8 @@ function switchTab(tab, pushHistory = true) {
   const mapOverlay = document.getElementById('map-overlay');
   if (tab !== 'lakes') {
     if (mapOverlay) mapOverlay.style.display = 'none';
+    // Ensure the bait form closes if we navigate away from Tackle
+    if (isBaitFormOpen) toggleBaitRecipeForm(false);
   } else if (isMapVisible) {
     openMap(false);
   }
@@ -1016,6 +1024,13 @@ window.addEventListener('popstate', e => {
     if (fdOverlay) fdOverlay.style.display = 'none';
   } else {
     if (fdOverlay) fdOverlay.style.display = 'flex';
+  }
+
+  const brOverlay = document.getElementById('bait-recipe-overlay');
+  if (sub !== 'bait-recipe') {
+    if (isBaitFormOpen) toggleBaitRecipeForm(false);
+  } else {
+    if (!isBaitFormOpen) toggleBaitRecipeForm(false);
   }
 
   if (sub === 'map') openMap(false);
@@ -3089,18 +3104,16 @@ function renderBaitRecipes() {
 }
 
 let isBaitFormOpen = false;
-function toggleBaitRecipeForm() {
+function toggleBaitRecipeForm(pushHistory = true) {
   const overlay = document.getElementById('bait-recipe-overlay');
   const wrap = document.getElementById('bait-recipe-form-wrap');
-  const fab = document.getElementById('bait-fab');
   
   if (isBaitFormOpen) {
     overlay.style.display = 'none';
-    fab.querySelector('.icon-plus').style.display = 'block';
-    fab.querySelector('.icon-close').style.display = 'none';
-    fab.style.backgroundColor = 'var(--green)';
+    document.body.classList.remove('bait-form-active');
     document.body.style.overflow = '';
     isBaitFormOpen = false;
+    if (pushHistory && location.hash === '#bait-recipe') history.back();
     return;
   }
 
@@ -3118,11 +3131,13 @@ function toggleBaitRecipeForm() {
     </div>`;
   
   overlay.style.display = 'block';
-  fab.querySelector('.icon-plus').style.display = 'none';
-  fab.querySelector('.icon-close').style.display = 'block';
-  fab.style.backgroundColor = 'var(--red-dark)';
+  document.body.classList.add('bait-form-active');
   document.body.style.overflow = 'hidden';
   isBaitFormOpen = true;
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: 'tackle', sub: 'bait-recipe' }, '', '#bait-recipe');
+  }
 }
 
 async function submitBaitRecipe(btn) {
@@ -3313,7 +3328,7 @@ function calcMonoBraid() {
 // ── Event handlers ────────────────────────────────────────────────────────────
 let isLocationPending = false;
 
-function getAndLoadLocation() {
+async function getAndLoadLocation() { // Made async to use await
   if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
   const btns = document.querySelectorAll('.btn-gps');
   const inputs = document.querySelectorAll('.loc-in');
@@ -3325,22 +3340,25 @@ function getAndLoadLocation() {
   btns.forEach(b => { b.textContent = '⏳'; b.disabled = true; });
   inputs.forEach(i => { i.value = 'Getting your location…'; i.disabled = true; });
 
-  let isDone = false;
+  let geolocationAttemptFinished = false; // Flag to ensure cleanup runs only once
 
-  const finish = () => {
-    isDone = true;
+  const cleanupUI = () => {
+    if (geolocationAttemptFinished) return; // Prevent multiple cleanups
+    geolocationAttemptFinished = true;
     isLocationPending = false;
     btns.forEach(b => { b.textContent = '🛰️'; b.disabled = false; });
     inputs.forEach(i => { 
       i.disabled = false;
       if (i.value === 'Getting your location…') i.value = '';
     });
+    console.log('UI cleanup complete: buttons re-enabled.'); // Added for debugging
   };
 
   const onSuccess = async pos => {
-    if (isDone) return;
+    if (geolocationAttemptFinished) return;
+    cleanupUI(); // Ensure UI is re-enabled immediately on success
 
-    let detectedState = null;
+    let detectedState = null; // Moved inside try block for better scope
     try {
       // Reverse geocode to detect state for official regulation links
       // Using zoom=5 to prioritize administrative/state level data
@@ -3349,16 +3367,22 @@ function getAndLoadLocation() {
       const stateName = data.address?.state;
       if (stateName) detectedState = STATE_NAME_TO_ABBR[stateName] || stateName;
     } catch (err) {
-      console.warn('State detection failed during GPS lookup:', err);
+      console.warn('State detection failed during GPS lookup:', err); // Non-fatal
     }
 
-    finish();
-    loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby', detectedState);
+    try {
+      await loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby', detectedState);
+    } catch (err) {
+      console.error('Error loading data after successful geolocation:', err);
+      setContent(`<div class="err-msg">⚠️ Failed to load data: ${err.message}. Please try again.</div>`);
+      const lakesTab = document.getElementById('lakes-tab-content');
+      if (lakesTab) lakesTab.innerHTML = `<div class="err-msg">⚠️ Failed to load data: ${err.message}. Please try again.</div>`;
+    }
   };
 
   const onFail = (error) => {
-    if (isDone) return;
-    finish();
+    if (geolocationAttemptFinished) return;
+    cleanupUI(); // Ensure UI is re-enabled immediately on failure
     console.error('Geolocation error:', error);
     const msg = `<div class="err-msg">⚠️ Could not get GPS location: ${error?.message || 'Timed out'}. Try typing your city instead.</div>`;
     setContent(msg);
@@ -3373,20 +3397,22 @@ function getAndLoadLocation() {
     }
   };
 
-  // Use a single hard timeout to unblock the UI if the native API completely hangs.
-  // We avoid issuing a second fallback getCurrentPosition because overlapping
-  // concurrent location requests can permanently deadlock Android LocationManager.
-  const hardTimeout = setTimeout(() => {
-    if (!isDone) {
+  let hardTimeoutId;
+  try {
+    // Use a single hard timeout to unblock the UI if the native API completely hangs.
+    hardTimeoutId = setTimeout(() => {
       onFail({ code: 3, message: 'Location request timed out. Please check your signal or try typing a city.' });
-    }
-  }, 12000); // 12 seconds max
+    }, 12000); // 12 seconds max
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => { clearTimeout(hardTimeout); onSuccess(pos); },
-    (err) => { clearTimeout(hardTimeout); onFail(err); },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-  );
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { clearTimeout(hardTimeoutId); onSuccess(pos); },
+      (err) => { clearTimeout(hardTimeoutId); onFail(err); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  } catch (err) {
+    clearTimeout(hardTimeoutId);
+    onFail(err); // Catch synchronous errors from getCurrentPosition call itself
+  }
 }
 
 // Handle BFCache and asynchronous form restoration by Chrome/Firefox restoring "disabled" state on refresh
