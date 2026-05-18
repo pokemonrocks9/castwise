@@ -95,18 +95,9 @@
 
     /* ── Map ── */
     #map-overlay {
-      position: fixed; top: 0; left: 0; right: 0; 
-      bottom: calc(58px + env(safe-area-inset-bottom));
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
-    }
-    #bait-recipe-overlay {
-      position: fixed; 
-      top: 100px; /* Stay below the app header */
-      left: 0; right: 0; 
-      bottom: calc(58px + env(safe-area-inset-bottom)); /* Stay above bottom nav */
-      z-index: 4000; background: var(--bg); display: none;
-      flex-direction: column; overflow-y: auto; padding-top: 20px;
     }
     #map-canvas {
       height: 50%;
@@ -312,7 +303,6 @@
     .inat-source { font-size: 11px; color: var(--text3); margin-top: 8px; text-align: right; }
     .inat-source a { color: var(--text3); }
     .inat-fallback-note { font-size: 11px; color: var(--text3); margin-top: 6px; font-style: italic; }
-    #bait-recipe-list { padding-bottom: 100px; }
 
     /* ── States ── */
     .loading { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
@@ -510,7 +500,7 @@
     }
     /* Always add bottom nav padding */
 .app { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
-    .fab {
+    .map-fab {
       position: fixed;
       bottom: calc(80px + env(safe-area-inset-bottom));
       right: 16px;
@@ -529,27 +519,15 @@
       transition: transform 0.1s, background-color 0.2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .fab:active { transform: scale(0.92); }
-    .fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .fab .icon-close { display: none; }
+    .map-fab:active { transform: scale(0.92); }
+    .map-fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .map-fab .icon-close { display: none; }
-    body.bait-form-active #bait-fab { background: var(--red-dark); }
-    body.bait-form-active #bait-fab .icon-plus { display: none; }
-    body.bait-form-active #bait-fab .icon-close { display: block; }
     body.map-active .map-fab { background: var(--red-dark); }
     body.map-active .map-fab .icon-map { display: none; }
     body.map-active .map-fab .icon-close { display: block; }
   </style>
 </head>
 <body>
-
-<!-- Bait Recipe Overlay -->
-<div id="bait-recipe-overlay">
-  <div class="fish-detail-body">
-    <div id="bait-recipe-form-wrap"></div>
-  </div>
-</div>
-
 <div class="app">
 
   <!-- Fish Detail Overlay -->
@@ -617,7 +595,7 @@
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
       </div>
     </div>
-    <button class="fab map-fab" onclick="toggleMap()" title="View Map">
+    <button class="map-fab" onclick="toggleMap()" title="View Map">
       <svg class="icon-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
       <svg class="icon-close" viewBox="0 0 24 24">
         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -857,13 +835,8 @@
     <div id="tackle-recipes" style="display:none">
       <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div id="bait-recipe-list"></div>
-      <button class="fab" id="bait-fab" onclick="toggleBaitRecipeForm()" title="Share a bait recipe" style="display:none;">
-        <svg class="icon-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <svg class="icon-close" viewBox="0 0 24 24">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      <button class="add-lake-btn" style="margin-top:20px" onclick="toggleBaitRecipeForm()">🍯 Share a bait recipe</button>
+      <div id="bait-recipe-form-wrap"></div>
     </div>
   </div>
 
@@ -966,7 +939,6 @@ let currentTab = 'solunar';
 let appData = null;
 let selectedDay = 0;
 let appNavigated = false;
-let isMapVisible = false;
 let updatingLakeLocation = null;
 let map = null;
 
@@ -976,16 +948,6 @@ function switchTab(tab, pushHistory = true) {
     return;
   }
   currentTab = tab;
-
-  // Handle map overlay visibility based on tab
-  const mapOverlay = document.getElementById('map-overlay');
-  if (tab !== 'lakes') {
-    if (mapOverlay) mapOverlay.style.display = 'none';
-    // Ensure the bait form closes if we navigate away from Tackle
-    if (isBaitFormOpen) toggleBaitRecipeForm(false);
-  } else if (isMapVisible) {
-    openMap(false);
-  }
 
   // Update panels
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1024,13 +986,6 @@ window.addEventListener('popstate', e => {
     if (fdOverlay) fdOverlay.style.display = 'none';
   } else {
     if (fdOverlay) fdOverlay.style.display = 'flex';
-  }
-
-  const brOverlay = document.getElementById('bait-recipe-overlay');
-  if (sub !== 'bait-recipe') {
-    if (isBaitFormOpen) toggleBaitRecipeForm(false);
-  } else {
-    if (!isBaitFormOpen) toggleBaitRecipeForm(false);
   }
 
   if (sub === 'map') openMap(false);
@@ -2520,7 +2475,6 @@ function toggleFishRegForm(species, region) {
       <div id="freg-status" class="db-form-status"></div>
     </div>
   `;
-  wrap.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function submitFishReg(species, region, btn) {
@@ -2678,7 +2632,6 @@ function openMap(pushHistory = true) {
   const overlay = document.getElementById('map-overlay');
   overlay.style.display = 'flex';
   document.body.classList.add('map-active');
-  isMapVisible = true;
   
   if (pushHistory) {
     appNavigated = true;
@@ -2732,7 +2685,6 @@ function closeMap() {
   } else {
     document.getElementById('map-overlay').style.display = 'none';
     document.body.classList.remove('map-active');
-    isMapVisible = false;
     updatingLakeLocation = null;
   }
 }
@@ -3034,8 +2986,6 @@ function showTackleMenu(pushHistory = true) {
   document.getElementById('tackle-bait').style.display = 'none';
   document.getElementById('tackle-line').style.display = 'none';
   document.getElementById('tackle-recipes').style.display = 'none';
-  const baitFab = document.getElementById('bait-fab');
-  if (baitFab) baitFab.style.display = 'none';
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle' }, '', '#tackle');
@@ -3048,8 +2998,6 @@ function showTackleSection(sec, pushHistory = true) {
   document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
   document.getElementById('tackle-recipes').style.display = sec === 'recipes' ? 'block' : 'none';
   if (sec === 'recipes') renderBaitRecipes();
-  const baitFab = document.getElementById('bait-fab');
-  if (baitFab) baitFab.style.display = (sec === 'recipes') ? 'flex' : 'none';
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle', sub: sec }, '', '#tackle-' + sec);
@@ -3103,41 +3051,22 @@ function renderBaitRecipes() {
   el.innerHTML = html;
 }
 
-let isBaitFormOpen = false;
-function toggleBaitRecipeForm(pushHistory = true) {
-  const overlay = document.getElementById('bait-recipe-overlay');
+function toggleBaitRecipeForm() {
   const wrap = document.getElementById('bait-recipe-form-wrap');
-  
-  if (isBaitFormOpen) {
-    overlay.style.display = 'none';
-    document.body.classList.remove('bait-form-active');
-    document.body.style.overflow = '';
-    isBaitFormOpen = false;
-    if (pushHistory && location.hash === '#bait-recipe') history.back();
-    return;
-  }
-
+  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
   wrap.innerHTML = `
-    <div class="db-form" style="margin-top:0; border:none; background:transparent; padding:0;">
-      <div class="db-form-title" style="font-size:24px; margin-bottom:20px;">Share your bait recipe</div>
-      <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
-      <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
-      <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
-      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:120px; width:100%;" placeholder="List your ingredients here..." onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"></textarea></label>
-      <label class="db-label">Process <textarea id="brec-process" style="height:160px; width:100%;" placeholder="Step by step instructions..." onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"></textarea></label>
-      <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
-      <button class="db-submit-btn" style="height:50px; font-size:16px; margin-top:20px; margin-bottom:80px;" onclick="submitBaitRecipe(this)">Submit Recipe</button>
+    <div class="db-form" style="margin-top:16px;">
+      <div class="db-form-title">Share Your Secret Recipe</div>
+      <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" /></label>
+      <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" /></label>
+      <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" /></label>
+      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:80px; width:100%;" placeholder="List your ingredients here..."></textarea></label>
+      <label class="db-label">Process <textarea id="brec-process" style="height:100px; width:100%;" placeholder="Step by step instructions..."></textarea></label>
+      <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" /></label>
+      <button class="db-submit-btn" onclick="submitBaitRecipe(this)">Submit Recipe</button>
       <div id="brec-status" class="db-form-status"></div>
-    </div>`;
-  
-  overlay.style.display = 'block';
-  document.body.classList.add('bait-form-active');
-  document.body.style.overflow = 'hidden';
-  isBaitFormOpen = true;
-  if (pushHistory) {
-    appNavigated = true;
-    history.pushState({ tab: 'tackle', sub: 'bait-recipe' }, '', '#bait-recipe');
-  }
+    </div>
+  `;
 }
 
 async function submitBaitRecipe(btn) {
@@ -3153,7 +3082,7 @@ async function submitBaitRecipe(btn) {
   btn.disabled = true; btn.textContent = 'Submitting...';
   try {
     const res = await fetch(`${WORKER_URL}/submit-bait-recipe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (res.ok) { document.getElementById('brec-status').textContent = '✅ Recipe submitted for review!'; setTimeout(() => { toggleBaitRecipeForm(); loadLakeDB().then(renderBaitRecipes); }, 2000); }
+    if (res.ok) { document.getElementById('brec-status').textContent = '✅ Recipe submitted for review!'; setTimeout(() => { document.getElementById('bait-recipe-form-wrap').innerHTML = ''; loadLakeDB().then(renderBaitRecipes); }, 2000); }
   } catch { btn.disabled = false; btn.textContent = 'Submit Recipe'; }
 }
 
@@ -3328,7 +3257,7 @@ function calcMonoBraid() {
 // ── Event handlers ────────────────────────────────────────────────────────────
 let isLocationPending = false;
 
-async function getAndLoadLocation() { // Made async to use await
+function getAndLoadLocation() {
   if (!navigator.geolocation) { alert('GPS not available in this browser.'); return; }
   const btns = document.querySelectorAll('.btn-gps');
   const inputs = document.querySelectorAll('.loc-in');
@@ -3340,25 +3269,22 @@ async function getAndLoadLocation() { // Made async to use await
   btns.forEach(b => { b.textContent = '⏳'; b.disabled = true; });
   inputs.forEach(i => { i.value = 'Getting your location…'; i.disabled = true; });
 
-  let geolocationAttemptFinished = false; // Flag to ensure cleanup runs only once
+  let isDone = false;
 
-  const cleanupUI = () => {
-    if (geolocationAttemptFinished) return; // Prevent multiple cleanups
-    geolocationAttemptFinished = true;
+  const finish = () => {
+    isDone = true;
     isLocationPending = false;
     btns.forEach(b => { b.textContent = '🛰️'; b.disabled = false; });
     inputs.forEach(i => { 
       i.disabled = false;
       if (i.value === 'Getting your location…') i.value = '';
     });
-    console.log('UI cleanup complete: buttons re-enabled.'); // Added for debugging
   };
 
   const onSuccess = async pos => {
-    if (geolocationAttemptFinished) return;
-    cleanupUI(); // Ensure UI is re-enabled immediately on success
+    if (isDone) return;
 
-    let detectedState = null; // Moved inside try block for better scope
+    let detectedState = null;
     try {
       // Reverse geocode to detect state for official regulation links
       // Using zoom=5 to prioritize administrative/state level data
@@ -3367,22 +3293,16 @@ async function getAndLoadLocation() { // Made async to use await
       const stateName = data.address?.state;
       if (stateName) detectedState = STATE_NAME_TO_ABBR[stateName] || stateName;
     } catch (err) {
-      console.warn('State detection failed during GPS lookup:', err); // Non-fatal
+      console.warn('State detection failed during GPS lookup:', err);
     }
 
-    try {
-      await loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby', detectedState);
-    } catch (err) {
-      console.error('Error loading data after successful geolocation:', err);
-      setContent(`<div class="err-msg">⚠️ Failed to load data: ${err.message}. Please try again.</div>`);
-      const lakesTab = document.getElementById('lakes-tab-content');
-      if (lakesTab) lakesTab.innerHTML = `<div class="err-msg">⚠️ Failed to load data: ${err.message}. Please try again.</div>`;
-    }
+    finish();
+    loadData(pos.coords.latitude, pos.coords.longitude, 'Nearby', detectedState);
   };
 
   const onFail = (error) => {
-    if (geolocationAttemptFinished) return;
-    cleanupUI(); // Ensure UI is re-enabled immediately on failure
+    if (isDone) return;
+    finish();
     console.error('Geolocation error:', error);
     const msg = `<div class="err-msg">⚠️ Could not get GPS location: ${error?.message || 'Timed out'}. Try typing your city instead.</div>`;
     setContent(msg);
@@ -3397,22 +3317,20 @@ async function getAndLoadLocation() { // Made async to use await
     }
   };
 
-  let hardTimeoutId;
-  try {
-    // Use a single hard timeout to unblock the UI if the native API completely hangs.
-    hardTimeoutId = setTimeout(() => {
+  // Use a single hard timeout to unblock the UI if the native API completely hangs.
+  // We avoid issuing a second fallback getCurrentPosition because overlapping
+  // concurrent location requests can permanently deadlock Android LocationManager.
+  const hardTimeout = setTimeout(() => {
+    if (!isDone) {
       onFail({ code: 3, message: 'Location request timed out. Please check your signal or try typing a city.' });
-    }, 12000); // 12 seconds max
+    }
+  }, 12000); // 12 seconds max
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { clearTimeout(hardTimeoutId); onSuccess(pos); },
-      (err) => { clearTimeout(hardTimeoutId); onFail(err); },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  } catch (err) {
-    clearTimeout(hardTimeoutId);
-    onFail(err); // Catch synchronous errors from getCurrentPosition call itself
-  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { clearTimeout(hardTimeout); onSuccess(pos); },
+    (err) => { clearTimeout(hardTimeout); onFail(err); },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
 }
 
 // Handle BFCache and asynchronous form restoration by Chrome/Firefox restoring "disabled" state on refresh
