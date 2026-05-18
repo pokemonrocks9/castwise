@@ -95,9 +95,15 @@
 
     /* ── Map ── */
     #map-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      position: fixed; top: 0; left: 0; right: 0; 
+      bottom: calc(58px + env(safe-area-inset-bottom));
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
+    }
+    #bait-recipe-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 4000; background: var(--bg); display: none;
+      flex-direction: column; overflow-y: auto; padding-top: 20px;
     }
     #map-canvas {
       height: 50%;
@@ -303,6 +309,7 @@
     .inat-source { font-size: 11px; color: var(--text3); margin-top: 8px; text-align: right; }
     .inat-source a { color: var(--text3); }
     .inat-fallback-note { font-size: 11px; color: var(--text3); margin-top: 6px; font-style: italic; }
+    #bait-recipe-list { padding-bottom: 100px; }
 
     /* ── States ── */
     .loading { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; }
@@ -521,6 +528,7 @@
     }
     .fab:active { transform: scale(0.92); }
     .fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab .icon-close { display: none; }
     .map-fab .icon-close { display: none; }
     body.map-active .map-fab { background: var(--red-dark); }
     body.map-active .map-fab .icon-map { display: none; }
@@ -528,6 +536,14 @@
   </style>
 </head>
 <body>
+
+<!-- Bait Recipe Overlay -->
+<div id="bait-recipe-overlay">
+  <div class="fish-detail-body">
+    <div id="bait-recipe-form-wrap"></div>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- Fish Detail Overlay -->
@@ -835,10 +851,13 @@
     <div id="tackle-recipes" style="display:none">
       <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div id="bait-recipe-list"></div>
-      <button class="fab" onclick="toggleBaitRecipeForm()" title="Share a bait recipe">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <button class="fab" id="bait-fab" onclick="toggleBaitRecipeForm()" title="Share a bait recipe" style="display:none;">
+        <svg class="icon-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <svg class="icon-close" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
       </button>
-      <div id="bait-recipe-form-wrap"></div>
     </div>
   </div>
 
@@ -941,6 +960,7 @@ let currentTab = 'solunar';
 let appData = null;
 let selectedDay = 0;
 let appNavigated = false;
+let isMapVisible = false;
 let updatingLakeLocation = null;
 let map = null;
 
@@ -950,6 +970,14 @@ function switchTab(tab, pushHistory = true) {
     return;
   }
   currentTab = tab;
+
+  // Handle map overlay visibility based on tab
+  const mapOverlay = document.getElementById('map-overlay');
+  if (tab !== 'lakes') {
+    if (mapOverlay) mapOverlay.style.display = 'none';
+  } else if (isMapVisible) {
+    openMap(false);
+  }
 
   // Update panels
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -2635,6 +2663,7 @@ function openMap(pushHistory = true) {
   const overlay = document.getElementById('map-overlay');
   overlay.style.display = 'flex';
   document.body.classList.add('map-active');
+  isMapVisible = true;
   
   if (pushHistory) {
     appNavigated = true;
@@ -2688,6 +2717,7 @@ function closeMap() {
   } else {
     document.getElementById('map-overlay').style.display = 'none';
     document.body.classList.remove('map-active');
+    isMapVisible = false;
     updatingLakeLocation = null;
   }
 }
@@ -2989,6 +3019,8 @@ function showTackleMenu(pushHistory = true) {
   document.getElementById('tackle-bait').style.display = 'none';
   document.getElementById('tackle-line').style.display = 'none';
   document.getElementById('tackle-recipes').style.display = 'none';
+  const baitFab = document.getElementById('bait-fab');
+  if (baitFab) baitFab.style.display = 'none';
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle' }, '', '#tackle');
@@ -3001,6 +3033,8 @@ function showTackleSection(sec, pushHistory = true) {
   document.getElementById('tackle-line').style.display = sec === 'line' ? 'block' : 'none';
   document.getElementById('tackle-recipes').style.display = sec === 'recipes' ? 'block' : 'none';
   if (sec === 'recipes') renderBaitRecipes();
+  const baitFab = document.getElementById('bait-fab');
+  if (baitFab) baitFab.style.display = (sec === 'recipes') ? 'flex' : 'none';
   if (pushHistory) {
     appNavigated = true;
     history.pushState({ tab: 'tackle', sub: sec }, '', '#tackle-' + sec);
@@ -3054,22 +3088,41 @@ function renderBaitRecipes() {
   el.innerHTML = html;
 }
 
+let isBaitFormOpen = false;
 function toggleBaitRecipeForm() {
+  const overlay = document.getElementById('bait-recipe-overlay');
   const wrap = document.getElementById('bait-recipe-form-wrap');
-  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
+  const fab = document.getElementById('bait-fab');
+  
+  if (isBaitFormOpen) {
+    overlay.style.display = 'none';
+    fab.querySelector('.icon-plus').style.display = 'block';
+    fab.querySelector('.icon-close').style.display = 'none';
+    fab.style.backgroundColor = 'var(--green)';
+    document.body.style.overflow = '';
+    isBaitFormOpen = false;
+    return;
+  }
+
   wrap.innerHTML = `
-    <div class="db-form" style="margin-top:16px;">
-      <div class="db-form-title">Share Your Secret Recipe</div>
-      <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" /></label>
-      <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" /></label>
-      <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" /></label>
-      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:80px; width:100%;" placeholder="List your ingredients here..."></textarea></label>
-      <label class="db-label">Process <textarea id="brec-process" style="height:100px; width:100%;" placeholder="Step by step instructions..."></textarea></label>
-      <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" /></label>
-      <button class="db-submit-btn" onclick="submitBaitRecipe(this)">Submit Recipe</button>
+    <div class="db-form" style="margin-top:0; border:none; background:transparent; padding:0;">
+      <div class="db-form-title" style="font-size:24px; margin-bottom:20px;">Share your bait recipe</div>
+      <label class="db-label">Recipe Name <input type="text" id="brec-name" placeholder="e.g. Strawberry Kool-Aid Hotdogs" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
+      <label class="db-label">Target Species <input type="text" id="brec-species" placeholder="e.g. Catfish, Carp" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
+      <label class="db-label">Hook Recommendation <input type="text" id="brec-hook" placeholder="e.g. 2/0 Circle Hook" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
+      <label class="db-label">Ingredients <textarea id="brec-ingredients" style="height:120px; width:100%;" placeholder="List your ingredients here..." onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"></textarea></label>
+      <label class="db-label">Process <textarea id="brec-process" style="height:160px; width:100%;" placeholder="Step by step instructions..." onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"></textarea></label>
+      <label class="db-label">Your Name (optional) <input type="text" id="brec-sub" placeholder="anonymous" onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})" /></label>
+      <button class="db-submit-btn" style="height:50px; font-size:16px; margin-top:20px; margin-bottom:80px;" onclick="submitBaitRecipe(this)">Submit Recipe</button>
       <div id="brec-status" class="db-form-status"></div>
-    </div>
-  `;
+    </div>`;
+  
+  overlay.style.display = 'block';
+  fab.querySelector('.icon-plus').style.display = 'none';
+  fab.querySelector('.icon-close').style.display = 'block';
+  fab.style.backgroundColor = 'var(--red-dark)';
+  document.body.style.overflow = 'hidden';
+  isBaitFormOpen = true;
 }
 
 async function submitBaitRecipe(btn) {
@@ -3085,7 +3138,7 @@ async function submitBaitRecipe(btn) {
   btn.disabled = true; btn.textContent = 'Submitting...';
   try {
     const res = await fetch(`${WORKER_URL}/submit-bait-recipe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (res.ok) { document.getElementById('brec-status').textContent = '✅ Recipe submitted for review!'; setTimeout(() => { document.getElementById('bait-recipe-form-wrap').innerHTML = ''; loadLakeDB().then(renderBaitRecipes); }, 2000); }
+    if (res.ok) { document.getElementById('brec-status').textContent = '✅ Recipe submitted for review!'; setTimeout(() => { toggleBaitRecipeForm(); loadLakeDB().then(renderBaitRecipes); }, 2000); }
   } catch { btn.disabled = false; btn.textContent = 'Submit Recipe'; }
 }
 
