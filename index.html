@@ -101,10 +101,7 @@
       flex-direction: column;
     }
     #bait-recipe-overlay {
-      position: fixed; 
-      top: 100px; /* Stay below the app header */
-      left: 0; right: 0; 
-      bottom: calc(58px + env(safe-area-inset-bottom)); /* Stay above bottom nav */
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4000; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding-top: 20px;
     }
@@ -533,9 +530,6 @@
     .fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .fab .icon-close { display: none; }
     .map-fab .icon-close { display: none; }
-    body.bait-form-active #bait-fab { background: var(--red-dark); }
-    body.bait-form-active #bait-fab .icon-plus { display: none; }
-    body.bait-form-active #bait-fab .icon-close { display: block; }
     body.map-active .map-fab { background: var(--red-dark); }
     body.map-active .map-fab .icon-map { display: none; }
     body.map-active .map-fab .icon-close { display: block; }
@@ -981,8 +975,6 @@ function switchTab(tab, pushHistory = true) {
   const mapOverlay = document.getElementById('map-overlay');
   if (tab !== 'lakes') {
     if (mapOverlay) mapOverlay.style.display = 'none';
-    // Ensure the bait form closes if we navigate away from Tackle
-    if (isBaitFormOpen) toggleBaitRecipeForm(false);
   } else if (isMapVisible) {
     openMap(false);
   }
@@ -1024,13 +1016,6 @@ window.addEventListener('popstate', e => {
     if (fdOverlay) fdOverlay.style.display = 'none';
   } else {
     if (fdOverlay) fdOverlay.style.display = 'flex';
-  }
-
-  const brOverlay = document.getElementById('bait-recipe-overlay');
-  if (sub !== 'bait-recipe') {
-    if (isBaitFormOpen) toggleBaitRecipeForm(false);
-  } else {
-    if (!isBaitFormOpen) toggleBaitRecipeForm(false);
   }
 
   if (sub === 'map') openMap(false);
@@ -3104,16 +3089,18 @@ function renderBaitRecipes() {
 }
 
 let isBaitFormOpen = false;
-function toggleBaitRecipeForm(pushHistory = true) {
+function toggleBaitRecipeForm() {
   const overlay = document.getElementById('bait-recipe-overlay');
   const wrap = document.getElementById('bait-recipe-form-wrap');
+  const fab = document.getElementById('bait-fab');
   
   if (isBaitFormOpen) {
     overlay.style.display = 'none';
-    document.body.classList.remove('bait-form-active');
+    fab.querySelector('.icon-plus').style.display = 'block';
+    fab.querySelector('.icon-close').style.display = 'none';
+    fab.style.backgroundColor = 'var(--green)';
     document.body.style.overflow = '';
     isBaitFormOpen = false;
-    if (pushHistory && location.hash === '#bait-recipe') history.back();
     return;
   }
 
@@ -3131,13 +3118,11 @@ function toggleBaitRecipeForm(pushHistory = true) {
     </div>`;
   
   overlay.style.display = 'block';
-  document.body.classList.add('bait-form-active');
+  fab.querySelector('.icon-plus').style.display = 'none';
+  fab.querySelector('.icon-close').style.display = 'block';
+  fab.style.backgroundColor = 'var(--red-dark)';
   document.body.style.overflow = 'hidden';
   isBaitFormOpen = true;
-  if (pushHistory) {
-    appNavigated = true;
-    history.pushState({ tab: 'tackle', sub: 'bait-recipe' }, '', '#bait-recipe');
-  }
 }
 
 async function submitBaitRecipe(btn) {
