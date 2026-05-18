@@ -500,7 +500,7 @@
     }
     /* Always add bottom nav padding */
 .app { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
-    .map-fab {
+    .fab {
       position: fixed;
       bottom: calc(80px + env(safe-area-inset-bottom));
       right: 16px;
@@ -519,8 +519,8 @@
       transition: transform 0.1s, background-color 0.2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .map-fab:active { transform: scale(0.92); }
-    .map-fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fab:active { transform: scale(0.92); }
+    .fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .map-fab .icon-close { display: none; }
     body.map-active .map-fab { background: var(--red-dark); }
     body.map-active .map-fab .icon-map { display: none; }
@@ -595,7 +595,7 @@
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
       </div>
     </div>
-    <button class="map-fab" onclick="toggleMap()" title="View Map">
+    <button class="fab map-fab" onclick="toggleMap()" title="View Map">
       <svg class="icon-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
       <svg class="icon-close" viewBox="0 0 24 24">
         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -835,7 +835,9 @@
     <div id="tackle-recipes" style="display:none">
       <button class="btn" style="margin-top:20px;margin-bottom:10px;width:100%" onclick="handleTackleBack()">← Back to Tackle Box</button>
       <div id="bait-recipe-list"></div>
-      <button class="add-lake-btn" style="margin-top:20px" onclick="toggleBaitRecipeForm()">🍯 Share a bait recipe</button>
+      <button class="fab" onclick="toggleBaitRecipeForm()" title="Share a bait recipe">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
       <div id="bait-recipe-form-wrap"></div>
     </div>
   </div>
@@ -2475,6 +2477,7 @@ function toggleFishRegForm(species, region) {
       <div id="freg-status" class="db-form-status"></div>
     </div>
   `;
+  wrap.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function submitFishReg(species, region, btn) {
