@@ -1492,7 +1492,7 @@ async function loadData(lat, lon, locName, state = null) {
       };
     });
     // Render weather/solunar immediately — don't wait on lakes
-    appData = { days, lakes: [], locName, userLat: lat, userLon: lon, state, inatFish: null };
+    appData = { days, lakes: null, locName, userLat: lat, userLon: lon, state, inatFish: null };
     selectedDay = 0;
     render();
     if (currentTab === 'fish') renderFishTab();
@@ -2275,10 +2275,11 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
 // ── Render just the lakes section (called after background fetch) ─────────────
 function renderLakes() {
   const el2 = document.getElementById('lakes-tab-content');
-  const { lakes } = appData;
-  const d = appData.days[selectedDay];
+  const lakes = appData?.lakes;
+  const d = appData?.days[selectedDay];
 
-  if (!lakes.length) {
+  if (lakes === null) return;
+  if (!lakes || !lakes.length) {
     if (el2) el2.innerHTML = '<div class="empty">No named lakes or reservoirs found within ~35 miles.</div>';
     return;
   }
@@ -2753,7 +2754,12 @@ function updateMapMarkers() {
 
 function renderMapList() {
   const el = document.getElementById('map-list');
-  if (!el || !appData?.lakes) return;
+  if (!el) return;
+
+  if (!appData || appData.lakes === null) {
+    el.innerHTML = '<div class="loading" style="padding:40px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
+    return;
+  }
 
   const d = appData.days[selectedDay];
   let h = '<div style="padding:16px"><div class="section-label">Lakes in view</div>';
