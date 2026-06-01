@@ -910,7 +910,7 @@
       <hr class="settings-divider">
 
       <!-- PWA Install Button -->
-      <div style="width:100%; max-width:300px; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
+      <div style="width:100%; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
         <button id="installPwaBtn" style="width:100%; background:var(--green); color:#fff; border:none; border-radius:var(--radius); padding:12px; font-size:15px; font-weight:500; font-family:'DM Sans', sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Install CastWise App
@@ -920,7 +920,7 @@
       <!-- New setting for automatic location -->
       <div class="settings-section-title">App Preferences</div>
       
-      <div style="width:100%; max-width:300px; margin-top:20px; text-align:left;">
+      <div style="width:100%; margin-top:20px; text-align:left;">
         <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--text);">Automatic Location</span>
           <input type="checkbox" id="autoLocToggle" style="width:20px; height:20px;" />
@@ -929,7 +929,7 @@
       </div>
 
       <!-- Theme Setting -->
-      <div style="width:100%; max-width:300px; margin-top:12px; text-align:left;">
+      <div style="width:100%; margin-top:12px; text-align:left;">
         <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--text);">Theme</span>
           <select id="themeSelect" style="background:var(--bg); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:4px 8px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
@@ -1513,7 +1513,6 @@ async function applyUserIcon() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         username: authData.username, 
-        pin, 
         castKey: authData.castKey,
         iconId: previewIconId
       })
