@@ -1266,12 +1266,34 @@ function renderAccountSection() {
   if (!container) return;
 
   if (authData) {
+    const roleNames = { 0: 'Caster', 1: 'Admin', 2: 'Owner' };
+    const roleName = roleNames[authData.role] || 'Caster';
+    
+    let ownerTools = '';
+    if (authData.role === 2) {
+      ownerTools = `
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">
+          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:8px;">Manage Roles</div>
+          <input type="text" id="role-target" placeholder="Username" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border2); background:var(--bg); color:var(--text); font-size:13px; margin-bottom:8px;" />
+          <div style="display:flex; gap:4px;">
+            <button class="btn" style="flex:1; font-size:11px;" onclick="updateUserRole(1)">Make Admin</button>
+            <button class="btn" style="flex:1; font-size:11px;" onclick="updateUserRole(0)">Demote to Caster</button>
+          </div>
+          <div id="role-status" style="font-size:11px; margin-top:6px; color:var(--text2)"></div>
+        </div>
+      `;
+    }
+
     container.innerHTML = `
       <div class="card" style="padding:14px; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius);">
-        <div class="card-title" style="margin-bottom:8px">CastWise Account</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <div class="card-title" style="margin-bottom:0">CastWise Account</div>
+          <span style="font-size:10px; font-weight:700; background:var(--green); color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${roleName}</span>
+        </div>
         <div style="font-size:14px; color:var(--text); margin-bottom:4px">User: <b>${authData.username}</b></div>
         <div style="font-size:14px; color:var(--text); margin-bottom:12px">Cast Key: <code style="background:var(--bg); padding:2px 4px; border-radius:4px; font-weight:600; color:var(--green);">${authData.castKey}</code></div>
         <button class="btn" style="width:100%; color:var(--red-dark); border-color:var(--red-dark);" onclick="handleSignOut()">Sign Out</button>
+        ${ownerTools}
       </div>
     `;
   } else {
@@ -1310,12 +1332,38 @@ async function handleAuth(type) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Authentication failed');
 
-    authData = { username: data.username, castKey: data.castKey, isAdmin: !!data.isAdmin };
+    authData = { username: data.username, castKey: data.castKey, role: data.role };
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
     renderAccountSection();
   } catch (err) {
     status.textContent = '⚠️ ' + err.message;
   }
+}
+
+async function updateUserRole(newRole) {
+  const target = document.getElementById('role-target').value.trim();
+  const status = document.getElementById('role-status');
+  if (!target) return;
+
+  const pin = prompt(`Enter your PIN to confirm changing ${target}'s role:`);
+  if (!pin) return;
+
+  status.textContent = 'Updating...';
+  try {
+    const res = await fetch(`${WORKER_URL}/set-role`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        targetUsername: target, 
+        newRole, 
+        adminUsername: authData.username, 
+        pin 
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    status.textContent = `✅ ${target} is now a ${newRole === 1 ? 'Admin' : 'Caster'}`;
+  } catch (e) { status.textContent = '❌ ' + e.message; }
 }
 
 function handleSignOut() {
