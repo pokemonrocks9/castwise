@@ -1267,7 +1267,7 @@ function renderAccountSection() {
 
   if (authData) {
     const roleNames = { 0: 'Caster', 1: 'Admin', 2: 'Owner' };
-    const roleName = roleNames[authData.role] || 'Caster';
+    const roleName = roleNames[authData.role] || roleNames[0];
     
     let ownerTools = '';
     if (authData.role === 2) {
@@ -1332,7 +1332,11 @@ async function handleAuth(type) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Authentication failed');
 
-    authData = { username: data.username, castKey: data.castKey, role: data.role };
+    authData = { 
+      username: data.username, 
+      castKey: data.castKey, 
+      role: data.role ?? 0 
+    };
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
     renderAccountSection();
   } catch (err) {
