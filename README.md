@@ -12,11 +12,16 @@ As I am expanding the app for more features, and eventually making it into an ac
 - List the weather of the area
 - Show a fishing score up to 7 days ahead, which is estimated with on device calculations
 - List lakes and potential fish in the area
+- Map of lakes in the nearby area
 - Add Lakes if they aren't listed
 - Each lake has the potential to list:
   - If it is a park, private, or public lake
   - If it costs to fish, whether bank fishing, if a pier is available, or boat launch is available
   - If it is a catch and keep or catch and release area
+- Set up an account and add your friends
+- See what lakes others have checked in at
+- Braid calculator and Mono recommendations for rod and reels
+- Lure and Bait recommendations
 
 If you have suggestions, put them as a [GitHub Issue](../../issues).
 
