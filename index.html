@@ -583,6 +583,14 @@
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
     }
 
+    /* ── Notification Dot ── */
+    .notif-wrapper { position: relative; }
+    .notif-dot {
+      position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
+      background: var(--red-dark); border: 2px solid var(--bg); border-radius: 50%;
+      display: none; pointer-events: none;
+    }
+
     /* ── Account Overlay ── */
     #account-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -606,6 +614,15 @@
     .profile-icon-large svg { width: 40px; height: 40px; stroke-width: 1.5; }
     
     /* ── Friends List ── */
+    .friends-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .friend-tab {
+      flex: 1; text-align: center; padding: 12px; font-size: 13px; font-weight: 600;
+      color: var(--text3); cursor: pointer; transition: color 0.2s; position: relative;
+    }
+    .friend-tab.active { color: var(--green); }
+    .friend-tab.active::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--green);
+    }
     .friends-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
     .friend-item {
       display: flex; align-items: center; gap: 12px; padding: 10px;
@@ -695,15 +712,20 @@
     </div>
 
     <div style="padding: 24px 16px;">
-      <div class="section-label">Friends</div>
+      <div class="section-label">Connections</div>
       <div class="loc-bar" style="margin-bottom: 12px;">
-        <input type="text" id="friend-search" placeholder="Add friend by username..." autocomplete="off" />
+        <input type="text" id="friend-search" placeholder="Search Username or Cast Key..." autocomplete="off" />
         <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="handleAddFriend()">Add</button>
       </div>
       <div id="friends-status" style="font-size: 11px; margin-bottom: 8px; color: var(--text3);"></div>
-      <div id="friends-list-container" class="friends-list">
-        <!-- Updated by JS -->
+      
+      <div class="friends-tabs">
+        <div id="tab-btn-friends" class="friend-tab active" onclick="switchFriendsTab('friends')">Friends</div>
+        <div id="tab-btn-requests" class="friend-tab" onclick="switchFriendsTab('requests')">Requests</div>
       </div>
+
+      <div id="friends-view" class="friends-list"></div>
+      <div id="requests-view" class="friends-list" style="display:none"></div>
     </div>
   </div>
 
@@ -1494,8 +1516,11 @@ function renderAccountSection() {
     
     // 1. Update Header Zone
     headerZone.innerHTML = `
-      <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
-        ${USER_ICONS[displayIconId]}
+      <div class="notif-wrapper">
+        <div id="header-notif-dot" class="notif-dot"></div>
+        <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
+          ${USER_ICONS[displayIconId]}
+        </div>
       </div>
     `;
 
@@ -1511,6 +1536,9 @@ function renderAccountSection() {
         <button class="btn" style="width:100%; color:var(--red-dark); border-color:var(--red-dark);" onclick="handleSignOut()">Sign Out</button>
       </div>
     `;
+
+    // Check for requests to show red dot
+    checkFriendRequests();
 
     // 3. Update Overlay if open
     if (document.getElementById('account-overlay').style.display === 'flex') {
@@ -1591,40 +1619,91 @@ function setPreviewIcon(id) {
   document.getElementById('apply-icon-btn').disabled = (id === authData.iconId);
 }
 
-async function fetchFriends() {
-  const container = document.getElementById('friends-list-container');
-  if (!container) return;
+let currentFriendsView = 'friends';
+function switchFriendsTab(view) {
+  currentFriendsView = view;
+  document.getElementById('tab-btn-friends').classList.toggle('active', view === 'friends');
+  document.getElementById('tab-btn-requests').classList.toggle('active', view === 'requests');
+  document.getElementById('friends-view').style.display = view === 'friends' ? 'flex' : 'none';
+  document.getElementById('requests-view').style.display = view === 'requests' ? 'flex' : 'none';
+  fetchFriends();
+}
 
-  container.innerHTML = '<div style="font-size:12px; color:var(--text3); text-align:center; padding:20px;">Loading friends...</div>';
+async function checkFriendRequests() {
+  if (!authData) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/get-friends?username=${authData.username}&castKey=${authData.castKey}`);
+    const data = await res.json();
+    const hasRequests = data.requests && data.requests.length > 0;
+    const dot = document.getElementById('header-notif-dot');
+    if (dot) dot.style.display = hasRequests ? 'block' : 'none';
+  } catch (e) {}
+}
+
+async function fetchFriends() {
+  const fView = document.getElementById('friends-view');
+  const rView = document.getElementById('requests-view');
+  if (!fView || !rView) return;
 
   try {
-    const res = await fetch(`${WORKER_URL}/friends?username=${authData.username}&castKey=${authData.castKey}`);
-    const friends = await res.json();
+    const res = await fetch(`${WORKER_URL}/get-friends?username=${authData.username}&castKey=${authData.castKey}`);
+    const data = await res.json();
 
-    if (!friends || friends.length === 0) {
-      container.innerHTML = '<div style="font-size:13px; color:var(--text2); text-align:center; padding:20px; background:var(--bg2); border-radius:var(--radius);">No friends yet. Add someone by their username!</div>';
-      return;
+    // Update friends
+    if (!data.friends || data.friends.length === 0) {
+      fView.innerHTML = '<div class="empty">No friends yet.</div>';
+    } else {
+      fView.innerHTML = data.friends.map(f => `
+        <div class="friend-item">
+          <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
+          <div class="friend-info">
+            <div class="friend-name">${f.username}</div>
+            <div class="friend-status">${f.cast_key}</div>
+          </div>
+        </div>
+      `).join('');
     }
 
-    container.innerHTML = friends.map(f => `
-      <div class="friend-item">
-        <div class="friend-icon">${USER_ICONS[f.iconId || 0]}</div>
-        <div class="friend-info">
-          <div class="friend-name">${f.username}</div>
-          <div class="friend-status">${f.status === 'accepted' ? 'Connected' : 'Pending request'}</div>
+    // Update requests
+    if (!data.requests || data.requests.length === 0) {
+      rView.innerHTML = '<div class="empty">No pending requests.</div>';
+      document.getElementById('header-notif-dot').style.display = 'none';
+    } else {
+      document.getElementById('header-notif-dot').style.display = 'block';
+      rView.innerHTML = data.requests.map(f => `
+        <div class="friend-item">
+          <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
+          <div class="friend-info">
+            <div class="friend-name">${f.username}</div>
+            <div class="friend-status">sent you a request</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-primary" style="padding:4px 8px; font-size:11px" onclick="respondFriend('${f.username}', 'accept')">Accept</button>
+            <button class="btn" style="padding:4px 8px; font-size:11px" onclick="respondFriend('${f.username}', 'reject')">✕</button>
+          </div>
         </div>
-        <div style="font-size: 11px; font-weight: 600; color: var(--green);">${f.castKey}</div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   } catch (e) {
-    container.innerHTML = '<div style="font-size:12px; color:var(--red-dark); text-align:center;">Failed to load friends list.</div>';
+    fView.innerHTML = rView.innerHTML = '<div class="err-msg">Failed to load.</div>';
   }
 }
 
+async function respondFriend(target, action) {
+  try {
+    await fetch(`${WORKER_URL}/respond-friend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authData.username, castKey: authData.castKey, targetUsername: target, action })
+    });
+    fetchFriends();
+  } catch (e) { showToast('Action failed'); }
+}
+
 async function handleAddFriend() {
-  const target = document.getElementById('friend-search').value.trim();
+  let query = document.getElementById('friend-search').value.trim();
   const status = document.getElementById('friends-status');
-  if (!target) return;
+  if (!query) return;
 
   status.textContent = 'Sending request...';
   try {
@@ -1634,12 +1713,12 @@ async function handleAddFriend() {
       body: JSON.stringify({ 
         username: authData.username, 
         castKey: authData.castKey,
-        targetUsername: target 
+        query
       })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    status.textContent = '✅ Request sent to ' + target;
+    status.textContent = '✅ Request sent!';
     document.getElementById('friend-search').value = '';
     fetchFriends();
   } catch (e) { status.textContent = '❌ ' + e.message; }
