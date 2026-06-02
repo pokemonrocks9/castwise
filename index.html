@@ -680,6 +680,11 @@
 
   <!-- Map Overlay (Beta) -->
   <div id="map-overlay">
+    <div id="map-edit-hint" style="display:none; background:var(--amber-light); color:var(--amber-dark); padding:10px; font-size:13px; font-weight:600; text-align:center; border-bottom:1px solid var(--border);">
+       Moving: <span id="map-edit-target"></span>. Tap/Right-click new spot.
+       <button onclick="cancelLocationUpdate()" class="btn" style="padding:2px 8px; font-size:11px; margin-left:8px; border-color:var(--amber-dark); color:var(--amber-dark); background:none;">Cancel</button>
+    </div>
+
     <div style="border-bottom: 1px solid var(--border); background: var(--bg);">
       <div style="max-width: 520px; margin: 0 auto; padding: 16px 16px 12px;">
         <div class="loc-wrap" style="margin-bottom: 0;">
@@ -1143,6 +1148,17 @@ let selectedDay = 0;
 let appNavigated = false;
 let updatingLakeLocation = null;
 let map = null;
+let mapTempMarker = null;
+
+function cancelLocationUpdate() {
+  updatingLakeLocation = null;
+  const hint = document.getElementById('map-edit-hint');
+  if (hint) hint.style.display = 'none';
+  if (map && mapTempMarker) {
+    map.removeLayer(mapTempMarker);
+    mapTempMarker = null;
+  }
+}
 
 function switchTab(tab, pushHistory = true) {
   if (tab === currentTab) {
@@ -1181,7 +1197,7 @@ window.addEventListener('popstate', e => {
     const mapOverlay = document.getElementById('map-overlay');
     if (mapOverlay) mapOverlay.style.display = 'none';
     document.body.classList.remove('map-active');
-    updatingLakeLocation = null;
+    cancelLocationUpdate();
   }
   const fdOverlay = document.getElementById('fish-detail-overlay');
   if (sub !== 'fish-detail') {
@@ -3261,21 +3277,49 @@ function openMap(pushHistory = true) {
 
     // Long-press / Right-click logic
     map.on('contextmenu', (e) => {
+      if (mapTempMarker) map.removeLayer(mapTempMarker);
       const { lat, lng } = e.latlng;
+
+      // Drop a high-contrast physical pin
+      mapTempMarker = L.marker([lat, lng], {
+        draggable: true,
+        icon: L.divIcon({
+          className: 'custom-drop-pin',
+          html: `<div style="background:var(--red-dark); width:16px; height:16px; border:3px solid #fff; border-radius:50%; box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })
+      }).addTo(map);
+      
+      const container = document.createElement('div');
+      container.style.minWidth = '140px';
+      container.style.padding = '4px 0';
       
       if (updatingLakeLocation) {
-        if (confirm(`Update location for "${updatingLakeLocation}" to here?`)) {
-          const lakeName = updatingLakeLocation;
-          updatingLakeLocation = null;
-          closeMap();
-          submitLocationUpdate(lakeName, lat, lng);
-        }
+        container.innerHTML = `
+          <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--text); line-height:1.3">Move "${updatingLakeLocation}" here?</div>
+          <button id="map-confirm-move" class="btn btn-primary" style="width:100%; font-size:12px; padding:8px;">Confirm Move</button>
+        `;
+        mapTempMarker.bindPopup(container).openPopup();
+        container.querySelector('#map-confirm-move').onclick = () => {
+          const pos = mapTempMarker.getLatLng();
+          const target = updatingLakeLocation;
+          cancelLocationUpdate();
+          submitLocationUpdate(target, pos.lat, pos.lng);
+        };
       } else {
-        if (confirm(`Drop a pin here to add a new lake?`)) {
+        container.innerHTML = `
+          <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--text);">Drop Pin Here</div>
+          <button id="map-add-lake" class="btn btn-primary" style="width:100%; font-size:12px; padding:8px;">Add New Lake</button>
+        `;
+        mapTempMarker.bindPopup(container).openPopup();
+        container.querySelector('#map-add-lake').onclick = () => {
+          const pos = mapTempMarker.getLatLng();
+          const lat = pos.lat, lng = pos.lng;
+          cancelLocationUpdate();
           closeMap();
-          // Open the form with these specific coordinates
           setTimeout(() => showAddLakeForm(lat, lng), 300);
-        }
+        };
       }
     });
   } else {
@@ -3296,15 +3340,19 @@ function closeMap() {
   } else {
     document.getElementById('map-overlay').style.display = 'none';
     document.body.classList.remove('map-active');
-    updatingLakeLocation = null;
+    cancelLocationUpdate();
   }
 }
 
 function startLocationUpdate(lakeName) {
   updatingLakeLocation = lakeName;
+  const hint = document.getElementById('map-edit-hint');
+  const target = document.getElementById('map-edit-target');
+  if (hint && target) {
+    hint.style.display = 'block';
+    target.textContent = lakeName;
+  }
   openMap();
-  // Show an alert to guide the user
-  alert(`Right-click (or long-press on mobile) on the map at the correct spot for "${lakeName}" to update its location.`);
 }
 
 async function submitLocationUpdate(name, lat, lon) {
@@ -3348,6 +3396,16 @@ function updateMapMarkers() {
 
     const color = _noFish ? '#A32D2D' : (_isCommunity && !_confirmed ? '#BA7517' : '#1D9E75');
     
+    let popupContent = `
+      <div style="min-width:160px; padding:2px">
+        <div style="font-weight:700; font-size:14px; margin-bottom:2px; color:var(--text);">${lk.name}</div>
+        <div style="font-size:11px; color:var(--text3); margin-bottom:10px;">${lk.type || 'Lake'}</div>
+    `;
+    if (_isCommunity) {
+      popupContent += `<button class="btn" style="width:100%; font-size:11px; padding:6px; margin-bottom:4px;" onclick="startLocationUpdate('${lk.name.replace(/'/g,"\\'")}')">📍 Adjust Location</button>`;
+    }
+    popupContent += `<button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px;" onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon}, false)">🔍 View Details</button></div>`;
+
     const marker = L.circleMarker([lk.lat, lk.lon], {
       radius: 6,
       fillColor: color,
@@ -3356,7 +3414,7 @@ function updateMapMarkers() {
       opacity: 1,
       fillOpacity: 0.8
     }).addTo(map)
-      .bindPopup(`<b>${lk.name}</b><br>${lk.type || 'Lake'}`)
+      .bindPopup(popupContent)
       .on('click', () => focusLakeOnMap(lk.name, lk.lat, lk.lon, true));
 
     mapMarkers[lk.name] = marker;
