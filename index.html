@@ -1747,6 +1747,36 @@ function jumpToAccount() {
   }
 }
 
+async function approveContent(type, id, btn) {
+  if (!authData || authData.role < 2) return;
+  const pin = prompt(`Enter PIN to approve this ${type} update:`);
+  if (!pin) return;
+  
+  btn.disabled = true;
+  btn.textContent = 'Approving...';
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, id, username: authData.username, pin })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    
+    showToast('Approved successfully!');
+    loadLakeDB().then(() => {
+      if (type === 'lake') renderLakes();
+      else if (type === 'fish') renderFishRegs(id.split(':')[0]);
+      else if (type === 'bait') renderBaitRecipes();
+    });
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Failed';
+    alert(e.message);
+  }
+}
+
 async function handleAuth(type) {
   const username = document.getElementById('auth-user').value.trim();
   const pin = document.getElementById('auth-pin').value;
@@ -2329,10 +2359,15 @@ function lakeDBCard(lakeName, entry) {
     ? `<span class="db-badge db-confirmed">✓ Verified</span>`
     : `<span class="db-badge db-unconfirmed">community</span>`;
 
+  const isOwner = authData && authData.role === 2;
+  const voteAction = isOwner 
+    ? `approveContent('lake', '${lakeName.replace(/'/g,"\\'")}', this)`
+    : `voteOnLake('${lakeName.replace(/'/g,"\\'")}', this)`;
+
   const pendingSection = hasPending ? `
     <div class="db-pending-notice">
       🔔 Update pending · ${entry.pending.voteCount}/10 votes
-      <button class="db-vote-btn" onclick="voteOnLake('${lakeName.replace(/'/g,"\'")}', this)">Vote it's accurate</button>
+      <button class="db-vote-btn" onclick="${voteAction}">${isOwner ? 'Approve Update' : "Vote it's accurate"}</button>
     </div>` : '';
 
   return `<div class="db-card">
@@ -3043,10 +3078,13 @@ function renderFishRegs(species) {
   const region = appData?.state || 'all';
   const key = `${species}:${region}`;
   const fallback = `${species}:all`;
-  const data = fishRegs[key] || fishRegs[fallback];
+  const entry = fishRegs[key] || fishRegs[fallback];
+  const dataKey = fishRegs[key] ? key : (fishRegs[fallback] ? fallback : key);
+  const data = entry;
   
   // Show which region's data we are actually displaying
   const displayRegion = fishRegs[key] ? region : (fishRegs[fallback] ? 'General' : region);
+  const isOwner = authData && authData.role === 2;
   
   let html = `<div class="section-label">Fishing Regulations (${displayRegion})</div>`;
   
@@ -3065,7 +3103,10 @@ function renderFishRegs(species) {
         </div>
         <div class="db-meta">Updated ${active.submittedAt}</div>
         ${data.pending && data.confirmed ? `<div class="db-pending-notice">🔔 Update pending (${data.pending.voteCount}/5 votes)</div>` : ''}
-        ${data.pending && !data.confirmed ? `<button class="db-vote-btn" style="margin-top:10px" onclick="voteFishReg('${key}', this)">Confirm this is correct (${data.pending.voteCount}/5)</button>` : ''}
+        ${data.pending && !data.confirmed ? `
+          <button class="db-vote-btn" style="margin-top:10px" onclick="${isOwner ? `approveContent('fish', '${dataKey}', this)` : `voteFishReg('${dataKey}', this)`}">
+            ${isOwner ? 'Approve Regulation' : `Confirm this is correct (${data.pending.voteCount}/5)`}
+          </button>` : ''}
       </div>
     `;
   } else {
@@ -3688,6 +3729,7 @@ function renderBaitRecipes() {
   }
 
   let html = '<div class="section-label" style="margin-top:10px">Bait Recipes</div>';
+  const isOwner = authData && authData.role === 2;
   keys.forEach(key => {
     const data = baitRecipes[key];
     const active = data.confirmed || data.pending;
@@ -3713,7 +3755,10 @@ function renderBaitRecipes() {
           <div style="font-size:14px; color:var(--text); line-height:1.5; white-space:pre-line;">${active.process}</div>
         </div>
         <div class="db-meta">Shared by ${active.submittedBy} · ${active.submittedAt}</div>
-        ${data.pending && !data.confirmed ? `<button class="db-vote-btn" style="margin-top:12px; width:100%;" onclick="voteBaitRecipe('${key.replace(/'/g,"\\'")}', this)">Confirm this works (${data.pending.voteCount}/5)</button>` : ''}
+        ${data.pending && !data.confirmed ? `
+          <button class="db-vote-btn" style="margin-top:12px; width:100%;" onclick="${isOwner ? `approveContent('bait', '${key.replace(/'/g,"\\'")}', this)` : `voteBaitRecipe('${key.replace(/'/g,"\\'")}', this)`}">
+            ${isOwner ? 'Approve Recipe' : `Confirm this works (${data.pending.voteCount}/5)`}
+          </button>` : ''}
       </div>
     `;
   });
