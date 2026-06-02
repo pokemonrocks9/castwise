@@ -2522,9 +2522,9 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     const _rec = getDBRecord(lk.name);
     const activeCount = _rec?.activeCount || 0;
     const isUserHere = authData && authData.activeLake === lk.name;
-    
+
     const personSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
-    const activeTag = activeCount > 0 ? `<span class="tag" style="background:var(--blue-light); color:var(--blue-mid); font-weight:700; display:inline-flex; align-items:center;">${personSvg} ${activeCount} here</span>` : '';
+    const activeTag = activeCount > 0 ? `<span class="tag" style="background:var(--blue-mid); color:#fff; font-weight:700; display:inline-flex; align-items:center; border:none;">${personSvg} ${activeCount} here</span>` : '';
 
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
     const officialName = displayName !== lk.name ? lk.name : null;
