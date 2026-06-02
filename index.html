@@ -1088,6 +1088,8 @@
         </label>
       </div>
 
+      <div id="admin-settings-zone"></div>
+
       <div id="settings-signout-zone" style="margin-top: 24px;"></div>
     </div>
     
@@ -1528,6 +1530,7 @@ let previewIconId = null;
 function renderAccountSection() {
   const headerZone = document.getElementById('header-auth-zone');
   const signoutZone = document.getElementById('settings-signout-zone');
+  const adminZone = document.getElementById('admin-settings-zone');
   if (!headerZone) return;
 
   if (authData) {
@@ -1542,6 +1545,30 @@ function renderAccountSection() {
         </div>
       </div>
     `;
+
+    // Administration Section for Owners
+    if (adminZone) {
+      if (authData.role === 2) {
+        adminZone.innerHTML = `
+          <hr class="settings-divider">
+          <div class="settings-section-title">Administration</div>
+          <div class="card" style="margin-top: 12px; margin-bottom: 0;">
+            <div class="section-label" style="margin-bottom: 8px;">User Management</div>
+            <p style="font-size: 12px; color: var(--text3); margin-bottom: 12px;">Update user permissions by username.</p>
+            <div class="loc-bar" style="margin-bottom: 8px;">
+              <input type="text" id="role-target" placeholder="Username to update..." style="font-size: 13px;" />
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(1)">Promote to Admin</button>
+              <button class="btn" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(0)">Demote to Caster</button>
+            </div>
+            <div id="role-status" style="font-size:11px; margin-top:8px; min-height: 14px; color:var(--text2);"></div>
+          </div>
+        `;
+      } else {
+        adminZone.innerHTML = '';
+      }
+    }
 
     // 2. Settings Tab Sign Out
     if (signoutZone) {
@@ -1564,6 +1591,7 @@ function renderAccountSection() {
       <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
     `;
     if (signoutZone) signoutZone.innerHTML = '';
+    if (adminZone) adminZone.innerHTML = '';
   }
 }
 
@@ -1606,19 +1634,6 @@ function renderAccountOverlay() {
       <div style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">
         Cast Key: <code style="color: var(--green); font-weight: 600;">${authData.castKey}</code>
       </div>
-      ${authData.role === 2 ? `
-        <div style="margin: 20px 0; padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); text-align: left;">
-          <div class="section-label" style="margin-bottom: 8px;">User Management</div>
-          <div class="loc-bar" style="margin-bottom: 8px;">
-            <input type="text" id="role-target" placeholder="Username to update..." style="font-size: 13px;" />
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(1)">Promote to Admin</button>
-            <button class="btn" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(0)">Demote to Caster</button>
-          </div>
-          <div id="role-status" style="font-size:11px; margin-top:8px; min-height: 14px; color:var(--text2);"></div>
-        </div>
-      ` : ''}
       <button class="btn" style="padding: 6px 16px; font-size: 13px;" onclick="openEditModal()">Edit Profile</button>
     </div>
   `;
