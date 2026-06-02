@@ -4,9 +4,11 @@
     "lat": 36.29146974527685,
     "lon": -79.68286158903311,
     "type": "lake / pond",
-    "confirmed": false,
+    "confirmed": true,
     "submittedBy": "anonymous",
     "submittedAt": "2026-06-02",
-    "confirmations": []
+    "confirmations": [],
+    "confirmedBy": "Owner",
+    "confirmedAt": "2026-06-02"
   }
 ]
