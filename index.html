@@ -583,6 +583,40 @@
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
     }
 
+    /* ── Account Overlay ── */
+    #account-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 4500; background: var(--bg); display: none;
+      flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+    .account-header {
+      padding: 16px; display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-hero {
+      padding: 32px 16px; text-align: center; background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-icon-large {
+      width: 80px; height: 80px; margin: 0 auto 16px;
+      background: var(--bg); border: 2px solid var(--green);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      color: var(--green);
+    }
+    .profile-icon-large svg { width: 40px; height: 40px; stroke-width: 1.5; }
+    
+    /* ── Friends List ── */
+    .friends-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .friend-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px;
+      background: var(--bg2); border-radius: var(--radius);
+    }
+    .friend-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; }
+    .friend-icon svg { width: 18px; height: 18px; color: var(--text2); }
+    .friend-info { flex: 1; min-width: 0; }
+    .friend-name { font-size: 14px; font-weight: 500; }
+    .friend-status { font-size: 11px; color: var(--text3); }
+
     /* ── Auth Modal ── */
     #auth-modal {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -596,10 +630,18 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
       position: relative;
     }
-    .auth-modal-close {
+    .modal-close {
       position: absolute; top: 16px; right: 16px;
       background: none; border: none; font-size: 18px; color: var(--text3);
       cursor: pointer; padding: 4px;
+    }
+
+    /* ── Edit Profile Modal ── */
+    #edit-profile-modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 5500; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px; backdrop-filter: blur(2px);
     }
   </style>
 </head>
@@ -641,10 +683,47 @@
     </div>
   </div>
 
+  <!-- Account Overlay -->
+  <div id="account-overlay">
+    <div class="account-header">
+      <button class="btn" onclick="history.back()" style="padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">←</button>
+      <div style="font-size: 18px; font-weight: 600;">Account</div>
+    </div>
+    
+    <div id="profile-content">
+      <!-- Updated by JS -->
+    </div>
+
+    <div style="padding: 24px 16px;">
+      <div class="section-label">Friends</div>
+      <div class="loc-bar" style="margin-bottom: 12px;">
+        <input type="text" id="friend-search" placeholder="Add friend by username..." autocomplete="off" />
+        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="handleAddFriend()">Add</button>
+      </div>
+      <div id="friends-status" style="font-size: 11px; margin-bottom: 8px; color: var(--text3);"></div>
+      <div id="friends-list-container" class="friends-list">
+        <!-- Updated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="edit-profile-modal" onclick="if(event.target === this) closeEditModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+      <div class="card-title">Edit Profile</div>
+      <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Choose your icon</div>
+      <div id="icon-picker-grid" class="icon-grid">
+        <!-- Filled by JS -->
+      </div>
+      <button id="apply-icon-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="applyUserIcon()" disabled>Apply Change</button>
+    </div>
+  </div>
+
   <!-- Auth Modal -->
   <div id="auth-modal" onclick="if(event.target === this) closeAuthModal()">
     <div class="auth-modal-content">
-      <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
       <div class="card-title" style="margin-bottom:8px">CastWise Account</div>
       <div style="font-size:13px; color:var(--text3); margin-bottom:18px;">Create an account to sync your tackle box and settings.</div>
       
@@ -1091,6 +1170,14 @@ window.addEventListener('popstate', e => {
     if (fdOverlay) fdOverlay.style.display = 'flex';
   }
 
+  const accountOverlay = document.getElementById('account-overlay');
+  if (sub !== 'account') {
+    if (accountOverlay) accountOverlay.style.display = 'none';
+  } else {
+    if (accountOverlay) accountOverlay.style.display = 'flex';
+    renderAccountOverlay();
+  }
+
   if (sub === 'map') openMap(false);
 
   switchTab(tab, false);
@@ -1403,56 +1490,32 @@ function renderAccountSection() {
 
   if (authData) {
     const roleName = roleNames[authData.role] || roleNames[0];
-    const currentIconId = authData.iconId || 0;
-    const displayIconId = previewIconId !== null ? previewIconId : currentIconId;
+    const displayIconId = authData.iconId || 0;
     
-    // 1. Update Settings Tab
-    const iconGrid = USER_ICONS.map((svg, i) => `
-      <div class="icon-choice ${i === displayIconId ? 'active' : ''}" onclick="setPreviewIcon(${i})">
-        ${svg}
+    // 1. Update Header Zone
+    headerZone.innerHTML = `
+      <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
+        ${USER_ICONS[displayIconId]}
       </div>
-    `).join('');
+    `;
 
-    const showApply = previewIconId !== null && previewIconId !== currentIconId;
-
-    let ownerTools = '';
-    if (authData.role === 2) {
-      ownerTools = `
-        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">
-          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:8px;">Manage Roles</div>
-          <input type="text" id="role-target" placeholder="Username" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border2); background:var(--bg); color:var(--text); font-size:13px; margin-bottom:8px;" />
-          <div style="display:flex; gap:4px;">
-            <button class="btn" style="flex:1; font-size:11px;" onclick="updateUserRole(1)">Make Admin</button>
-            <button class="btn" style="flex:1; font-size:11px;" onclick="updateUserRole(0)">Demote to Caster</button>
-          </div>
-          <div id="role-status" style="font-size:11px; margin-top:6px; color:var(--text2)"></div>
-        </div>
-      `;
-    }
-
+    // 2. Settings Tab (Simplified)
     container.innerHTML = `
       <div class="card" style="padding:14px; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius);">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
           <div class="card-title" style="margin-bottom:0">CastWise Account</div>
           <span style="font-size:10px; font-weight:700; background:var(--green); color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${roleName}</span>
         </div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:4px">User: <b>${authData.username}</b></div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:12px">Cast Key: <code style="background:var(--bg); padding:2px 4px; border-radius:4px; font-weight:600; color:var(--green);">${authData.castKey}</code></div>
-        <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; margin-bottom:8px;">Profile Icon</div>
-        <div class="icon-grid">${iconGrid}</div>
-        ${showApply ? `<button class="btn btn-primary" style="width:100%; margin-top:12px;" onclick="applyUserIcon()">Apply Selected Icon</button>` : ''}
-        <div style="height:12px"></div>
+        <div style="font-size:14px; color:var(--text); margin-bottom:14px">Logged in as <b>${authData.username}</b></div>
+        <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="jumpToAccount()">View Profile & Friends</button>
         <button class="btn" style="width:100%; color:var(--red-dark); border-color:var(--red-dark);" onclick="handleSignOut()">Sign Out</button>
-        ${ownerTools}
       </div>
     `;
 
-    // 2. Update Header Zone
-    headerZone.innerHTML = `
-      <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
-        ${USER_ICONS[displayIconId]}
-      </div>
-    `;
+    // 3. Update Overlay if open
+    if (document.getElementById('account-overlay').style.display === 'flex') {
+      renderAccountOverlay();
+    }
 
   } else {
     // 1. Update Header Zone for logged out state
@@ -1482,6 +1545,106 @@ function closeAuthModal() {
   document.getElementById('auth-modal').style.display = 'none';
 }
 
+function renderAccountOverlay() {
+  if (!authData) return;
+  const container = document.getElementById('profile-content');
+  const iconId = authData.iconId || 0;
+  
+  container.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-icon-large">${USER_ICONS[iconId]}</div>
+      <div style="font-size: 22px; font-weight: 600; margin-bottom: 4px;">${authData.username}</div>
+      <div style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">
+        Cast Key: <code style="color: var(--green); font-weight: 600;">${authData.castKey}</code>
+      </div>
+      <button class="btn" style="padding: 6px 16px; font-size: 13px;" onclick="openEditModal()">Edit Profile</button>
+    </div>
+  `;
+  
+  fetchFriends();
+}
+
+function openEditModal() {
+  const modal = document.getElementById('edit-profile-modal');
+  const grid = document.getElementById('icon-picker-grid');
+  const currentIconId = authData.iconId || 0;
+  previewIconId = currentIconId;
+
+  grid.innerHTML = USER_ICONS.map((svg, i) => `
+    <div class="icon-choice ${i === currentIconId ? 'active' : ''}" onclick="setPreviewIcon(${i})">
+      ${svg}
+    </div>
+  `).join('');
+
+  modal.style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-profile-modal').style.display = 'none';
+  previewIconId = null;
+}
+
+function setPreviewIcon(id) {
+  previewIconId = id;
+  const choices = document.querySelectorAll('.icon-choice');
+  choices.forEach((c, i) => c.classList.toggle('active', i === id));
+  document.getElementById('apply-icon-btn').disabled = (id === authData.iconId);
+}
+
+async function fetchFriends() {
+  const container = document.getElementById('friends-list-container');
+  if (!container) return;
+
+  container.innerHTML = '<div style="font-size:12px; color:var(--text3); text-align:center; padding:20px;">Loading friends...</div>';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/friends?username=${authData.username}&castKey=${authData.castKey}`);
+    const friends = await res.json();
+
+    if (!friends || friends.length === 0) {
+      container.innerHTML = '<div style="font-size:13px; color:var(--text2); text-align:center; padding:20px; background:var(--bg2); border-radius:var(--radius);">No friends yet. Add someone by their username!</div>';
+      return;
+    }
+
+    container.innerHTML = friends.map(f => `
+      <div class="friend-item">
+        <div class="friend-icon">${USER_ICONS[f.iconId || 0]}</div>
+        <div class="friend-info">
+          <div class="friend-name">${f.username}</div>
+          <div class="friend-status">${f.status === 'accepted' ? 'Connected' : 'Pending request'}</div>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--green);">${f.castKey}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = '<div style="font-size:12px; color:var(--red-dark); text-align:center;">Failed to load friends list.</div>';
+  }
+}
+
+async function handleAddFriend() {
+  const target = document.getElementById('friend-search').value.trim();
+  const status = document.getElementById('friends-status');
+  if (!target) return;
+
+  status.textContent = 'Sending request...';
+  try {
+    const res = await fetch(`${WORKER_URL}/add-friend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: authData.username, 
+        castKey: authData.castKey,
+        targetUsername: target 
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    status.textContent = '✅ Request sent to ' + target;
+    document.getElementById('friend-search').value = '';
+    fetchFriends();
+  } catch (e) { status.textContent = '❌ ' + e.message; }
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1491,9 +1654,11 @@ function showToast(msg) {
 
 function jumpToAccount() {
   if (authData) {
-    switchTab('settings');
-    // Smooth scroll to top of settings
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const overlay = document.getElementById('account-overlay');
+    overlay.style.display = 'flex';
+    renderAccountOverlay();
+    appNavigated = true;
+    history.pushState({ tab: currentTab, sub: 'account' }, '', '#account');
   } else {
     openAuthModal();
   }
@@ -1579,9 +1744,10 @@ async function applyUserIcon() {
     });
     if (!res.ok) throw new Error('Update failed');
     authData.iconId = previewIconId;
-    previewIconId = null;
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
-    renderAccountSection(); showToast('Icon Updated!');
+    closeEditModal();
+    renderAccountSection();
+    showToast('Profile Updated!');
   } catch (e) { alert(e.message); }
 }
 
