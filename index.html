@@ -99,6 +99,7 @@
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
     }
+    #map-canvas { flex-shrink: 0; }
     #map-canvas {
       height: 50%;
       width: calc(100% - 32px);
@@ -107,12 +108,13 @@
       border: 1px solid var(--border2);
       overflow: hidden;
     }
-    #map-list { height: 50%; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--border); }
+    #map-list { height: 50%; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--border); -webkit-overflow-scrolling: touch; }
 
     #fish-detail-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4000; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .fish-detail-hero { width: 100%; height: 250px; background: var(--bg2); position: relative; }
     .fish-detail-hero img { width: 100%; height: 100%; object-fit: cover; }
@@ -596,7 +598,9 @@
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4500; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+      -webkit-overflow-scrolling: touch;
     }
+    body.overlay-open { overflow: hidden; height: 100vh; }
     .account-header {
       padding: 16px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--border);
@@ -1202,6 +1206,10 @@ window.addEventListener('popstate', e => {
   const tab = e.state?.tab || 'solunar';
   const sub = e.state?.sub || null;
   
+  // Manage body scroll lock for page-like overlays
+  if (['map', 'fish-detail', 'account'].includes(sub)) document.body.classList.add('overlay-open');
+  else document.body.classList.remove('overlay-open');
+
   // Close overlays if we're navigating back from them
   if (sub !== 'map') {
     const mapOverlay = document.getElementById('map-overlay');
@@ -1786,6 +1794,7 @@ function jumpToAccount() {
   if (authData) {
     const overlay = document.getElementById('account-overlay');
     overlay.style.display = 'flex';
+    document.body.classList.add('overlay-open');
     renderAccountOverlay();
     appNavigated = true;
     history.pushState({ tab: currentTab, sub: 'account' }, '', '#account');
@@ -3103,6 +3112,7 @@ function filterFishidex() {
 function showFishDetail(common, sci, imgUrl) {
   const overlay = document.getElementById('fish-detail-overlay');
   overlay.style.display = 'flex';
+  document.body.classList.add('overlay-open');
   
   document.getElementById('fd-img').src = imgUrl || '';
   document.getElementById('fd-common').textContent = common;
@@ -3338,6 +3348,7 @@ function openMap(pushHistory = true) {
   const overlay = document.getElementById('map-overlay');
   overlay.style.display = 'flex';
   document.body.classList.add('map-active');
+  document.body.classList.add('overlay-open');
   
   if (pushHistory) {
     appNavigated = true;
