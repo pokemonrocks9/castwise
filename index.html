@@ -582,6 +582,25 @@
       font-size: 12px; font-weight: 600; color: var(--text3); 
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
     }
+
+    /* ── Auth Modal ── */
+    #auth-modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 5000; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px; backdrop-filter: blur(2px);
+    }
+    .auth-modal-content {
+      background: var(--bg); border-radius: var(--radius-lg);
+      width: 100%; max-width: 380px; padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .auth-modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none; font-size: 18px; color: var(--text3);
+      cursor: pointer; padding: 4px;
+    }
   </style>
 </head>
 <body>
@@ -619,6 +638,24 @@
     <div id="map-list"></div>
     <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text3); background: var(--bg2);">
       Long-press (or right-click) anywhere to drop a pin for a new lake
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="auth-modal" onclick="if(event.target === this) closeAuthModal()">
+    <div class="auth-modal-content">
+      <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+      <div class="card-title" style="margin-bottom:8px">CastWise Account</div>
+      <div style="font-size:13px; color:var(--text3); margin-bottom:18px;">Create an account to sync your tackle box and settings.</div>
+      
+      <label class="db-label">Username <input type="text" id="auth-user" placeholder="Choose a handle" autocomplete="username" /></label>
+      <label class="db-label">PIN <input type="password" id="auth-pin" placeholder="4+ digits" inputmode="numeric" autocomplete="current-password" /></label>
+      
+      <div style="display:flex; gap:8px; margin-top:20px;">
+        <button class="btn btn-primary" style="flex:1" onclick="handleAuth('register')">Sign Up</button>
+        <button class="btn" style="flex:1" onclick="handleAuth('login')">Sign In</button>
+      </div>
+      <div id="auth-status" style="font-size:11px; margin-top:12px; min-height:14px; color:var(--text2); text-align:center;"></div>
     </div>
   </div>
 
@@ -1418,24 +1455,31 @@ function renderAccountSection() {
     `;
 
   } else {
-    // 1. Logged Out UI
+    // 1. Update Header Zone for logged out state
     headerZone.innerHTML = `
-      <div class="header-auth-pill" onclick="switchTab('settings')">Sign In</div>
+      <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
     `;
+
+    // 2. Simple prompt in Settings tab
     if (container) container.innerHTML = `
       <div class="card" style="padding:14px; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius);">
         <div class="card-title" style="margin-bottom:8px">CastWise Account</div>
-        <div style="font-size:12px; color:var(--text3); margin-bottom:12px;">Create an account to sync your tackle box and settings.</div>
-        <label class="db-label">Username <input type="text" id="auth-user" placeholder="Choose a handle" /></label>
-        <label class="db-label">PIN <input type="password" id="auth-pin" placeholder="4+ digits" inputmode="numeric" /></label>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button class="btn btn-primary" style="flex:1" onclick="handleAuth('register')">Sign Up</button>
-          <button class="btn" style="flex:1" onclick="handleAuth('login')">Sign In</button>
-        </div>
-        <div id="auth-status" style="font-size:11px; margin-top:8px; min-height:14px; color:var(--text2)"></div>
+        <div style="font-size:13px; color:var(--text2); margin-bottom:14px;">Sign in to sync your tackle box, catch logs, and favorite lakes across devices.</div>
+        <button class="btn btn-primary" style="width:100%" onclick="openAuthModal()">Sign In or Sign Up</button>
       </div>
     `;
   }
+}
+
+function openAuthModal() {
+  document.getElementById('auth-modal').style.display = 'flex';
+  // Clear previous status
+  const status = document.getElementById('auth-status');
+  if (status) status.textContent = '';
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').style.display = 'none';
 }
 
 function showToast(msg) {
@@ -1446,9 +1490,13 @@ function showToast(msg) {
 }
 
 function jumpToAccount() {
-  switchTab('settings');
-  // Smooth scroll to top of settings
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (authData) {
+    switchTab('settings');
+    // Smooth scroll to top of settings
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    openAuthModal();
+  }
 }
 
 async function handleAuth(type) {
@@ -1478,6 +1526,7 @@ async function handleAuth(type) {
       activeLake: data.activeLake || null
     };
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
+    closeAuthModal();
     renderAccountSection();
     showToast(`Welcome, ${username}!`);
   } catch (err) {
