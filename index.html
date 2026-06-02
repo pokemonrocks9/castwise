@@ -1046,8 +1046,6 @@
 
   <div id="tab-settings" class="tab-panel">
     <div style="padding: 20px 16px;">
-      <hr class="settings-divider">
-
       <!-- PWA Install Button -->
       <div style="width:100%; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
         <button id="installPwaBtn" style="width:100%; background:var(--green); color:#fff; border:none; border-radius:var(--radius); padding:12px; font-size:15px; font-weight:500; font-family:'DM Sans', sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -1057,8 +1055,6 @@
       </div>
 
       <!-- New setting for automatic location -->
-      <div class="settings-section-title">App Preferences</div>
-      
       <div style="width:100%; margin-top:20px; text-align:left;">
         <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--text);">Automatic Location</span>
@@ -1516,6 +1512,7 @@ function renderAccountSection() {
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div class="notif-wrapper">
+        <div id="header-notif-dot" class="notif-dot"></div>
         <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
           ${USER_ICONS[displayIconId]}
         </div>
@@ -1656,9 +1653,11 @@ async function fetchFriends() {
     // Update requests
     if (!data.requests || data.requests.length === 0) {
       rView.innerHTML = '<div class="empty">No pending requests.</div>';
-      document.getElementById('header-notif-dot').style.display = 'none';
+      const dot = document.getElementById('header-notif-dot');
+      if (dot) dot.style.display = 'none';
     } else {
-      document.getElementById('header-notif-dot').style.display = 'block';
+      const dot = document.getElementById('header-notif-dot');
+      if (dot) dot.style.display = 'block';
       rView.innerHTML = data.requests.map(f => `
         <div class="friend-item">
           <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
