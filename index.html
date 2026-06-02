@@ -1046,9 +1046,6 @@
 
   <div id="tab-settings" class="tab-panel">
     <div style="padding: 20px 16px;">
-      <!-- Account Setting moved to top -->
-      <div id="account-card" style="width:100%; margin-bottom:12px;"></div>
-
       <hr class="settings-divider">
 
       <!-- PWA Install Button -->
@@ -1082,6 +1079,7 @@
         </label>
       </div>
 
+      <div id="settings-signout-zone" style="margin-top: 24px;"></div>
     </div>
     
     <div class="footer" style="margin-top:0; border-top:none;">
@@ -1508,38 +1506,28 @@ let authData = JSON.parse(localStorage.getItem('castwise_auth')) || null;
 let previewIconId = null;
 
 function renderAccountSection() {
-  const container = document.getElementById('account-card'); 
   const headerZone = document.getElementById('header-auth-zone');
-  if (!container || !headerZone) return;
-
-  const roleNames = { 0: 'Caster', 1: 'Admin', 2: 'Owner' };
+  const signoutZone = document.getElementById('settings-signout-zone');
+  if (!headerZone) return;
 
   if (authData) {
-    const roleName = roleNames[authData.role] || roleNames[0];
     const displayIconId = authData.iconId || 0;
     
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div class="notif-wrapper">
-        <div id="header-notif-dot" class="notif-dot"></div>
         <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
           ${USER_ICONS[displayIconId]}
         </div>
       </div>
     `;
 
-    // 2. Settings Tab (Simplified)
-    container.innerHTML = `
-      <div class="card" style="padding:14px; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius);">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div class="card-title" style="margin-bottom:0">CastWise Account</div>
-          <span style="font-size:10px; font-weight:700; background:var(--green); color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${roleName}</span>
-        </div>
-        <div style="font-size:14px; color:var(--text); margin-bottom:14px">Logged in as <b>${authData.username}</b></div>
-        <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" onclick="jumpToAccount()">View Profile & Friends</button>
-        <button class="btn" style="width:100%; color:var(--red-dark); border-color:var(--red-dark);" onclick="handleSignOut()">Sign Out</button>
-      </div>
-    `;
+    // 2. Settings Tab Sign Out
+    if (signoutZone) {
+      signoutZone.innerHTML = `
+        <button class="btn" style="width:100%; color:var(--red-dark); border-color:var(--red-dark); background:var(--bg2);" onclick="handleSignOut()">Sign Out</button>
+      `;
+    }
 
     // Check for requests to show red dot
     checkFriendRequests();
@@ -1554,15 +1542,7 @@ function renderAccountSection() {
     headerZone.innerHTML = `
       <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
     `;
-
-    // 2. Simple prompt in Settings tab
-    if (container) container.innerHTML = `
-      <div class="card" style="padding:14px; background:var(--bg2); border:1px solid var(--border2); border-radius:var(--radius);">
-        <div class="card-title" style="margin-bottom:8px">CastWise Account</div>
-        <div style="font-size:13px; color:var(--text2); margin-bottom:14px;">Sign in to sync your tackle box, catch logs, and favorite lakes across devices.</div>
-        <button class="btn btn-primary" style="width:100%" onclick="openAuthModal()">Sign In or Sign Up</button>
-      </div>
-    `;
+    if (signoutZone) signoutZone.innerHTML = '';
   }
 }
 
@@ -1581,9 +1561,14 @@ function renderAccountOverlay() {
   if (!authData) return;
   const container = document.getElementById('profile-content');
   const iconId = authData.iconId || 0;
+  const roleNames = { 0: 'Caster', 1: 'Admin', 2: 'Owner' };
+  const roleName = roleNames[authData.role] || roleNames[0];
   
   container.innerHTML = `
     <div class="profile-hero">
+      <div style="margin-bottom: 12px;">
+        <span style="font-size:10px; font-weight:700; background:var(--green); color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${roleName}</span>
+      </div>
       <div class="profile-icon-large">${USER_ICONS[iconId]}</div>
       <div style="font-size: 22px; font-weight: 600; margin-bottom: 4px;">${authData.username}</div>
       <div style="font-size: 14px; color: var(--text2); margin-bottom: 16px;">
