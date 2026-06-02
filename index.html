@@ -1792,11 +1792,6 @@ async function updateUserRole(newRole) {
   } catch (e) { status.textContent = '❌ ' + e.message; }
 }
 
-function setPreviewIcon(id) {
-  previewIconId = id;
-  renderAccountSection();
-}
-
 async function applyUserIcon() {
   if (previewIconId === null) return;
   try {
