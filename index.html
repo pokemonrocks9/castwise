@@ -1722,7 +1722,7 @@ async function fetchFriends() {
           <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
           <div class="friend-info">
             <div class="friend-name">${f.username}</div>
-            <div class="friend-status">${f.cast_key}</div>
+            <div class="friend-status">${f.active_lake_id ? `Fishing at ${f.active_lake_id}` : ''}</div>
           </div>
         </div>
       `).join('');
