@@ -1474,7 +1474,8 @@ async function handleAuth(type) {
       username: data.username, 
       castKey: data.castKey, 
       role: data.role ?? 0,
-      iconId: data.iconId ?? 0
+      iconId: data.iconId ?? 0,
+      activeLake: data.activeLake || null
     };
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
     renderAccountSection();
@@ -1543,6 +1544,31 @@ function handleSignOut() {
   }
 }
 
+async function logIntoLake(lakeName) {
+  if (!authData) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/log-lake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: authData.username, 
+        castKey: authData.castKey, 
+        lakeName 
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      authData.activeLake = data.activeLake;
+      localStorage.setItem('castwise_auth', JSON.stringify(authData));
+      
+      // Refresh DB and UI
+      loadLakeDB().then(() => {
+        renderLakes();
+        showToast(data.activeLake ? `Logged into ${lakeName}!` : `Checked out of ${lakeName}`);
+      });
+    }
+  } catch (e) { console.error(e); }
+}
 
 // ── Haversine distance (miles) ────────────────────────────────────────────────
 function haversine(a, b, c, d) {
@@ -1968,6 +1994,8 @@ function lakeDBCard(lakeName, entry) {
   if (!entry) return lakeDBSubmitForm(lakeName, false);
 
   const data       = entry.confirmed || entry.pending;
+  if (!data) return lakeDBSubmitForm(lakeName, false);
+
   const isConfirmed = !!entry.confirmed;
   const hasPending  = !!entry.pending && !!entry.confirmed;
 
@@ -2492,6 +2520,12 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       ? '<span class="tag tag-paid">💰 Paid</span>'
       : '';
     const _rec = getDBRecord(lk.name);
+    const activeCount = _rec?.activeCount || 0;
+    const isUserHere = authData && authData.activeLake === lk.name;
+    
+    const personSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    const activeTag = activeCount > 0 ? `<span class="tag" style="background:var(--blue-light); color:var(--blue-mid); font-weight:700; display:inline-flex; align-items:center;">${personSvg} ${activeCount} here</span>` : '';
+
     const displayName = _rec?.confirmed?.localName || _rec?.pending?.localName || lk.name;
     const officialName = displayName !== lk.name ? lk.name : null;
     const _noFish    = isNoFish(lk.name);
@@ -2519,6 +2553,12 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
                     : _isCommunity && !_confirmed ? 'lake-ico lake-ico-community'
                     : 'lake-ico';
     const icoEmoji  = _noFish ? '🚫' : '🎣';
+
+    // Log button for users
+    const logBtn = (authData && !_noFish) ? `
+      <button class="btn" style="margin-top:12px; width:100%; font-size:12px; padding:8px; color:#fff; background:${isUserHere ? 'var(--red-dark)' : 'var(--green)'}; border-color:${isUserHere ? 'var(--red-dark)' : 'var(--green)'};" onclick="event.stopPropagation(); logIntoLake('${lk.name.replace(/'/g,"\\'")}')">
+        ${isUserHere ? 'Check out' : 'Check in'}
+      </button>` : '';
 
     // Map list click handler
     const onclick = isMapMode ? `onclick="focusLakeOnMap('${lk.name.replace(/'/g,"\\'")}', ${lk.lat}, ${lk.lon}, false)"` : '';
@@ -2548,6 +2588,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
             ${priceBadge}
+            ${activeTag}
           </div>
         </div>
         ${navigateBtn}
@@ -2555,6 +2596,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       <div class="db-section">
         ${_noFish ? '<div style="font-size:13px;color:var(--red-dark);font-weight:500">🚫 This water is marked as not open for public fishing.</div>' : lakeDBCard(lk.name, _rec)}
       </div>
+      ${logBtn}
     </div>`;
   });
 
