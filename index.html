@@ -700,7 +700,7 @@
     </div>
     <div id="map-canvas"></div>
     <div id="map-list"></div>
-    <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text3); background: var(--bg2);">
+    <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text2); background: var(--bg2); font-weight: 500;">
       Long-press (or right-click) anywhere to drop a pin for a new lake
     </div>
   </div>
@@ -748,6 +748,14 @@
         <!-- Filled by JS -->
       </div>
       <button id="apply-icon-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="applyUserIcon()" disabled>Apply Change</button>
+    </div>
+  </div>
+
+  <!-- Lake Form Modal (Shared for Adding/Updating) -->
+  <div id="lake-form-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 5200; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeLakeModal()">
+    <div class="auth-modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" onclick="closeLakeModal()">✕</button>
+      <div id="lake-form-modal-content"></div>
     </div>
   </div>
 
@@ -1568,6 +1576,17 @@ function openAuthModal() {
 
 function closeAuthModal() {
   document.getElementById('auth-modal').style.display = 'none';
+}
+
+function openLakeModal(content) {
+  const modal = document.getElementById('lake-form-modal');
+  const inner = document.getElementById('lake-form-modal-content');
+  inner.innerHTML = content;
+  modal.style.display = 'flex';
+  inner.scrollTop = 0;
+}
+function closeLakeModal() {
+  document.getElementById('lake-form-modal').style.display = 'none';
 }
 
 function renderAccountOverlay() {
@@ -2394,31 +2413,23 @@ function lakeDBCard(lakeName, entry) {
     ${data.notes ? `<div class="db-notes">${data.notes}</div>` : ''}
     <div class="db-meta">Submitted by ${data.submittedBy || 'anonymous'} · ${data.submittedAt || ''}</div>
     ${pendingSection}
-    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}', this)">Suggest an update</button>
-  </div>
-  <div class="db-form-wrap" id="form-${lakeName.replace(/[^a-z0-9]/gi,'_')}"></div>`;
+    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}')">Suggest an update</button>
+  </div>`;
 }
 
 function lakeDBSubmitForm(lakeName, inline) {
-  const id = lakeName.replace(/[^a-z0-9]/gi,'_');
   return `<div class="db-card db-empty">
     <div class="db-card-header">No info yet</div>
     <p class="db-empty-text">Know about this lake? Add pay/rules info for everyone.</p>
-    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}', this)">Add info</button>
-  </div>
-  <div class="db-form-wrap" id="form-${id}"></div>`;
+    <button class="db-edit-btn" onclick="toggleSubmitForm('${lakeName.replace(/'/g,"\'")}')">Add info</button>
+  </div>`;
 }
 
-function toggleSubmitForm(lakeName, btn) {
+function toggleSubmitForm(lakeName) {
   const id = lakeName.replace(/[^a-z0-9]/gi,'_');
-  const wrap = document.getElementById('form-' + id);
-  if (!wrap) return;
-  if (wrap.innerHTML) { wrap.innerHTML = ''; btn.textContent = btn.dataset.open || 'Add info'; return; }
-  btn.dataset.open = btn.textContent;
-  btn.textContent = 'Cancel';
-  wrap.innerHTML = `
+  const content = `
     <div class="db-form">
-      <div class="db-form-title">What do you know about this lake?</div>
+      <div class="db-form-title">${lakeName}</div>
       <div class="db-form-subtitle">Only check what you actually know — everything else stays as-is.</div>
 
       <div class="db-section-picks">
@@ -2541,6 +2552,7 @@ function toggleSubmitForm(lakeName, btn) {
         <div class="db-form-status" id="fst-${id}"></div>
       </div>
     </div>`;
+  openLakeModal(content);
 }
 
 function toggleSection(sectionId, cb) {
@@ -2746,6 +2758,7 @@ async function submitLakeInfo(lakeName, id, btn) {
     // Re-render lakes
     renderLakes();
     status.textContent = '✅ Submitted! Thanks for contributing.';
+    setTimeout(closeLakeModal, 1500);
   } catch (e) {
     if (e.message.includes('does not match')) {
       status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
@@ -2942,7 +2955,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
   });
 
   if (!isMapMode) {
-    h += `<button class="add-lake-btn" onclick="showAddLakeForm()">📍 Don't see your lake? Add it</button><div id="add-lake-form-wrap"></div>`;
+    h += `<button class="add-lake-btn" onclick="showAddLakeForm()">📍 Don't see your lake? Add it</button>`;
   }
   return h;
 }
@@ -3205,15 +3218,11 @@ async function voteFishReg(key, btn) {
 
 // ── Add missing lake form ─────────────────────────────────────────────────────
 function showAddLakeForm(customLat, customLon) {
-  const wrap = document.getElementById('add-lake-form-wrap');
-  if (!wrap) return;
-  if (wrap.innerHTML) { wrap.innerHTML = ''; return; }
-
   const lat = customLat || appData?.userLat;
   const lon = customLon || appData?.userLon;
   const hasLocation = !!(lat && lon);
 
-  wrap.innerHTML = `
+  const content = `
     <div class="add-lake-form">
       <div class="db-form-title">Add a missing lake</div>
       <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
@@ -3244,8 +3253,8 @@ function showAddLakeForm(customLat, customLon) {
       <button class="db-submit-btn" onclick="submitNewLake()" ${hasLocation ? '' : 'disabled'}>Submit lake</button>
       <div class="db-form-status" id="new-lake-status"></div>
     </div>`;
-    
-  if (customLat) wrap.scrollIntoView({ behavior: 'smooth' });
+
+  openLakeModal(content);
 }
 
 async function submitNewLake() {
@@ -3291,6 +3300,7 @@ async function submitNewLake() {
     }
     renderLakes();
     status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
+    setTimeout(closeLakeModal, 1500);
   } catch (e) {
     if (e.message.includes('does not match')) {
       status.textContent = '✅ Submitted! It will appear as unverified until confirmed.';
