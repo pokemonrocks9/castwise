@@ -1288,14 +1288,14 @@ if (_initTab === 'tackle' && _initSub) {
 
 // ── Fish database ──────────────────────────────────────────────────────────────
 const FISH = [
-  { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.45 },
-  { name: 'Crappie',         peak: [3,4,5,10,11],    tr: [55,75], base: 0.55 },
-  { name: 'Channel Catfish', peak: [5,6,7,8,9],      tr: [65,85], base: 0.40 },
-  { name: 'Bluegill',        peak: [5,6,7,8],        tr: [65,85], base: 0.60 },
-  { name: 'Rainbow Trout',   peak: [3,4,5,10,11,12], tr: [45,65], base: 0.38 },
-  { name: 'Walleye',         peak: [4,5,6,9,10,11],  tr: [55,72], base: 0.35 },
-  { name: 'Yellow Perch',    peak: [4,5,10,11],      tr: [55,72], base: 0.50 },
-  { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.42 },
+  { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.25 },
+  { name: 'Crappie',         peak: [3,4,4,5,10,11],  tr: [55,75], base: 0.30 },
+  { name: 'Channel Catfish', peak: [5,6,7,8,9],      tr: [65,85], base: 0.20 },
+  { name: 'Bluegill',        peak: [5,6,7,8],        tr: [65,85], base: 0.35 },
+  { name: 'Rainbow Trout',   peak: [3,4,5,10,11,12], tr: [45,65], base: 0.20 },
+  { name: 'Walleye',         peak: [4,5,6,9,10,11],  tr: [55,72], base: 0.18 },
+  { name: 'Yellow Perch',    peak: [4,5,10,11],      tr: [55,72], base: 0.28 },
+  { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.22 },
 ];
 function getRegInfo(species) {
   // Simplified to remove legal risk; cards now act as gateways to official info
@@ -1407,22 +1407,27 @@ function solunarWindows(lat, lon, date) {
 
 // ── Solunar score (0–100) ─────────────────────────────────────────────────────
 function calcScore(date, wcode, wind, moon) {
-  let s = 50;
+  let s = 35; // Lowered baseline from 50 to 35
   const il = moon.illum;
-  if (il > 90 || il < 5)   s += 20;
-  else if (il > 70 || il < 15) s += 12;
-  else if (il > 50)         s += 6;
-  if (wcode <= 3)  s += 15;
+  // More granular moon influence
+  if (il > 90 || il < 10)   s += 25; // Full/New moon
+  else if (il > 70 || il < 30) s += 15; // Gibbous/Crescent
+  else s += 5; // Quarters
+
+  if (wcode <= 3)  s += 15; // Clear skies
   else if (wcode <= 51) s += 5;
-  else if (wcode >= 71) s -= 15;
-  if (wind < 10) s += 10;
-  else if (wind > 20) s -= 10;
-  if (date.getDay() === 0 || date.getDay() === 6) s += 3;
-  return Math.min(100, Math.max(5, s));
+  else if (wcode >= 71) s -= 20; // Heavy rain/snow
+
+  if (wind < 8) s += 10; // Calm wind
+  else if (wind > 18) s -= 15; // High wind
+
+  if (date.getDay() === 0 || date.getDay() === 6) s += 2; // Weekend bonus
+  return Math.min(100, Math.max(0, s));
 }
 
 function scoreLabel(s) {
-  return s >= 78 ? 'excellent' : s >= 58 ? 'good' : s >= 38 ? 'fair' : 'poor';
+  // Higher thresholds for more exclusivity
+  return s >= 82 ? 'excellent' : s >= 62 ? 'good' : s >= 40 ? 'fair' : 'poor';
 }
 
 // ── Crowd heuristic ───────────────────────────────────────────────────────────
@@ -1438,13 +1443,19 @@ function crowdEstimate(sc, dow, wc) {
 
 // ── Fish activity rates ───────────────────────────────────────────────────────
 function fishRates(month, tempF, wc, sc) {
+  // Estimate water temp: Water is usually cooler than max air temp and more stable.
+  // We apply a 15% dampening factor toward a "neutral" 65 degrees.
+  const estimatedWaterTemp = tempF * 0.85 + (65 * 0.15);
+
   return FISH.map(f => {
     let r = f.base;
-    if (f.peak.includes(month)) r += 0.20;
-    if (tempF >= f.tr[0] && tempF <= f.tr[1])        r += 0.15;
-    else if (tempF < f.tr[0]-15 || tempF > f.tr[1]+15) r -= 0.15;
+    if (f.peak.includes(month)) r += 0.25;
+    if (estimatedWaterTemp >= f.tr[0] && estimatedWaterTemp <= f.tr[1]) r += 0.20;
+    else if (estimatedWaterTemp < f.tr[0]-10 || estimatedWaterTemp > f.tr[1]+10) r -= 0.25;
+    
     if (wc <= 3) r += 0.05;
-    r += (sc - 50) / 100 * 0.15;
+    // Solunar score influence increased from 15% to 25%
+    r += (sc - 45) / 100 * 0.25;
     return { ...f, rate: Math.min(0.95, Math.max(0.02, r)) };
   }).sort((a,b) => b.rate - a.rate).slice(0, 6);
 }
@@ -1453,12 +1464,13 @@ function fishRates(month, tempF, wc, sc) {
 function hourlyActivity(windows, rise, set) {
   return Array.from({ length: 19 }, (_, i) => {
     const h = i + 4;
-    let a = 20;
-    if (Math.abs(h - rise) < 1.5) a += 40;
-    if (Math.abs(h - set)  < 1.5) a += 35;
+    let a = 10; // Lowered base hourly activity from 20 to 10
+    if (Math.abs(h - rise) < 1.2) a += 35; // Sunrise influence
+    if (Math.abs(h - set)  < 1.2) a += 30; // Sunset influence
     windows.forEach(w => {
-      const diff = Math.abs(h - w.hour), range = w.type === 'Major' ? 2 : 1;
-      if (diff < range) a += w.type === 'Major' ? 35 : 20;
+      const diff = Math.abs(h - w.hour);
+      const range = w.type === 'Major' ? 1.5 : 1.0;
+      if (diff < range) a += w.type === 'Major' ? 30 : 15;
     });
     return { h, a: Math.min(100, a) };
   });
