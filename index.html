@@ -2045,17 +2045,6 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
-// ── Pinned lakes — always show regardless of NHD name ────────────────────────
-// Add any lake here that NHD misses or names differently from what locals use.
-// coords: approximate center of the lake
-const PINNED_LAKES = [
-  { name: 'High Point City Lake',  lat: 35.9974, lon: -79.9488, type: 'lake / pond' },
-  { name: 'Oak Hollow Lake',       lat: 36.01347721628055, lon: -80.00361500274349, type: 'lake / pond' },
-  { name: 'Kernersville Lake',     lat: 36.1541, lon: -80.1004, type: 'lake / pond' },
-  { name: 'High Rock Lake',        lat: 35.6541, lon: -80.2452, type: 'reservoir' },
-  { name: 'Badin Lake',            lat: 35.4495, lon: -80.1212, type: 'reservoir' },
-];
-
 // ── Community-submitted lakes cache ──────────────────────────────────────────
 let communityLakes = [];
 async function loadCommunityLakes() {
@@ -2084,13 +2073,21 @@ function getCommunityLake(lakeName) {
 // Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
 // and compute center from xmin/xmax/ymin/ymax ourselves.
 async function fetchLakes(lat, lon) {
+  await lakeDBReady;
   const BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query';
   const deg = 0.7; // ~48mi bbox
 
-  // Always start with pinned lakes within range
+  // Always start with lakes from our database that have coordinates
   const seen = new Set();
-  const pinned = PINNED_LAKES
-    .map(p => ({ ...p, dist: haversine(lat, lon, p.lat, p.lon) }))
+  const pinned = Object.entries(lakeDB)
+    .filter(([name, entry]) => entry.lat && entry.lon)
+    .map(([name, entry]) => ({
+      name,
+      lat: entry.lat,
+      lon: entry.lon,
+      type: entry.type || 'lake / pond',
+      dist: haversine(lat, lon, entry.lat, entry.lon)
+    }))
     .filter(p => p.dist <= 48);
   pinned.forEach(p => seen.add(p.name));
 
