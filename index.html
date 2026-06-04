@@ -1310,7 +1310,7 @@ function getRegInfo(species) {
     const isNoLimit = (s) => {
       if (!s) return true;
       const l = s.toLowerCase();
-      return l.includes('no limit') || l.includes('none') || l.includes('no size') || l.includes('no bag');
+      return l.includes('none') || (l.includes('no') && (l.includes('limit') || l.includes('size') || l.includes('bag')));
     };
 
     const hasSize = !!active.sizeRules && !isNoLimit(active.sizeRules);
