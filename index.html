@@ -294,6 +294,7 @@
     .tag-med    { background: var(--amber-light); color: var(--amber-dark); }
     .tag-high   { background: var(--red-light);   color: var(--red-dark); }
     .tag-catch  { background: var(--lime-light);  color: var(--lime-dark); }
+    .tag-stocked { background: var(--blue-light); color: var(--blue-mid); }
 
     /* ── iNat fish section ── */
     .fish-toggle {
@@ -2365,6 +2366,7 @@ function lakeDBCard(lakeName, entry) {
                    : data.catchRules === 'catch-and-keep'    ? '🪣 Catch & keep allowed'
                    : data.catchRules === 'slot-limits'       ? '📏 Slot limits apply'
                    : '❓ Rules unknown';
+  const stockedLabel = data.isStocked === true ? '🐟 Stocked waters' : data.isStocked === false ? '🌿 Wild / Unstocked' : '';
   const accessLabel = data.accessType === 'public' ? '🌐 Public access'
                     : data.accessType === 'private' ? '🔒 Private'
                     : data.accessType === 'park'    ? '🏕️ Park / managed area'
@@ -2411,6 +2413,7 @@ function lakeDBCard(lakeName, entry) {
   return `<div class="db-card">
     <div class="db-card-header">${badge} Community info</div>
     <div class="db-row">${accessLabel}</div>
+    ${stockedLabel ? `<div class="db-row">${stockedLabel}</div>` : ''}
     <div class="db-row">${rulesLabel}</div>
     ${calcHoursRow(data)}
     ${bankRow}
@@ -2462,6 +2465,13 @@ function toggleSubmitForm(lakeName) {
             <option value="public">Public access</option>
             <option value="private">Private</option>
             <option value="park">Park / managed area</option>
+          </select>
+        </label>
+        <label class="db-label">Is it stocked?
+          <select id="stk-${id}">
+            <option value="">— select —</option>
+            <option value="true">Yes — regularly stocked</option>
+            <option value="false">No — wild population only</option>
           </select>
         </label>
         <label class="db-label">Pay to fish?
@@ -2699,6 +2709,7 @@ function fmtTime(t) {
 async function submitLakeInfo(lakeName, id, btn) {
   const noFishing   = document.getElementById('nof-'+id)?.checked || false;
   const payToFish   = document.getElementById('ptf-'+id).value;
+  const isStocked   = document.getElementById('stk-'+id).value;
   const accessType  = document.getElementById('act-'+id).value;
   const catchRules  = document.getElementById('crs-'+id).value;
   const localName   = document.getElementById('lnm-'+id).value;
@@ -2728,6 +2739,7 @@ async function submitLakeInfo(lakeName, id, btn) {
       body: JSON.stringify({
         lakeName, noFishing, accessType, localName,
         payToFish: payToFish === 'true', catchRules,
+        isStocked: isStocked !== '' ? isStocked === 'true' : undefined,
         bankFishing: bankFishing !== '' ? bankFishing === 'true' : undefined,
         pier, bankPrices,
         boatLaunch: boatLaunch !== '' ? boatLaunch === 'true' : undefined,
@@ -2874,6 +2886,10 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       (_dbEntry.bankPrices || []).length > 0 ||
       (_dbEntry.launchPrices || []).length > 0
     );
+    const stockedBadge = _dbEntry && _dbEntry.isStocked === true
+      ? '<span class="tag tag-stocked">🐟 Stocked</span>'
+      : '';
+
     const priceBadge = _hasFreeOption
       ? '<span class="tag tag-free">🆓 Free</span>'
       : _hasPaidOption
@@ -2961,6 +2977,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
           <div class="lake-dist">${lk.dist} mi away · ${lk.type || 'lake'}</div>
           <div class="tags">
             <span class="tag tag-fish">${topFish}</span>
+            ${stockedBadge}
             ${priceBadge}
             ${activeTag}
           </div>
