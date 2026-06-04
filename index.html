@@ -2244,7 +2244,7 @@ function renderDayDetails() {
     let h = `<div class="card"><div class="card-title">Hourly bite activity</div>`;
     d.hours.forEach(({ h: hr, a }) => {
       const t = hr > 12 ? `${hr-12}pm` : hr === 12 ? '12pm' : `${hr}am`;
-      const color = a >= 70 ? '#1D9E75' : a >= 45 ? '#639922' : '#B4B2A9';
+      const color = a >= 75 ? 'var(--green-dark)' : a >= 45 ? 'var(--green)' : a >= 25 ? 'var(--gray-400)' : 'var(--border2)';
       h += `<div class="hour-row"><span class="hour-time">${t}</span><div class="hbar-track"><div class="hbar-fill" style="width:${a}%;background:${color}"></div></div><span class="hour-pk">${a >= 70 ? 'peak' : ''}</span></div>`;
     });
     h += `</div>`;
