@@ -1298,42 +1298,8 @@ const FISH = [
   { name: 'Common Carp',     peak: [5,6,7,8,9],      tr: [60,80], base: 0.42 },
 ];
 function getRegInfo(species) {
-  const region = appData?.state || 'all';
-  const key = `${species}:${region}`;
-  const fallback = `${species}:all`;
-  const data = fishRegs[key] || fishRegs[fallback];
-
-  if (data && (data.confirmed || data.pending)) {
-    const isUnconfirmed = !data.confirmed;
-    const active = data.confirmed || data.pending;
-
-    const isNoLimit = (s) => {
-      if (!s) return true;
-      const l = s.toLowerCase();
-      return l.includes('none') || (l.includes('no') && (l.includes('limit') || l.includes('size') || l.includes('bag')));
-    };
-
-    const hasSize = !!active.sizeRules && !isNoLimit(active.sizeRules);
-    const hasBag = !!active.bagRules && !isNoLimit(active.bagRules);
-
-    let cls = isUnconfirmed ? 'reg-pending' : 'reg-data';
-    let label = 'No Limits';
-
-    if (hasSize && hasBag) {
-      if (!isUnconfirmed) cls = 'reg-limit';
-      label = 'Both Limits';
-    } else if (hasSize) {
-      if (!isUnconfirmed) cls = 'reg-limit';
-      label = 'Size Limit';
-    } else if (hasBag) {
-      if (!isUnconfirmed) cls = 'reg-limit';
-      label = 'Bag Limit';
-    }
-    
-    if (isUnconfirmed) label += ' (Sug.)';
-    return { cls, label };
-  }
-  return { cls: 'reg-none', label: 'No data yet' };
+  // Simplified to remove legal risk; cards now act as gateways to official info
+  return { cls: 'reg-none', label: 'Official Info' };
 }
 
 // ── State Regulation Directories ───────────────────────────────────────────
@@ -3066,20 +3032,16 @@ function displayFishList(list) {
   let stateLink = '';
   if (appData.state && STATE_REGS_LINKS[appData.state]) {
     stateLink = `
-      <a href="${STATE_REGS_LINKS[appData.state]}" target="_blank" class="btn" style="text-decoration:none; display:flex; align-items:center; gap:6px; margin: 0 16px 16px; font-size:12px; justify-content:center; background:var(--blue-light); border-color:var(--blue-mid); color:var(--blue-mid);">
+      <a href="${STATE_REGS_LINKS[appData.state]}" target="_blank" class="btn" style="text-decoration:none; display:flex; align-items:center; gap:6px; margin: 16px; font-size:14px; font-weight:600; justify-content:center; background:var(--blue-mid); border-color:var(--blue-mid); color:#fff; box-shadow: 0 2px 8px rgba(24, 95, 165, 0.2);">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="stroke: var(--blue-mid)"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        Official ${appData.state} Regulations
+        View Official ${appData.state} Regulations
       </a>
     `;
   }
 
   let h = `
-    <div class="section-label" style="padding:16px 16px 8px">${label}</div>
-    <div style="display:flex; gap:12px; margin-bottom:12px; font-size:10px; padding:0 16px; flex-wrap:wrap;">
-      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--green);"></span> No Regulation</div>
-      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Size/Bag Limit</div>
-      <div style="display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--red-dark);"></span> Prohibited</div>
-    </div>
+    ${stateLink}
+    <div class="section-label" style="padding:0 16px 8px">${label}</div>
   `;
   
   if (list.length > 0) {
@@ -3102,7 +3064,6 @@ function displayFishList(list) {
         </div>`;
     });
     h += '</div>';
-    h += stateLink;
     if (!isFallback) {
       h += '<div class="inat-source" style="padding:0 16px 16px">Identification data via <a href="https://www.inaturalist.org" target="_blank">iNaturalist</a></div>';
     } else {
@@ -3153,42 +3114,20 @@ function renderFishRegs(species) {
   
   // Show which region's data we are actually displaying
   const displayRegion = fishRegs[key] ? region : (fishRegs[fallback] ? 'General' : region);
-  const isOwner = authData && authData.role === 2;
+  const link = STATE_REGS_LINKS[appData?.state || 'NC']; // Fallback to NC if state is null
   
-  let html = `<div class="section-label">Fishing Regulations (${displayRegion})</div>`;
+  let html = `<div class="section-label">Local Information</div>`;
   
-  if (data && (data.confirmed || data.pending)) {
-    const active = data.confirmed || data.pending;
-    html += `
-      <div class="card" style="border-left: 4px solid var(--green);">
-        ${data.confirmed ? '<div class="db-badge db-confirmed" style="margin-bottom:8px">Verified Rule</div>' : '<div class="db-badge db-unconfirmed" style="margin-bottom:8px">Community Suggested</div>'}
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Size & Gear Rules</div>
-          <div style="font-size:15px; line-height:1.5; color:var(--text);">${active.sizeRules || 'No size limit recorded.'}</div>
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Bag & Harvest Limits</div>
-          <div style="font-size:15px; line-height:1.5; color:var(--text);">${active.bagRules || 'No bag limit recorded.'}</div>
-        </div>
-        <div class="db-meta">Updated ${active.submittedAt}</div>
-        ${data.pending && data.confirmed ? `<div class="db-pending-notice">🔔 Update pending (${data.pending.voteCount}/5 votes)</div>` : ''}
-        ${data.pending && !data.confirmed ? `
-          <button class="db-vote-btn" style="margin-top:10px" onclick="${isOwner ? `approveContent('fish', '${dataKey}', this)` : `voteFishReg('${dataKey}', this)`}">
-            ${isOwner ? 'Approve Regulation' : `Confirm this is correct (${data.pending.voteCount}/5)`}
-          </button>` : ''}
-      </div>
-    `;
-  } else {
-    html += `
-      <div class="card db-empty">
-        <p class="db-empty-text">No community-verified regulations for this region yet.</p>
-      </div>
-    `;
-  }
-
   html += `
-    <button class="db-edit-btn" onclick="toggleFishRegForm('${species}', '${region}')">Suggest / Edit Regulations</button>
-    <div id="fish-reg-form-wrap" style="margin-top:10px"></div>
+    <div class="card">
+      <div style="font-size:15px; line-height:1.6; color:var(--text); margin-bottom:16px;">
+        Regulations for <b>${species}</b> vary by season and body of water. To ensure you are following the latest legal requirements, please visit the official wildlife resources website.
+      </div>
+      <a href="${link}" target="_blank" class="btn btn-primary" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:14px;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        Open Official Regulations
+      </a>
+    </div>
   `;
   
   container.innerHTML = html;
