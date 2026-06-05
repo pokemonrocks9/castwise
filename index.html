@@ -764,6 +764,20 @@
     </div>
   </div>
 
+  <!-- Approval PIN Modal -->
+  <div id="approve-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 6000; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeApproveModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeApproveModal()">✕</button>
+      <div class="card-title" style="margin-bottom:8px">Verify Action</div>
+      <div id="approve-modal-desc" style="font-size:13px; color:var(--text3); margin-bottom:18px;">Enter your PIN to approve this update.</div>
+      
+      <label class="db-label">Admin PIN <input type="password" id="approve-pin" placeholder="Enter PIN" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" /></label>
+      
+      <button id="approve-confirm-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="handleApproveConfirm()">Confirm Approval</button>
+      <div id="approve-status" style="font-size:11px; margin-top:12px; min-height:14px; color:var(--text2); text-align:center;"></div>
+    </div>
+  </div>
+
   <!-- Auth Modal -->
   <div id="auth-modal" onclick="if(event.target === this) closeAuthModal()">
     <div class="auth-modal-content">
@@ -772,7 +786,7 @@
       <div style="font-size:13px; color:var(--text3); margin-bottom:18px;">Create an account to sync your tackle box and settings.</div>
       
       <label class="db-label">Username <input type="text" id="auth-user" placeholder="Choose a handle" autocomplete="username" /></label>
-      <label class="db-label">PIN <input type="password" id="auth-pin" placeholder="4+ digits" inputmode="numeric" autocomplete="current-password" /></label>
+      <label class="db-label">PIN <input type="password" id="auth-pin" placeholder="4+ digits" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" /></label>
       
       <div style="display:flex; gap:8px; margin-top:20px;">
         <button class="btn btn-primary" style="flex:1" onclick="handleAuth('register')">Sign Up</button>
@@ -996,19 +1010,19 @@
         <div style="font-size:15px;font-weight:500;margin-bottom:12px">Combo Balancer</div>
         <div style="display:flex;gap:10px;margin-bottom:8px">
           <label class="db-label" style="flex:1">Rod Min (lb)
-            <input type="number" id="line-rod-min" placeholder="e.g. 8" />
+            <input type="number" id="line-rod-min" placeholder="e.g. 8" inputmode="numeric" pattern="[0-9]*" />
           </label>
           <label class="db-label" style="flex:1">Rod Max (lb)
-            <input type="number" id="line-rod-max" placeholder="e.g. 15" />
+            <input type="number" id="line-rod-max" placeholder="e.g. 15" inputmode="numeric" pattern="[0-9]*" />
           </label>
         </div>
         
         <div style="display:flex;gap:10px;margin-bottom:8px">
           <label class="db-label" style="flex:1">Reel Min (lb)
-            <input type="number" id="line-reel-min" placeholder="e.g. 10" />
+            <input type="number" id="line-reel-min" placeholder="e.g. 10" inputmode="numeric" pattern="[0-9]*" />
           </label>
           <label class="db-label" style="flex:1">Reel Max (lb)
-            <input type="number" id="line-reel-max" placeholder="e.g. 20" />
+            <input type="number" id="line-reel-max" placeholder="e.g. 20" inputmode="numeric" pattern="[0-9]*" />
           </label>
         </div>
         <button class="db-submit-btn" style="margin-top:8px" onclick="calcComboLine()">Calculate Setup</button>
@@ -1789,33 +1803,64 @@ function jumpToAccount() {
   }
 }
 
+let pendingApproval = null;
+
+function closeApproveModal() {
+  document.getElementById('approve-modal').style.display = 'none';
+  document.getElementById('approve-pin').value = '';
+  document.getElementById('approve-status').textContent = '';
+  pendingApproval = null;
+}
+
 async function approveContent(type, id, btn) {
   if (!authData || authData.role < 2) return;
-  const pin = prompt(`Enter PIN to approve this ${type} update:`);
-  if (!pin) return;
   
-  btn.disabled = true;
-  btn.textContent = 'Approving...';
+  pendingApproval = { type, id, btn };
+  
+  document.getElementById('approve-modal-desc').textContent = `Enter your PIN to approve this ${type} update for "${id}".`;
+  document.getElementById('approve-modal').style.display = 'flex';
+  document.getElementById('approve-pin').focus();
+}
+
+async function handleApproveConfirm() {
+  if (!pendingApproval) return;
+  const { type, id, btn } = pendingApproval;
+  const pin = document.getElementById('approve-pin').value;
+  const status = document.getElementById('approve-status');
+  const confirmBtn = document.getElementById('approve-confirm-btn');
+
+  if (!pin) { status.textContent = '⚠️ PIN required'; return; }
+
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Verifying...';
   
   try {
     const res = await fetch(`${WORKER_URL}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, id, username: authData.username, pin })
+      body: JSON.stringify({ type, id, username: authData.username, pin: pin })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) throw new Error(data.error || 'Approval failed');
     
     showToast('Approved successfully!');
+    closeApproveModal();
+
+    // If triggered from a specific button, update its state
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Approved';
+    }
+
     loadLakeDB().then(() => {
       if (type === 'lake') renderLakes();
       else if (type === 'fish') renderFishRegs(id.split(':')[0]);
       else if (type === 'bait') renderBaitRecipes();
     });
   } catch (e) {
-    btn.disabled = false;
-    btn.textContent = 'Failed';
-    alert(e.message);
+    status.textContent = '⚠️ ' + e.message;
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Confirm Approval';
   }
 }
 
@@ -2593,7 +2638,7 @@ function addPrice(containerId) {
   const el = document.getElementById(containerId);
   const div = document.createElement('div');
   div.className = 'db-price-row';
-  div.innerHTML = `$<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" />
+  div.innerHTML = `$<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" inputmode="decimal" />
     per <select class="db-price-per">${PER_OPTIONS.map(o=>`<option>${o}</option>`).join('')}</select>
     <button class="db-remove-btn" onclick="this.parentElement.remove()">✕</button>`;
   el.appendChild(div);
@@ -2604,7 +2649,7 @@ function addRental(id) {
   const div = document.createElement('div');
   div.className = 'db-rental-row';
   div.innerHTML = `<select class="db-rental-type">${BOAT_TYPES.map(t=>`<option>${t}</option>`).join('')}</select>
-    $<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" />
+    $<input type="number" min="0" step="0.01" placeholder="0.00" class="db-price-amt" inputmode="decimal" />
     per <select class="db-price-per">${PER_OPTIONS.map(o=>`<option>${o}</option>`).join('')}</select>
     <button class="db-remove-btn" onclick="this.parentElement.remove()">✕</button>`;
   el.appendChild(div);
@@ -4149,6 +4194,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (monoWeightSelect) {
     calcMonoBraid();
   }
+
+  // PIN input listener for approval modal
+  document.getElementById('approve-pin')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleApproveConfirm();
+  });
 
   renderAccountSection();
 });
