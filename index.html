@@ -1865,11 +1865,14 @@ async function handleApproveConfirm() {
       btn.textContent = 'Approved';
     }
 
-    loadLakeDB().then(() => {
-      if (type === 'lake') renderLakes();
-      else if (type === 'fish') renderFishRegs(id.split(':')[0]);
-      else if (type === 'bait') renderBaitRecipes();
-    });
+          closeApproveModal();
+ 
+      loadLakeDB().then(() => {
+      if (type === 'lake' || type === 'community-lake') renderLakes();
+        else if (type === 'fish') renderFishRegs(id.split(':')[0]);
+        else if (type === 'bait') renderBaitRecipes();
+      });
+
   } catch (e) {
     status.textContent = '⚠️ ' + e.message;
     confirmBtn.disabled = false;
@@ -2988,6 +2991,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     const activeUsers = _rec?.activeUsers || [];
     const friendsHereCount = activeUsers.filter(u => friendsList.some(f => f.username === u)).length;
     const isUserHere = authData && authData.activeLake === lk.name;
+    const isOwner = authData && authData.role === 2;
 
     const personSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
     
@@ -3050,7 +3054,10 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
         <div class="lake-badge lake-badge-community">📍 Community submitted · unverified</div>
         <div style="margin-bottom:10px">
           <p style="font-size:11px; color:var(--text2); margin-bottom:6px;">Is the map pin wrong? You can update it.</p>
-          <button class="btn" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="startLocationUpdate('${lk.name.replace(/'/g,"\\'")}')">Update Map Location</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="event.stopPropagation(); startLocationUpdate('${lk.name.replace(/'/g,"\\'")}')">Update Map Location</button>
+            ${isOwner ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="event.stopPropagation(); approveContent('community-lake', '${lk.name.replace(/'/g,"\\'")}', this)">Approve Lake</button>` : ''}
+          </div>
         </div>
       `
       : '';
