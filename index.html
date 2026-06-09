@@ -1107,6 +1107,18 @@
         </label>
       </div>
 
+      <!-- Lake Source Setting -->
+      <div style="width:100%; margin-top:12px; text-align:left;">
+        <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--text);">Lakes Data Source</span>
+          <select id="lakeSourceSelect" style="background:var(--bg); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:4px 8px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
+            <option value="usgs">USGS NHD (Official)</option>
+            <option value="osm">OpenStreetMap (Faster)</option>
+          </select>
+        </label>
+        <p style="font-size:12px; color:var(--text3); margin-top:8px;">USGS is the official government dataset. OSM is community-mapped and much faster to load.</p>
+      </div>
+
       <div id="admin-settings-zone"></div>
 
       <div id="settings-signout-zone" style="margin-top: 24px;"></div>
@@ -1161,6 +1173,7 @@
 // Replace with your deployed Cloudflare Worker URL after `wrangler deploy`
 const WORKER_URL = 'https://castwise-worker.tytygoins.workers.dev';
 const AUTO_LOCATION_KEY = 'castwise_auto_location'; // New constant for localStorage key
+const LAKE_SOURCE_KEY = 'castwise_lake_source';
 
 // Helper for cross-browser fetch timeouts to prevent infinite hanging
 function timeoutSignal(ms) {
@@ -2094,12 +2107,33 @@ function getCommunityLake(lakeName) {
 
 // ── Lakes via USGS National Hydrography Dataset (NHD) ────────────────────────
 // Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
-// Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
-// and compute center from xmin/xmax/ymin/ymax ourselves.
+
+async function fetchLakesOSM(lat, lon) {
+  const radius = 50000; // 50km
+  const query = `[out:json][timeout:25];(way["natural"="water"]"water"~"lake|pond|reservoir";relation["natural"="water"]"water"~"lake|pond|reservoir";);out center;`;
+  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+  
+  try {
+    const res = await fetch(url, { signal: timeoutSignal(10000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.elements || []).map(e => {
+      const name = e.tags?.name || e.tags?.official_name;
+      if (!name) return null;
+      const clat = e.center ? e.center.lat : (e.lat || 0);
+      const clon = e.center ? e.center.lon : (e.lon || 0);
+      const wtype = e.tags?.water || 'lake';
+      return { 
+        name, lat: clat, lon: clon, 
+        type: wtype === 'reservoir' ? 'reservoir' : 'lake / pond',
+        dist: haversine(lat, lon, clat, clon)
+      };
+    }).filter(Boolean);
+  } catch (e) { return []; }
+}
+
 async function fetchLakes(lat, lon) {
   await lakeDBReady;
-  const BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query';
-  const deg = 0.7; // ~48mi bbox
 
   // Always start with lakes from our database that have coordinates
   const seen = new Set();
@@ -2115,43 +2149,52 @@ async function fetchLakes(lat, lon) {
     .filter(p => p.dist <= 48);
   pinned.forEach(p => seen.add(p.name));
 
-  const tryQuery = async (where) => {
-    const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
-    const p = new URLSearchParams({
-      where, geometry: bbox, geometryType: 'esriGeometryEnvelope',
-      inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
-      outFields: 'GNIS_NAME,FTYPE,FCODE', returnGeometry: 'true',
-      resultRecordCount: '150', f: 'json',
-    });
-    try {
-      const res = await fetch(`${BASE}?${p}`, { signal: timeoutSignal(12000) });
-      if (!res.ok) return [];
-      const text = await res.text();
-      if (!text.trim().startsWith('{')) return [];
-      const data = JSON.parse(text);
-      return data.features || [];
-    } catch { return []; }
-  };
+  const source = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
+  let remoteLakes = [];
 
-  // Try with FTYPE filter first, then fall back to just GNIS_NAME if empty
-  let features = await tryQuery("GNIS_NAME <> '' AND FTYPE IN (390, 436, 378, 361)");
-  if (!features.length) features = await tryQuery("GNIS_NAME <> ''");
+  if (source === 'osm') {
+    remoteLakes = await fetchLakesOSM(lat, lon);
+  } else {
+    const BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query';
+    const deg = 0.7; 
+    const tryQuery = async (where) => {
+      const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
+      const params = new URLSearchParams({
+        where, geometry: bbox, geometryType: 'esriGeometryEnvelope',
+        inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+        outFields: 'GNIS_NAME,FTYPE,FCODE', returnGeometry: 'true',
+        resultRecordCount: '150', f: 'json',
+      });
+      try {
+        const res = await fetch(`${BASE}?${params}`, { signal: timeoutSignal(12000) });
+        if (!res.ok) return [];
+        const text = await res.text();
+        if (!text.trim().startsWith('{')) return [];
+        const data = JSON.parse(text);
+        return data.features || [];
+      } catch { return []; }
+    };
 
-  const nhd = features
-    .filter(f => f.attributes.GNIS_NAME && f.geometry)
-    .map(f => {
-      const name = f.attributes.GNIS_NAME;
-      let allX = [], allY = [];
-      (f.geometry.rings || []).forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
-      if (!allX.length) return null;
-      const clon = (Math.min(...allX) + Math.max(...allX)) / 2;
-      const clat = (Math.min(...allY) + Math.max(...allY)) / 2;
-      const ftype = f.attributes.FTYPE;
-      const type = (ftype === 436 || ftype === 378) ? 'reservoir' : ftype === 361 ? 'pluvial lake' : 'lake / pond';
-      return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
-    })
-    .filter(Boolean)
-    .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
+    let features = await tryQuery("GNIS_NAME <> '' AND FTYPE IN (390, 436, 378, 361)");
+    if (!features.length) features = await tryQuery("GNIS_NAME <> ''");
+
+    remoteLakes = features
+      .filter(f => f.attributes.GNIS_NAME && f.geometry)
+      .map(f => {
+        const name = f.attributes.GNIS_NAME;
+        let allX = [], allY = [];
+        (f.geometry.rings || []).forEach(ring => ring.forEach(([x, y]) => { allX.push(x); allY.push(y); }));
+        if (!allX.length) return null;
+        const clon = (Math.min(...allX) + Math.max(...allX)) / 2;
+        const clat = (Math.min(...allY) + Math.max(...allY)) / 2;
+        const ftype = f.attributes.FTYPE;
+        const type = (ftype === 436 || ftype === 378) ? 'reservoir' : ftype === 361 ? 'pluvial lake' : 'lake / pond';
+        return { name, lat: clat, lon: clon, dist: haversine(lat, lon, clat, clon), type };
+      })
+      .filter(Boolean);
+  }
+
+  const nhd = remoteLakes.filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; });
 
   // Merge in community submitted lakes within range
   const community = communityLakes
@@ -4185,6 +4228,16 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSelect.addEventListener('change', (e) => {
       localStorage.setItem('castwise_theme', e.target.value);
       document.documentElement.setAttribute('data-theme', e.target.value);
+    });
+  }
+
+  // Lake source toggle initialization
+  const lakeSourceSelect = document.getElementById('lakeSourceSelect');
+  if (lakeSourceSelect) {
+    lakeSourceSelect.value = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
+    lakeSourceSelect.addEventListener('change', (e) => {
+      localStorage.setItem(LAKE_SOURCE_KEY, e.target.value);
+      showToast('Lake source updated');
     });
   }
 
