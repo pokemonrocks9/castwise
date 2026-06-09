@@ -1108,7 +1108,7 @@
       </div>
 
       <!-- Lake Source Setting -->
-      <div style="width:100%; margin-top:12px; text-align:left;">
+      <div style="width:100%; margin-top:12px; text-align:left; display:none;" id="lakeSourceSettingWrap">
         <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
           <span style="font-size:15px; font-weight:500; color:var(--text);">Lakes Data Source</span>
           <select id="lakeSourceSelect" style="background:var(--bg); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:4px 8px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
@@ -1546,11 +1546,13 @@ function renderAccountSection() {
   const headerZone = document.getElementById('header-auth-zone');
   const signoutZone = document.getElementById('settings-signout-zone');
   const adminZone = document.getElementById('admin-settings-zone');
+  const lakeSourceWrap = document.getElementById('lakeSourceSettingWrap');
   if (!headerZone) return;
 
   if (authData) {
     const displayIconId = authData.iconId || 0;
     
+    if (lakeSourceWrap) lakeSourceWrap.style.display = authData.role === 2 ? 'block' : 'none';
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div class="notif-wrapper">
@@ -1606,6 +1608,7 @@ function renderAccountSection() {
     headerZone.innerHTML = `
       <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
     `;
+    if (lakeSourceWrap) lakeSourceWrap.style.display = 'none';
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
   }
