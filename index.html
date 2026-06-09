@@ -2110,7 +2110,7 @@ function getCommunityLake(lakeName) {
 
 async function fetchLakesOSM(lat, lon) {
   const radius = 50000; // 50km
-  const query = `[out:json][timeout:25];(way["natural"="water"]"water"~"lake|pond|reservoir";relation["natural"="water"]"water"~"lake|pond|reservoir";);out center;`;
+  const query = `[out:json][timeout:25];(way"natural"="water";relation"natural"="water";);out center;`;
   const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
   
   try {
