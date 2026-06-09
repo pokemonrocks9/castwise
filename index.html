@@ -2417,13 +2417,20 @@ function lakeDBCard(lakeName, entry) {
                     : data.accessType === 'park'    ? '🏕️ Park / managed area'
                     : '❓ Access unknown';
 
-  // Bank fishing
-  const bankRow = data.bankFishing !== undefined ? (() => {
-    if (!data.bankFishing) return '<div class="db-row">🚫 No bank / pier fishing</div>';
+  // Bank & Pier fishing
+  const fishingRow = (() => {
+    const hasBank = data.bankFishing === true;
+    const hasPier = data.pier === true;
+    if (!hasBank && !hasPier) {
+      if (data.bankFishing === false || data.pier === false) return '<div class="db-row">🚫 No bank or pier fishing</div>';
+      return '';
+    }
+    const labels = [];
+    if (hasBank) labels.push('🪨 Bank fishing');
+    if (hasPier) labels.push('🪝 Pier');
     const prices = (data.bankPrices || []).map(p => `$${p.price}/${p.per}`).join(' or ');
-    const pierRow = data.pier ? '<div class="db-row">🪝 Pier available</div>' : '';
-    return `<div class="db-row">🪨 Bank fishing available${prices ? ' — ' + prices : ' — free'}</div>${pierRow}`;
-  })() : '';
+    return `<div class="db-row">${labels.join(' · ')} available${prices ? ' — ' + prices : ' — free'}</div>`;
+  })();
 
   // Boat launch
   const launchRow = data.boatLaunch !== undefined ? (() => {
@@ -2461,7 +2468,7 @@ function lakeDBCard(lakeName, entry) {
     ${stockedLabel ? `<div class="db-row">${stockedLabel}</div>` : ''}
     <div class="db-row">${rulesLabel}</div>
     ${calcHoursRow(data)}
-    ${bankRow}
+    ${fishingRow}
     ${launchRow}
     ${rentalRows}
     ${data.notes ? `<div class="db-notes">${data.notes}</div>` : ''}
@@ -2539,16 +2546,20 @@ function toggleSubmitForm(lakeName) {
       <div id="sec-bank-${id}" class="db-collapsible">
         <div class="db-form-section">Bank &amp; pier fishing</div>
         <label class="db-label">Bank fishing available?
-          <select id="bnk-${id}" onchange="toggleBankPrices('${id}')">
+          <select id="bnk-${id}" onchange="toggleFishingAccess('${id}')">
             <option value="">— select —</option>
             <option value="true">Yes</option>
             <option value="false">No</option>
           </select>
         </label>
-        <div id="bnk-prices-${id}" style="display:none">
-          <label class="db-label" style="flex-direction:row;align-items:center;gap:8px">
-            <input type="checkbox" id="pier-${id}" /> Pier available
-          </label>
+        <label class="db-label">Pier available?
+          <select id="pier-sel-${id}" onchange="toggleFishingAccess('${id}')">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <div id="fishing-prices-${id}" style="display:none">
           <div class="db-form-subsection">Bank fishing prices (add multiple if needed)</div>
           <div id="bnk-price-list-${id}"></div>
           <button class="db-add-btn" onclick="addPrice('bnk-price-list-${id}')">+ Add price tier</button>
@@ -2622,9 +2633,10 @@ function toggleSection(sectionId, cb) {
   el.style.display = cb.checked ? 'block' : 'none';
 }
 
-function toggleBankPrices(id) {
-  const val = document.getElementById('bnk-'+id).value;
-  document.getElementById('bnk-prices-'+id).style.display = val === 'true' ? 'block' : 'none';
+function toggleFishingAccess(id) {
+  const bnk = document.getElementById('bnk-'+id).value === 'true';
+  const pier = document.getElementById('pier-sel-'+id).value === 'true';
+  document.getElementById('fishing-prices-'+id).style.display = (bnk || pier) ? 'block' : 'none';
 }
 function toggleLaunchPrices(id) {
   const val = document.getElementById('lnch-'+id).value;
@@ -2765,8 +2777,8 @@ async function submitLakeInfo(lakeName, id, btn) {
   const closedDays  = getClosedDays(id);
 
   const bankFishing  = document.getElementById('bnk-'+id)?.value;
-  const pier         = document.getElementById('pier-'+id)?.checked || false;
-  const bankPrices   = bankFishing === 'true' ? getPriceList('bnk-price-list-'+id) : [];
+  const pier         = document.getElementById('pier-sel-'+id)?.value === 'true';
+  const bankPrices   = (bankFishing === 'true' || pier) ? getPriceList('bnk-price-list-'+id) : [];
   const boatLaunch   = document.getElementById('lnch-'+id)?.value;
   const launchPrices = boatLaunch === 'true' ? getPriceList('lnch-price-list-'+id) : [];
   const boatRentals  = getRentalList(id);
