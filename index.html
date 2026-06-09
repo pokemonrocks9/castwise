@@ -2125,7 +2125,8 @@ function getCommunityLake(lakeName) {
 // Layer 12 = Waterbody Large Scale | FTYPE 390=LakePond, 436=Reservoir, 361=PluvialLake
 
 async function fetchLakesOSM(lat, lon) {
-  const radius = 60000; // ~37 miles in meters
+  const radius = 50000; // 50km
+  // Added the (around) filter to the query so it actually looks at your location
   const query = `[out:json][timeout:25];(way["natural"="water"]"water"~"lake|pond|reservoir";relation["natural"="water"]"water"~"lake|pond|reservoir";);out center;`;
   const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
   
@@ -2165,7 +2166,7 @@ async function fetchLakes(lat, lon) {
   const source = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
   let remoteLakes = [];
 
-  if (source === 'osm') {
+  if (source === 'osm' || source === 'osm-fast') {
     remoteLakes = await fetchLakesOSM(lat, lon);
   } else {
     // USGS NHD Logic
@@ -2173,16 +2174,19 @@ async function fetchLakes(lat, lon) {
     const deg = 0.7; 
     const tryQuery = async (where) => {
       const bbox = `${lon-deg},${lat-deg},${lon+deg},${lat+deg}`;
-      const p = new URLSearchParams({
+      const params = new URLSearchParams({
         where, geometry: bbox, geometryType: 'esriGeometryEnvelope',
         inSR: '4326', outSR: '4326', spatialRel: 'esriSpatialRelIntersects',
         outFields: 'GNIS_NAME,FTYPE,FCODE', returnGeometry: 'true',
         resultRecordCount: '150', f: 'json',
       });
       try {
-        const res = await fetch(`${BASE}?${p}`, { signal: timeoutSignal(12000) });
+        const res = await fetch(`${BASE}?${params}`, { signal: timeoutSignal(12000) });
         if (!res.ok) return [];
-        const data = await res.json();
+        const text = await res.text();
+        // ArcGIS sometimes returns error strings with a 200 OK status; we must verify JSON
+        if (!text.trim().startsWith('{')) return [];
+        const data = JSON.parse(text);
         return data.features || [];
       } catch { return []; }
     };
