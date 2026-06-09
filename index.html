@@ -2447,7 +2447,7 @@ function lakeDBCard(lakeName, entry) {
   if (!data) return lakeDBSubmitForm(lakeName, false);
 
   const isConfirmed = !!entry.confirmed;
-  const hasPending  = !!entry.pending && !!entry.confirmed;
+  const hasPending  = !!entry.pending;
 
 
   const rulesLabel = data.catchRules === 'catch-and-release' ? '🔄 Catch & release only'
@@ -2494,8 +2494,8 @@ function lakeDBCard(lakeName, entry) {
 
   const pendingSection = hasPending ? `
     <div class="db-pending-notice">
-      🔔 Update pending · ${entry.pending.voteCount}/10 votes
-      <button class="db-vote-btn" onclick="${voteAction}">${isOwner ? 'Approve Update' : "Vote it's accurate"}</button>
+      ${isConfirmed ? '🔔 Update pending' : '🆕 New submission'} · ${entry.pending.voteCount}/10 votes
+      <button class="db-vote-btn" onclick="${voteAction}">${isOwner ? (isConfirmed ? 'Approve Update' : 'Approve Submission') : "Vote it's accurate"}</button>
     </div>` : '';
 
   return `<div class="db-card">
