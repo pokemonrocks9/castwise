@@ -2110,7 +2110,7 @@ function getCommunityLake(lakeName) {
 
 async function fetchLakesOSM(lat, lon) {
   const radius = 50000; // 50km
-  const query = `[out:json][timeout:25];(way"natural"="water";relation"natural"="water";);out center;`;
+  const query = `[out:json][timeout:25];(way["natural"="water"]"name";relation["natural"="water"]"name";);out center;`;
   const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
   
   try {
@@ -2118,7 +2118,7 @@ async function fetchLakesOSM(lat, lon) {
     if (!res.ok) return [];
     const data = await res.json();
     return (data.elements || []).map(e => {
-      const name = e.tags?.name || e.tags?.official_name;
+      const name = e.tags?.name || e.tags?.official_name || e.tags?.["gnis:name"];
       if (!name) return null;
       const clat = e.center ? e.center.lat : (e.lat || 0);
       const clon = e.center ? e.center.lon : (e.lon || 0);
