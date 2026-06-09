@@ -1263,6 +1263,15 @@ let fishRegs = {};
 let baitRecipes = {};
 let lakeDBReady; // promise — resolves when DB is loaded (or failed)
 function loadLakeDB() {
+  // Load from cache for instant initial render
+  const cached = localStorage.getItem('castwise_db_cache');
+  if (cached) {
+    try {
+      const d = JSON.parse(cached);
+      lakeDB = d.lakeDB || {}; fishRegs = d.fishRegs || {}; baitRecipes = d.baitRecipes || {};
+    } catch(e) {}
+  }
+
   const fetchJSON = async (path) => {
     try {
       const res = await fetch(`${WORKER_URL}/${path}`, { signal: timeoutSignal(5000) });
@@ -1274,7 +1283,14 @@ function loadLakeDB() {
     fetchJSON('db').then(d => { if(d) lakeDB = d; }),
     fetchJSON('fish-regs').then(d => { if(d) fishRegs = d; }),
     fetchJSON('bait-recipes').then(d => { if(d) baitRecipes = d; })
-  ]);
+  ]).then(() => {
+    // Persistence for offline/fast-start
+    localStorage.setItem('castwise_db_cache', JSON.stringify({ lakeDB, fishRegs, baitRecipes }));
+    
+    // If we are on a tab that uses this data, trigger a re-render
+    if (currentTab === 'lakes') renderLakes();
+    if (currentTab === 'fish') renderFishTab();
+  });
   
   return lakeDBReady;
 }
@@ -2097,7 +2113,6 @@ function getCommunityLake(lakeName) {
 // Note: returnCentroid is NOT supported on this layer — we fetch geometry envelope
 // and compute center from xmin/xmax/ymin/ymax ourselves.
 async function fetchLakes(lat, lon) {
-  await lakeDBReady;
   const BASE = 'https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12/query';
   const deg = 0.7; // ~48mi bbox
 
@@ -2226,25 +2241,26 @@ async function loadData(lat, lon, locName, state = null) {
       map.setView([lat, lon], 12);
     }
 
-    // Fetch lakes + lakeDB + inatFish in parallel, render only after ready
-    Promise.all([
-      fetchLakes(lat, lon),
-      lakeDBReady,
-      fetchInatFish(lat, lon, 40, 50).catch(() => [])
-    ]).then(([lakes, _, inatFish]) => {
-      if (appData) {
-        appData.lakes = lakes;
-        appData.inatFish = inatFish.length > 0 ? inatFish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
-        renderLakes();
-        if (currentTab === 'fish') renderFishTab();
-      }
-    }).catch(() => {
-      if (appData) {
-        appData.inatFish = appData.inatFish || FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
-        renderLakes();
-        if (currentTab === 'fish') renderFishTab();
-      }
+    // Kick off secondary fetches in parallel without blocking each other
+    fetchLakes(lat, lon).then(lakes => {
+      if (!appData) return;
+      appData.lakes = lakes;
+      renderLakes();
     });
+
+    fetchInatFish(lat, lon, 40, 50)
+      .catch(() => [])
+      .then(inatFish => {
+        if (!appData) return;
+        appData.inatFish = inatFish.length > 0 ? inatFish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
+        if (currentTab === 'fish') renderFishTab();
+      });
+
+    // If the DB isn't ready yet, it will trigger a render when lakeDBReady resolves in loadLakeDB()
+    if (lakeDB && Object.keys(lakeDB).length > 0) {
+      renderLakes();
+    }
+
   } catch (e) {
     setContent(`<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`);
     if (lakesTab) lakesTab.innerHTML = `<div class="err-msg">⚠️ ${e.message}. Check your connection and try again.</div>`;
