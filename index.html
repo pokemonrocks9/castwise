@@ -595,7 +595,7 @@
     }
 
     /* ── Account Overlay ── */
-    #account-overlay {
+    #account-overlay, #admin-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4500; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -740,6 +740,22 @@
 
       <div id="friends-view" class="friends-list"></div>
       <div id="requests-view" class="friends-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Admin Overlay -->
+  <div id="admin-overlay">
+    <div class="account-header">
+      <button class="btn" onclick="history.back()" style="padding: 0; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <div style="font-size: 18px; font-weight: 600;">Admin Dashboard</div>
+    </div>
+    
+    <div id="admin-dashboard-content" style="padding: 24px 16px;">
+      <!-- Updated by JS -->
     </div>
   </div>
 
@@ -1236,7 +1252,7 @@ window.addEventListener('popstate', e => {
   const sub = e.state?.sub || null;
   
   // Manage body scroll lock for page-like overlays
-  if (['map', 'fish-detail', 'account'].includes(sub)) document.body.classList.add('overlay-open');
+  if (['map', 'fish-detail', 'account', 'admin'].includes(sub)) document.body.classList.add('overlay-open');
   else document.body.classList.remove('overlay-open');
 
   // Close overlays if we're navigating back from them
@@ -1259,6 +1275,14 @@ window.addEventListener('popstate', e => {
   } else {
     if (accountOverlay) accountOverlay.style.display = 'flex';
     renderAccountOverlay();
+  }
+
+  const adminOverlay = document.getElementById('admin-overlay');
+  if (sub !== 'admin') {
+    if (adminOverlay) adminOverlay.style.display = 'none';
+  } else {
+    if (adminOverlay) adminOverlay.style.display = 'flex';
+    renderAdminDashboard();
   }
 
   if (sub === 'map') openMap(false);
@@ -1568,19 +1592,10 @@ function renderAccountSection() {
       if (authData.role === 2) {
         adminZone.innerHTML = `
           <hr class="settings-divider">
-          <div class="settings-section-title">Administration</div>
-          <div class="card" style="margin-top: 12px; margin-bottom: 0;">
-            <div class="section-label" style="margin-bottom: 8px;">User Management</div>
-            <p style="font-size: 12px; color: var(--text3); margin-bottom: 12px;">Update user permissions by username.</p>
-            <div class="loc-bar" style="margin-bottom: 8px;">
-              <input type="text" id="role-target" placeholder="Username to update..." style="font-size: 13px;" />
-            </div>
-            <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(1)">Promote to Admin</button>
-              <button class="btn" style="flex:1; font-size:11px; padding: 8px;" onclick="updateUserRole(0)">Demote to Caster</button>
-            </div>
-            <div id="role-status" style="font-size:11px; margin-top:8px; min-height: 14px; color:var(--text2);"></div>
-          </div>
+          <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openAdminOverlay()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Open Admin Dashboard
+          </button>
         `;
       } else {
         adminZone.innerHTML = '';
@@ -1611,6 +1626,143 @@ function renderAccountSection() {
     if (lakeSourceWrap) lakeSourceWrap.style.display = 'none';
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
+  }
+}
+
+function openAdminOverlay(pushHistory = true) {
+  const overlay = document.getElementById('admin-overlay');
+  overlay.style.display = 'flex';
+  document.body.classList.add('overlay-open');
+  renderAdminDashboard();
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: currentTab, sub: 'admin' }, '', '#admin');
+  }
+}
+
+function renderAdminDashboard() {
+  if (!authData || authData.role < 2) return;
+  const container = document.getElementById('admin-dashboard-content');
+
+  // Gather pending data
+  const pendingLakes = Object.entries(lakeDB).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending, isUpdate: !!v.confirmed, lat: v.lat || v.pending.lat, lon: v.lon || v.pending.lon }));
+  const pendingBaits = Object.entries(baitRecipes).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending }));
+  const pendingFish = Object.entries(fishRegs).filter(([_, v]) => v.pending).map(([key, v]) => ({ key, ...v.pending }));
+
+  const hasLakes = pendingLakes.length > 0;
+  const hasBaits = pendingBaits.length > 0;
+  const hasFish = pendingFish.length > 0;
+  
+  container.innerHTML = `
+    <div class="section-label">Review Queue</div>
+    <div class="card" style="margin-top: 8px; padding: 12px; display: flex; gap: 8px;">
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasLakes ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-lakes').scrollIntoView({behavior:'smooth'})">
+        Lakes ${hasLakes ? `(${pendingLakes.length})` : ''}
+        ${hasLakes ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasBaits ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-baits').scrollIntoView({behavior:'smooth'})">
+        Baits ${hasBaits ? `(${pendingBaits.length})` : ''}
+        ${hasBaits ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasFish ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-fish').scrollIntoView({behavior:'smooth'})">
+        Regs ${hasFish ? `(${pendingFish.length})` : ''}
+        ${hasFish ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+    </div>
+
+    <div id="admin-sec-lakes">
+      <div class="section-label" style="margin-top: 24px;">Pending Lakes & Updates</div>
+      ${pendingLakes.length ? pendingLakes.map(l => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid ${l.isUpdate ? 'var(--blue-mid)' : 'var(--amber-dark)'};">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-weight:600; font-size:15px;">${l.name}</div>
+              <div style="font-size:11px; color:var(--text3); margin-top:2px;">${l.isUpdate ? 'Update to existing lake' : 'New lake submission'}</div>
+            </div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('lake', '${l.name.replace(/'/g,"\\'")}', this)">Approve</button>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            ${l.lat && l.lon ? `
+              <a href="https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lon}" target="_blank" class="btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                View Coordinates
+              </a>
+            ` : ''}
+            <button class="btn" style="flex:1; font-size:11px;" onclick="startLocationUpdate('${l.name.replace(/'/g,"\\'")}')">Adjust Pin</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending lake updates.</div>'}
+    </div>
+
+    <div id="admin-sec-baits">
+      <div class="section-label" style="margin-top: 24px;">Pending Bait Recipes</div>
+      ${pendingBaits.length ? pendingBaits.map(b => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--green);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="font-weight:600;">${b.name}</div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('bait', '${b.name.replace(/'/g,"\\'")}', this)">Approve</button>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
+            <b>Target:</b> ${b.species}<br>
+            <b>Ingredients:</b> ${b.ingredients.substring(0, 60)}...
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending recipes.</div>'}
+    </div>
+
+    <div id="admin-sec-fish">
+      <div class="section-label" style="margin-top: 24px;">Pending Regulations</div>
+      ${pendingFish.length ? pendingFish.map(f => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--blue-mid);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="font-weight:600;">${f.key}</div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('fish', '${f.key.replace(/'/g,"\\'")}', this)">Approve</button>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
+            <b>Rules:</b> ${f.sizeRules?.substring(0, 60)}...
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending regulations.</div>'}
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="section-label">User Management</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
+      <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Update user permissions by username.</p>
+      <div class="loc-bar" style="margin-bottom: 8px;">
+        <input type="text" id="role-target" placeholder="Enter username..." style="font-size: 14px;" />
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" style="flex:1; font-size:12px;" onclick="updateUserRole(1)">Make Admin</button>
+        <button class="btn" style="flex:1; font-size:12px;" onclick="updateUserRole(0)">Make Caster</button>
+      </div>
+      <div id="role-status" style="font-size:11px; margin-top:10px; min-height: 14px; color:var(--text2); text-align:center;"></div>
+    </div>
+
+    <div class="section-label">Security Center (API Controls)</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 40px;">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Master Cast Key</div>
+      <div style="font-size: 12px; color: var(--text3); margin-bottom: 12px;">Used for third-party integrations like Pebble.</div>
+      
+      <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px dashed var(--border2); display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <code style="font-size:16px; font-weight:700; color:var(--green);">${authData.castKey}</code>
+        <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="copyCastKey()">Copy</button>
+      </div>
+
+      <button class="btn" style="width:100%; border-color:var(--red-dark); color:var(--red-dark);" onclick="rotateCastKey()">Rotate Master Key</button>
+      <p style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.4;">Rotating your key will immediately disconnect any connected apps or watches using the old key.</p>
+    </div>
+  `;
+}
+
+function copyCastKey() {
+  navigator.clipboard.writeText(authData.castKey).then(() => showToast('Key copied to clipboard'));
+}
+
+function rotateCastKey() {
+  if (confirm('Are you sure? This will break your current Pebble or API connections.')) {
+    showToast('Rotation functionality coming soon');
   }
 }
 
