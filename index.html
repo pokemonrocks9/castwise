@@ -1307,6 +1307,7 @@ window.addEventListener('popstate', e => {
 let lakeDB = {};
 let fishRegs = {};
 let baitRecipes = {};
+let userFavorites = new Set();
 let lakeDBReady; // promise — resolves when DB is loaded (or failed)
 function loadLakeDB() {
   const fetchJSON = async (path) => {
@@ -1574,6 +1575,54 @@ const USER_ICONS = [
 // ── Identity / Account Logic ─────────────────────────────────────────────────
 let authData = JSON.parse(localStorage.getItem('castwise_auth')) || null;
 let previewIconId = null;
+
+async function fetchFavorites() {
+  if (!authData) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/get-favorites?username=${authData.username}&castKey=${authData.castKey}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    userFavorites = new Set((data.favorites || []).map(f => f.name));
+    if (currentTab === 'lakes') renderLakes();
+  } catch (e) {
+    console.error('Fetch favorites failed:', e);
+  }
+}
+
+async function toggleFavorite(lakeName) {
+  if (!authData) { openAuthModal(); return; }
+  try {
+    const res = await fetch(`${WORKER_URL}/toggle-favorite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authData.username, castKey: authData.castKey, lakeName })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (data.isFavorite) userFavorites.add(lakeName);
+      else userFavorites.delete(lakeName);
+      renderLakes();
+      showToast(data.isFavorite ? 'Saved to favorites!' : 'Removed from favorites');
+    }
+  } catch (e) {
+    showToast('Failed to update favorites');
+  }
+}
+
+let longPressTimer;
+function handleLongPressStart(lakeName) {
+  longPressTimer = setTimeout(() => {
+    toggleFavorite(lakeName);
+    if (navigator.vibrate) navigator.vibrate(40);
+    longPressTimer = null;
+  }, 600);
+}
+function handleLongPressEnd() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
 
 function renderAccountSection() {
   const headerZone = document.getElementById('header-auth-zone');
@@ -2119,6 +2168,7 @@ async function handleAuth(type) {
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
     closeAuthModal();
     renderAccountSection();
+    fetchFavorites();
     showToast(`Welcome, ${username}!`);
   } catch (err) {
     status.textContent = '⚠️ ' + err.message;
@@ -2176,7 +2226,10 @@ function handleSignOut() {
   if (confirm('Sign out? You will need your Username and PIN to sign back in.')) {
     authData = null;
     localStorage.removeItem('castwise_auth');
+    userFavorites = new Set();
+    if (lakeFilter === 'favorites') lakeFilter = 'all';
     renderAccountSection();
+    renderLakes();
   }
 }
 
@@ -3167,6 +3220,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
 
   const filtered = lakes.filter(lk => {
     if (lakeFilter === 'all') return true;
+    if (lakeFilter === 'favorites') return userFavorites.has(lk.name);
     const data = getDBEntry(lk.name);
     if (!data || !data.accessType) return false;
     return data.accessType === lakeFilter;
@@ -3244,7 +3298,14 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     const icoClass  = _noFish ? 'lake-ico lake-ico-no-fish'
                     : _isCommunity && !_confirmed ? 'lake-ico lake-ico-community'
                     : 'lake-ico';
-    const icoEmoji  = _noFish ? '🚫' : '🎣';
+
+    const isFavorite = userFavorites.has(lk.name);
+    const icoEmoji  = _noFish ? '🚫' : (isFavorite ? '⭐' : '🎣');
+    const icoEvents = (authData && !_noFish) ? `
+      onpointerdown="event.stopPropagation(); handleLongPressStart('${lk.name.replace(/'/g,"\\'")}')" 
+      onpointerup="handleLongPressEnd()" 
+      onpointerleave="handleLongPressEnd()"` : '';
+    const icoStyle = (authData && !_noFish) ? 'style="cursor:pointer; user-select:none; -webkit-user-select:none;"' : '';
 
     // Log button for users
     const logBtn = (authData && !_noFish) ? `
@@ -3274,7 +3335,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
 
     h += `<div ${itemId} class="${lakeClass}" ${onclick} ${cursor}>
       <div class="lake-header">
-        <div class="${icoClass}">${icoEmoji}</div>
+        <div class="${icoClass}" ${icoEvents} ${icoStyle} title="Hold to Favorite">${icoEmoji}</div>
         <div style="flex:1;min-width:0">
           ${badge}
           <div class="lake-name">${displayName}</div>
@@ -3318,6 +3379,7 @@ function renderLakes() {
   const lakesHTML = `
     <div class="lake-filter-bar">
       <button class="filter-btn active" data-filter="all"    onclick="setLakeFilter('all')">All</button>
+      ${authData ? `<button class="filter-btn" data-filter="favorites" onclick="setLakeFilter('favorites')">⭐ Favorites</button>` : ''}
       <button class="filter-btn"        data-filter="public" onclick="setLakeFilter('public')">🌐 Public</button>
       <button class="filter-btn"        data-filter="park"   onclick="setLakeFilter('park')">🏕️ Park</button>
       <button class="filter-btn"        data-filter="private" onclick="setLakeFilter('private')">🔒 Private</button>
@@ -4459,6 +4521,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('approve-pin')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') handleApproveConfirm();
   });
+
+  fetchFavorites();
 
   renderAccountSection();
 });
