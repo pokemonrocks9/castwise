@@ -400,9 +400,17 @@
     }
 
     /* ── Lake filter bar ── */
-    .lake-filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .lake-filter-bar { 
+      display: flex; gap: 6px; margin-bottom: 12px; 
+      overflow-x: auto; white-space: nowrap; 
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      overscroll-behavior-x: contain;
+    }
+    .lake-filter-bar::-webkit-scrollbar { display: none; }
     .filter-btn {
-      font-size: 12px; font-weight: 500; padding: 6px 14px;
+      flex-shrink: 0;
+      font-size: 12px; font-weight: 500; padding: 6px 12px;
       border-radius: 20px; border: 1px solid var(--border2);
       background: var(--bg2); color: var(--text2); cursor: pointer;
       transition: background .15s, color .15s, border-color .15s;
@@ -3374,10 +3382,10 @@ function renderLakes() {
   const lakesHTML = `
     <div class="lake-filter-bar">
       <button class="filter-btn active" data-filter="all"    onclick="setLakeFilter('all')">All</button>
-      ${authData ? `<button class="filter-btn" data-filter="favorites" onclick="setLakeFilter('favorites')">⭐ Favorites</button>` : ''}
+      ${authData ? `<button class="filter-btn" data-filter="favorites" onclick="setLakeFilter('favorites')">⭐ Favs</button>` : ''}
       <button class="filter-btn"        data-filter="public" onclick="setLakeFilter('public')">🌐 Public</button>
       <button class="filter-btn"        data-filter="park"   onclick="setLakeFilter('park')">🏕️ Park</button>
-      <button class="filter-btn"        data-filter="private" onclick="setLakeFilter('private')">🔒 Private</button>
+      <button class="filter-btn"        data-filter="private" onclick="setLakeFilter('private')">🔒 Priv</button>
     </div>
     <div id="lakes-list"></div>`;
 
