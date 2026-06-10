@@ -2412,7 +2412,7 @@ async function fetchLakes(lat, lon) {
       type: entry.type || 'lake / pond',
       dist: haversine(lat, lon, entry.lat, entry.lon)
     }))
-    .filter(p => p.dist <= 48);
+    .filter(p => p.dist <= (userFavorites.has(p.name) ? 250 : 48));
   pinned.forEach(p => seen.add(p.name));
 
   const source = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
@@ -2465,10 +2465,10 @@ async function fetchLakes(lat, lon) {
   // Merge in community submitted lakes within range
   const community = communityLakes
     .map(cl => ({ ...cl, dist: haversine(lat, lon, cl.lat, cl.lon), source: 'community' }))
-    .filter(cl => cl.dist <= 48 && !seen.has(cl.name));
+    .filter(cl => (cl.dist <= (userFavorites.has(cl.name) ? 250 : 48)) && !seen.has(cl.name));
   community.forEach(cl => seen.add(cl.name));
 
-  return [...pinned, ...nhd, ...community].sort((a, b) => a.dist - b.dist).slice(0, 12);
+  return [...pinned, ...nhd, ...community].sort((a, b) => a.dist - b.dist).slice(0, 30);
 }
 
 // ── iNaturalist fish species for a location ───────────────────────────────────
