@@ -595,7 +595,7 @@
     }
 
     /* ── Account Overlay ── */
-    #account-overlay, #admin-overlay {
+    #account-overlay, #admin-overlay, #owner-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4500; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -757,6 +757,19 @@
     <div id="admin-dashboard-content" style="padding: 24px 16px;">
       <!-- Updated by JS -->
     </div>
+  </div>
+
+  <!-- Owner Overlay -->
+  <div id="owner-overlay">
+    <div class="account-header">
+      <button class="btn" onclick="history.back()" style="padding: 0; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <div style="font-size: 18px; font-weight: 600;">Owner Controls</div>
+    </div>
+    <div id="owner-controls-content" style="padding: 24px 16px;"></div>
   </div>
 
   <!-- Edit Profile Modal -->
@@ -1123,18 +1136,6 @@
         </label>
       </div>
 
-      <!-- Lake Source Setting -->
-      <div style="width:100%; margin-top:12px; text-align:left; display:none;" id="lakeSourceSettingWrap">
-        <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
-          <span style="font-size:15px; font-weight:500; color:var(--text);">Lakes Data Source</span>
-          <select id="lakeSourceSelect" style="background:var(--bg); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:4px 8px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
-            <option value="usgs">USGS NHD (Official)</option>
-            <option value="osm">OpenStreetMap (Faster)</option>
-          </select>
-        </label>
-        <p style="font-size:12px; color:var(--text3); margin-top:8px;">USGS is the official government dataset. OSM is community-mapped and much faster to load.</p>
-      </div>
-
       <div id="admin-settings-zone"></div>
 
       <div id="settings-signout-zone" style="margin-top: 24px;"></div>
@@ -1252,7 +1253,7 @@ window.addEventListener('popstate', e => {
   const sub = e.state?.sub || null;
   
   // Manage body scroll lock for page-like overlays
-  if (['map', 'fish-detail', 'account', 'admin'].includes(sub)) document.body.classList.add('overlay-open');
+  if (['map', 'fish-detail', 'account', 'admin', 'owner'].includes(sub)) document.body.classList.add('overlay-open');
   else document.body.classList.remove('overlay-open');
 
   // Close overlays if we're navigating back from them
@@ -1283,6 +1284,14 @@ window.addEventListener('popstate', e => {
   } else {
     if (adminOverlay) adminOverlay.style.display = 'flex';
     renderAdminDashboard();
+  }
+
+  const ownerOverlay = document.getElementById('owner-overlay');
+  if (sub !== 'owner') {
+    if (ownerOverlay) ownerOverlay.style.display = 'none';
+  } else {
+    if (ownerOverlay) ownerOverlay.style.display = 'flex';
+    renderOwnerControls();
   }
 
   if (sub === 'map') openMap(false);
@@ -1570,13 +1579,11 @@ function renderAccountSection() {
   const headerZone = document.getElementById('header-auth-zone');
   const signoutZone = document.getElementById('settings-signout-zone');
   const adminZone = document.getElementById('admin-settings-zone');
-  const lakeSourceWrap = document.getElementById('lakeSourceSettingWrap');
   if (!headerZone) return;
 
   if (authData) {
     const displayIconId = authData.iconId || 0;
     
-    if (lakeSourceWrap) lakeSourceWrap.style.display = authData.role === 2 ? 'block' : 'none';
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div class="notif-wrapper">
@@ -1589,13 +1596,19 @@ function renderAccountSection() {
 
     // Administration Section for Owners
     if (adminZone) {
-      if (authData.role === 2) {
+      if (authData.role >= 1) {
         adminZone.innerHTML = `
           <hr class="settings-divider">
-          <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openAdminOverlay()">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <button class="btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;" onclick="openAdminOverlay()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Open Admin Dashboard
           </button>
+          ${authData.role === 2 ? `
+            <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Owner Controls
+            </button>
+          ` : ''}
         `;
       } else {
         adminZone.innerHTML = '';
@@ -1623,7 +1636,6 @@ function renderAccountSection() {
     headerZone.innerHTML = `
       <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
     `;
-    if (lakeSourceWrap) lakeSourceWrap.style.display = 'none';
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
   }
@@ -1640,8 +1652,69 @@ function openAdminOverlay(pushHistory = true) {
   }
 }
 
-function renderAdminDashboard() {
+function openOwnerOverlay(pushHistory = true) {
+  const overlay = document.getElementById('owner-overlay');
+  overlay.style.display = 'flex';
+  document.body.classList.add('overlay-open');
+  renderOwnerControls();
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: currentTab, sub: 'owner' }, '', '#owner');
+  }
+}
+
+function renderOwnerControls() {
   if (!authData || authData.role < 2) return;
+  const container = document.getElementById('owner-controls-content');
+  const currentSource = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
+
+  container.innerHTML = `
+    <div class="section-label">User Management</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
+      <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Update user permissions by username.</p>
+      <div class="loc-bar" style="margin-bottom: 8px;">
+        <input type="text" id="role-target" placeholder="Enter username..." style="font-size: 14px;" />
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" style="flex:1; font-size:12px;" onclick="updateUserRole(1)">Make Admin</button>
+        <button class="btn" style="flex:1; font-size:12px;" onclick="updateUserRole(0)">Make Caster</button>
+      </div>
+      <div id="role-status" style="font-size:11px; margin-top:10px; min-height: 14px; color:var(--text2); text-align:center;"></div>
+    </div>
+
+    <div class="section-label">Lakes Data Source</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
+      <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+        <span style="font-size:15px; font-weight:500; color:var(--text);">Data Provider</span>
+        <select id="lakeSourceSelect" style="background:var(--bg2); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:6px 10px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
+          <option value="usgs" ${currentSource === 'usgs' ? 'selected' : ''}>USGS NHD (Official)</option>
+          <option value="osm" ${currentSource === 'osm' ? 'selected' : ''}>OpenStreetMap (Faster)</option>
+        </select>
+      </label>
+      <p style="font-size:12px; color:var(--text3); margin-top:12px; line-height:1.4;">
+        <b>USGS</b> is the official government dataset. <b>OSM</b> is community-mapped and much faster to load.
+      </p>
+    </div>
+
+    <div class="section-label">Account Security</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 40px;">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Public Cast Key</div>
+      <div style="font-size: 12px; color: var(--text3); margin-bottom: 12px;">Used for identification in community contributions.</div>
+      <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px dashed var(--border2); display:flex; align-items:center; justify-content:space-between;">
+        <code style="font-size:16px; font-weight:700; color:var(--green);">${authData.castKey}</code>
+        <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="copyCastKey()">Copy</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('lakeSourceSelect').addEventListener('change', (e) => {
+    localStorage.setItem(LAKE_SOURCE_KEY, e.target.value);
+    showToast('Lake source updated');
+  });
+}
+
+function renderAdminDashboard() {
+  if (!authData || authData.role < 1) return;
   const container = document.getElementById('admin-dashboard-content');
 
   // Gather pending data
@@ -1723,35 +1796,6 @@ function renderAdminDashboard() {
           </div>
         </div>
       `).join('') : '<div class="empty" style="padding:16px;">No pending regulations.</div>'}
-    </div>
-
-    <div class="settings-divider"></div>
-
-    <div class="section-label">User Management</div>
-    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
-      <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Update user permissions by username.</p>
-      <div class="loc-bar" style="margin-bottom: 8px;">
-        <input type="text" id="role-target" placeholder="Enter username..." style="font-size: 14px;" />
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary" style="flex:1; font-size:12px;" onclick="updateUserRole(1)">Make Admin</button>
-        <button class="btn" style="flex:1; font-size:12px;" onclick="updateUserRole(0)">Make Caster</button>
-      </div>
-      <div id="role-status" style="font-size:11px; margin-top:10px; min-height: 14px; color:var(--text2); text-align:center;"></div>
-    </div>
-
-    <div class="section-label">Security Center (API Controls)</div>
-    <div class="card" style="margin-top: 8px; margin-bottom: 40px;">
-      <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Master Cast Key</div>
-      <div style="font-size: 12px; color: var(--text3); margin-bottom: 12px;">Used for third-party integrations like Pebble.</div>
-      
-      <div style="background:var(--bg2); padding:12px; border-radius:var(--radius); border:1px dashed var(--border2); display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-        <code style="font-size:16px; font-weight:700; color:var(--green);">${authData.castKey}</code>
-        <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="copyCastKey()">Copy</button>
-      </div>
-
-      <button class="btn" style="width:100%; border-color:var(--red-dark); color:var(--red-dark);" onclick="rotateCastKey()">Rotate Master Key</button>
-      <p style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.4;">Rotating your key will immediately disconnect any connected apps or watches using the old key.</p>
     </div>
   `;
 }
@@ -4390,16 +4434,6 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSelect.addEventListener('change', (e) => {
       localStorage.setItem('castwise_theme', e.target.value);
       document.documentElement.setAttribute('data-theme', e.target.value);
-    });
-  }
-
-  // Lake source toggle initialization
-  const lakeSourceSelect = document.getElementById('lakeSourceSelect');
-  if (lakeSourceSelect) {
-    lakeSourceSelect.value = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
-    lakeSourceSelect.addEventListener('change', (e) => {
-      localStorage.setItem(LAKE_SOURCE_KEY, e.target.value);
-      showToast('Lake source updated');
     });
   }
 
