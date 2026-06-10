@@ -2502,8 +2502,8 @@ async function loadData(lat, lon, locName, state = null) {
   setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
   const lakesTab = document.getElementById('lakes-tab-content');
   const fishTab = document.getElementById('fish-tab-content');
-  if (lakesTab) lakesTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
-  if (fishTab) fishTab.innerHTML = '<div class="loading" style="padding:20px 0"><div class="spinner"></div>Finding common fish in your area…</div>';
+  if (lakesTab) lakesTab.innerHTML = '<div class="loading"><div class="spinner"></div>Finding nearby lakes…</div>';
+  if (fishTab) fishTab.innerHTML = '<div class="loading"><div class="spinner"></div>Finding common fish in your area…</div>';
   try {
     const wx = await fetchWeather(lat, lon);
     document.querySelectorAll('.loc-in').forEach(i => i.value = locName);
@@ -3872,7 +3872,7 @@ function renderMapList() {
   if (!el) return;
 
   if (!appData || appData.lakes === null) {
-    el.innerHTML = '<div class="loading" style="padding:40px 0"><div class="spinner"></div>Finding nearby lakes…</div>';
+    el.innerHTML = '<div class="loading"><div class="spinner"></div>Finding nearby lakes…</div>';
     return;
   }
 
