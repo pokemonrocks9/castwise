@@ -767,7 +767,7 @@
           <path d="m15 18-6-6 6-6"/>
         </svg>
       </button>
-      <div style="font-size: 18px; font-weight: 600;">Owner Controls</div>
+      <div style="font-size: 18px; font-weight: 600;">Owner Dashboard</div>
     </div>
     <div id="owner-controls-content" style="padding: 24px 16px;"></div>
   </div>
@@ -1596,19 +1596,21 @@ function renderAccountSection() {
 
     // Administration Section for Owners
     if (adminZone) {
-      if (authData.role >= 1) {
+      if (authData.role === 1) {
         adminZone.innerHTML = `
           <hr class="settings-divider">
-          <button class="btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;" onclick="openAdminOverlay()">
+          <button class="btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openAdminOverlay()">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Open Admin Dashboard
           </button>
-          ${authData.role === 2 ? `
-            <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              Owner Controls
-            </button>
-          ` : ''}
+        `;
+      } else if (authData.role === 2) {
+        adminZone.innerHTML = `
+          <hr class="settings-divider">
+          <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Open Owner Dashboard
+          </button>
         `;
       } else {
         adminZone.innerHTML = '';
@@ -1663,12 +1665,100 @@ function openOwnerOverlay(pushHistory = true) {
   }
 }
 
+function getReviewQueueHTML() {
+  if (!authData || authData.role < 1) return '';
+
+  // Gather pending data
+  const pendingLakes = Object.entries(lakeDB).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending, isUpdate: !!v.confirmed, lat: v.lat || v.pending.lat, lon: v.lon || v.pending.lon }));
+  const pendingBaits = Object.entries(baitRecipes).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending }));
+  const pendingFish = Object.entries(fishRegs).filter(([_, v]) => v.pending).map(([key, v]) => ({ key, ...v.pending }));
+
+  const hasLakes = pendingLakes.length > 0;
+  const hasBaits = pendingBaits.length > 0;
+  const hasFish = pendingFish.length > 0;
+
+  return `
+    <div class="section-label">Review Queue</div>
+    <div class="card" style="margin-top: 8px; padding: 12px; display: flex; gap: 8px;">
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasLakes ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-lakes').scrollIntoView({behavior:'smooth'})">
+        Lakes ${hasLakes ? `(${pendingLakes.length})` : ''}
+        ${hasLakes ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasBaits ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-baits').scrollIntoView({behavior:'smooth'})">
+        Baits ${hasBaits ? `(${pendingBaits.length})` : ''}
+        ${hasBaits ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasFish ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-fish').scrollIntoView({behavior:'smooth'})">
+        Regs ${hasFish ? `(${pendingFish.length})` : ''}
+        ${hasFish ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
+      </button>
+    </div>
+
+    <div id="admin-sec-lakes">
+      <div class="section-label" style="margin-top: 24px;">Pending Lakes & Updates</div>
+      ${pendingLakes.length ? pendingLakes.map(l => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid ${l.isUpdate ? 'var(--blue-mid)' : 'var(--amber-dark)'};">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-weight:600; font-size:15px;">${l.name}</div>
+              <div style="font-size:11px; color:var(--text3); margin-top:2px;">${l.isUpdate ? 'Update to existing lake' : 'New lake submission'}</div>
+            </div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('lake', '${l.name.replace(/'/g,"\\\\'")}', this)">Approve</button>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            ${l.lat && l.lon ? `
+              <a href="https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lon}" target="_blank" class="btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                View Coordinates
+              </a>
+            ` : ''}
+            <button class="btn" style="flex:1; font-size:11px;" onclick="startLocationUpdate('${l.name.replace(/'/g,"\\\\'")}')">Adjust Pin</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending lake updates.</div>'}
+    </div>
+
+    <div id="admin-sec-baits">
+      <div class="section-label" style="margin-top: 24px;">Pending Bait Recipes</div>
+      ${pendingBaits.length ? pendingBaits.map(b => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--green);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="font-weight:600;">${b.name}</div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('bait', '${b.name.replace(/'/g,"\\\\'")}', this)">Approve</button>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
+            <b>Target:</b> ${b.species}<br>
+            <b>Ingredients:</b> ${b.ingredients.substring(0, 60)}...
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending recipes.</div>'}
+    </div>
+
+    <div id="admin-sec-fish">
+      <div class="section-label" style="margin-top: 24px;">Pending Regulations</div>
+      ${pendingFish.length ? pendingFish.map(f => `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--blue-mid);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="font-weight:600;">${f.key}</div>
+            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('fish', '${f.key.replace(/'/g,"\\\\'")}', this)">Approve</button>
+          </div>
+          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
+            <b>Rules:</b> ${f.sizeRules?.substring(0, 60)}...
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:16px;">No pending regulations.</div>'}
+    </div>
+  `;
+}
+
 function renderOwnerControls() {
   if (!authData || authData.role < 2) return;
   const container = document.getElementById('owner-controls-content');
   const currentSource = localStorage.getItem(LAKE_SOURCE_KEY) || 'usgs';
 
-  container.innerHTML = `
+  let html = getReviewQueueHTML();
+  html += `<hr class="settings-divider">`;
+  html += `
     <div class="section-label">User Management</div>
     <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
       <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Update user permissions by username.</p>
@@ -1706,6 +1796,7 @@ function renderOwnerControls() {
       </div>
     </div>
   `;
+  container.innerHTML = html;
 
   document.getElementById('lakeSourceSelect').addEventListener('change', (e) => {
     localStorage.setItem(LAKE_SOURCE_KEY, e.target.value);
@@ -1716,88 +1807,7 @@ function renderOwnerControls() {
 function renderAdminDashboard() {
   if (!authData || authData.role < 1) return;
   const container = document.getElementById('admin-dashboard-content');
-
-  // Gather pending data
-  const pendingLakes = Object.entries(lakeDB).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending, isUpdate: !!v.confirmed, lat: v.lat || v.pending.lat, lon: v.lon || v.pending.lon }));
-  const pendingBaits = Object.entries(baitRecipes).filter(([_, v]) => v.pending).map(([name, v]) => ({ name, ...v.pending }));
-  const pendingFish = Object.entries(fishRegs).filter(([_, v]) => v.pending).map(([key, v]) => ({ key, ...v.pending }));
-
-  const hasLakes = pendingLakes.length > 0;
-  const hasBaits = pendingBaits.length > 0;
-  const hasFish = pendingFish.length > 0;
-  
-  container.innerHTML = `
-    <div class="section-label">Review Queue</div>
-    <div class="card" style="margin-top: 8px; padding: 12px; display: flex; gap: 8px;">
-      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasLakes ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-lakes').scrollIntoView({behavior:'smooth'})">
-        Lakes ${hasLakes ? `(${pendingLakes.length})` : ''}
-        ${hasLakes ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
-      </button>
-      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasBaits ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-baits').scrollIntoView({behavior:'smooth'})">
-        Baits ${hasBaits ? `(${pendingBaits.length})` : ''}
-        ${hasBaits ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
-      </button>
-      <button class="btn" style="flex:1; position:relative; font-size:12px; border-color:${hasFish ? 'var(--green)' : 'var(--border2)'};" onclick="document.getElementById('admin-sec-fish').scrollIntoView({behavior:'smooth'})">
-        Regs ${hasFish ? `(${pendingFish.length})` : ''}
-        ${hasFish ? '<span class="notif-dot" style="display:block; top:-4px; right:-4px; border-color:var(--bg);"></span>' : ''}
-      </button>
-    </div>
-
-    <div id="admin-sec-lakes">
-      <div class="section-label" style="margin-top: 24px;">Pending Lakes & Updates</div>
-      ${pendingLakes.length ? pendingLakes.map(l => `
-        <div class="card" style="margin-top: 8px; border-left: 4px solid ${l.isUpdate ? 'var(--blue-mid)' : 'var(--amber-dark)'};">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <div style="font-weight:600; font-size:15px;">${l.name}</div>
-              <div style="font-size:11px; color:var(--text3); margin-top:2px;">${l.isUpdate ? 'Update to existing lake' : 'New lake submission'}</div>
-            </div>
-            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('lake', '${l.name.replace(/'/g,"\\'")}', this)">Approve</button>
-          </div>
-          <div style="margin-top:12px; display:flex; gap:8px;">
-            ${l.lat && l.lon ? `
-              <a href="https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lon}" target="_blank" class="btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                View Coordinates
-              </a>
-            ` : ''}
-            <button class="btn" style="flex:1; font-size:11px;" onclick="startLocationUpdate('${l.name.replace(/'/g,"\\'")}')">Adjust Pin</button>
-          </div>
-        </div>
-      `).join('') : '<div class="empty" style="padding:16px;">No pending lake updates.</div>'}
-    </div>
-
-    <div id="admin-sec-baits">
-      <div class="section-label" style="margin-top: 24px;">Pending Bait Recipes</div>
-      ${pendingBaits.length ? pendingBaits.map(b => `
-        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--green);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-weight:600;">${b.name}</div>
-            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('bait', '${b.name.replace(/'/g,"\\'")}', this)">Approve</button>
-          </div>
-          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
-            <b>Target:</b> ${b.species}<br>
-            <b>Ingredients:</b> ${b.ingredients.substring(0, 60)}...
-          </div>
-        </div>
-      `).join('') : '<div class="empty" style="padding:16px;">No pending recipes.</div>'}
-    </div>
-
-    <div id="admin-sec-fish">
-      <div class="section-label" style="margin-top: 24px;">Pending Regulations</div>
-      ${pendingFish.length ? pendingFish.map(f => `
-        <div class="card" style="margin-top: 8px; border-left: 4px solid var(--blue-mid);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-weight:600;">${f.key}</div>
-            <button class="btn btn-primary" style="padding:4px 12px; font-size:12px;" onclick="approveContent('fish', '${f.key.replace(/'/g,"\\'")}', this)">Approve</button>
-          </div>
-          <div style="font-size:12px; color:var(--text2); line-height:1.4;">
-            <b>Rules:</b> ${f.sizeRules?.substring(0, 60)}...
-          </div>
-        </div>
-      `).join('') : '<div class="empty" style="padding:16px;">No pending regulations.</div>'}
-    </div>
-  `;
+  if (container) container.innerHTML = getReviewQueueHTML();
 }
 
 function copyCastKey() {
@@ -2018,14 +2028,15 @@ function jumpToAccount() {
 let pendingApproval = null;
 
 function closeApproveModal() {
-  document.getElementById('approve-modal').style.display = 'none';
+  const modal = document.getElementById('approve-modal');
+  if (modal) modal.style.display = 'none';
   document.getElementById('approve-pin').value = '';
   document.getElementById('approve-status').textContent = '';
   pendingApproval = null;
 }
 
 async function approveContent(type, id, btn) {
-  if (!authData || authData.role < 2) return;
+  if (!authData || authData.role < 1) return;
   
   pendingApproval = { type, id, btn };
   
@@ -3186,11 +3197,11 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
       ? '<span class="tag tag-paid">💰 Paid</span>'
       : '';
     const _rec = getDBRecord(lk.name);
-    const activeCount = _rec?.activeCount || 0;
-    const activeUsers = _rec?.activeUsers || [];
+    const activeCount = _rec?.activeCount ?? 0;
+    const activeUsers = _rec?.activeUsers ?? [];
     const friendsHereCount = activeUsers.filter(u => friendsList.some(f => f.username === u)).length;
     const isUserHere = authData && authData.activeLake === lk.name;
-    const isOwner = authData && authData.role === 2;
+    const canApproveDirectly = authData && authData.role >= 1;
 
     const personSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
     
@@ -3255,7 +3266,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
           <p style="font-size:11px; color:var(--text2); margin-bottom:6px;">Is the map pin wrong? You can update it.</p>
           <div style="display:flex; gap:8px;">
             <button class="btn" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="event.stopPropagation(); startLocationUpdate('${lk.name.replace(/'/g,"\\'")}')">Update Map Location</button>
-            ${isOwner ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="event.stopPropagation(); approveContent('community-lake', '${lk.name.replace(/'/g,"\\'")}', this)">Approve Lake</button>` : ''}
+            ${canApproveDirectly ? `<button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;" onclick="event.stopPropagation(); approveContent('community-lake', '${lk.name.replace(/'/g,"\\\\'")}', this)">Approve Lake</button>` : ''}
           </div>
         </div>
       `
