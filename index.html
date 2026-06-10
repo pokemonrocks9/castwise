@@ -4388,6 +4388,14 @@ function getAndLoadLocation() {
   btns.forEach(b => { b.textContent = '⏳'; b.disabled = true; });
   inputs.forEach(i => { i.value = 'Getting your location…'; i.disabled = true; });
 
+  // Show loading state across tabs while waiting for GPS hardware
+  const gpsLoadingHTML = '<div class="loading"><div class="spinner"></div>Getting GPS location…</div>';
+  setContent(gpsLoadingHTML);
+  const lakesTab = document.getElementById('lakes-tab-content');
+  const fishTab = document.getElementById('fish-tab-content');
+  if (lakesTab) lakesTab.innerHTML = gpsLoadingHTML;
+  if (fishTab) fishTab.innerHTML = gpsLoadingHTML;
+
   let isDone = false;
 
   const finish = () => {
