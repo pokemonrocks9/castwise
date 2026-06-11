@@ -761,10 +761,28 @@
           <path d="m15 18-6-6 6-6"/>
         </svg>
       </button>
-      <div style="font-size: 18px; font-weight: 600;">Messages</div>
+      <div style="font-size: 18px; font-weight: 600; flex: 1;">Messages</div>
+      <button class="btn" onclick="openNewMessageModal()" style="padding: 0; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;" aria-label="New Message">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
     </div>
     <div style="padding: 24px 16px;">
       <div class="empty">Coming soon</div>
+    </div>
+  </div>
+
+  <!-- New Message Modal (Select Friend) -->
+  <div id="new-message-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 5200; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeNewMessageModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeNewMessageModal()">✕</button>
+      <div class="card-title">New Message</div>
+      <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Select a friend</div>
+      <div id="new-message-friends-list" class="friends-list">
+        <!-- Filled by JS -->
+      </div>
     </div>
   </div>
 
@@ -1901,6 +1919,34 @@ function openMessagesOverlay(pushHistory = true) {
     appNavigated = true;
     history.pushState({ tab: currentTab, sub: 'messages' }, '', '#messages');
   }
+}
+
+function openNewMessageModal() {
+  const modal = document.getElementById('new-message-modal');
+  const list = document.getElementById('new-message-friends-list');
+  
+  if (!friendsList || friendsList.length === 0) {
+    list.innerHTML = '<div class="empty">No friends to message.</div>';
+  } else {
+    list.innerHTML = friendsList.map(f => `
+      <div class="friend-item" style="cursor:pointer;" onclick="startChat('${f.username}')">
+        <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
+        <div class="friend-info">
+          <div class="friend-name">${f.username}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+function closeNewMessageModal() {
+  document.getElementById('new-message-modal').style.display = 'none';
+}
+
+function startChat(username) {
+  showToast(`Chat with ${username} coming soon!`);
+  closeNewMessageModal();
 }
 
 function openAdminOverlay(pushHistory = true) {
