@@ -2291,6 +2291,7 @@ async function confirmDeleteAccount() {
     userFavorites = new Set();
     if (lakeFilter === 'favorites') lakeFilter = 'all';
     closeDeleteAccountModal();
+    closeEditModal();
     renderAccountSection();
     renderLakes();
     if (document.getElementById('account-overlay').style.display === 'flex') history.back();
