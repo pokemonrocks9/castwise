@@ -1352,12 +1352,19 @@ if (_hash.startsWith('tackle-')) {
   _initSub = _hash.replace('tackle-', '');
 } else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
   _initTab = _hash;
+} else if (_hash === 'requests') {
+  _initTab = 'settings';
+  _initSub = 'requests';
 }
 
 switchTab(_initTab, false);
 if (_initTab === 'tackle' && _initSub) {
   showTackleSection(_initSub, false);
   history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
+} else if (_hash === 'requests') {
+  // Handle deep link to friend requests
+  jumpToAccount();
+  switchFriendsTab('requests');
 } else {
   history.replaceState({ tab: _initTab }, '', '#' + _initTab);
 }
