@@ -833,6 +833,10 @@
         <!-- Filled by JS -->
       </div>
       <button id="apply-icon-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="saveProfileChanges()" disabled>Apply Change</button>
+
+      <div style="margin-top: 48px; border-top: 1px solid var(--border); padding-top: 16px; text-align: center;">
+        <button class="btn" style="color:var(--red-dark); border-color:var(--red-dark); font-size: 11px; padding: 6px 12px; background: none; opacity: 0.6;" onclick="handleDeleteAccount()">Delete Account</button>
+      </div>
     </div>
   </div>
 
@@ -2309,44 +2313,6 @@ function checkProfileChanges() {
   const usernameChanged = userIn.value.trim() !== authData.username && userIn.value.trim() !== "";
   const iconChanged = previewIconId !== authData.iconId;
   btn.disabled = !(usernameChanged || iconChanged);
-}
-
-function setPreviewIcon(id) {
-  previewIconId = id;
-  const choices = document.querySelectorAll('.icon-choice');
-  choices.forEach((c, i) => c.classList.toggle('active', i === id));
-  checkProfileChanges();
-}
-
-async function handleDeleteAccount() {
-  if (!confirm("Are you sure you want to PERMANENTLY delete your account? This will remove all your data, messages, and friends. This action cannot be undone.")) return;
-  
-  const pin = prompt("Please enter your PIN to confirm account deletion:");
-  if (!pin) return;
-
-  try {
-    const res = await fetch(`${WORKER_URL}/delete-account`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: authData.username, pin })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Deletion failed');
-
-    showToast('Account successfully deleted.');
-    
-    // Cleanup local state
-    authData = null;
-    localStorage.removeItem('castwise_auth');
-    userFavorites = new Set();
-    if (lakeFilter === 'favorites') lakeFilter = 'all';
-    renderAccountSection();
-    renderLakes();
-    
-    history.back(); // Close the overlay
-  } catch (e) {
-    alert(e.message);
-  }
 }
 
 /**
