@@ -1311,12 +1311,27 @@ window.addEventListener('popstate', e => {
   if (sub === 'map') openMap(false);
 
   switchTab(tab, false);
-  
+
+  // Handle deep links when no state is present (e.g. from Service Worker)
+  if (!e.state && location.hash === '#requests') {
+    jumpToAccount(false);
+    switchFriendsTab('requests');
+  }
+
   if (tab === 'tackle') {
     if (sub && !['map', 'photo'].includes(sub)) showTackleSection(sub, false);
     else showTackleMenu(false);
   }
 });
+
+// Listen for hash changes directly for Service Worker navigation
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#requests') {
+    jumpToAccount(false);
+    switchFriendsTab('requests');
+  }
+});
+
 // ── Lake database cache (loaded from worker on startup) ───────────────────────
 let lakeDB = {};
 let fishRegs = {};
@@ -1343,31 +1358,33 @@ function loadLakeDB() {
 loadLakeDB();
 
 // ── Hash Routing logic (Initialize after function definitions) ───────────────
-const _hash = location.hash.replace('#', '');
-let _initTab = 'solunar';
-let _initSub = null;
+function handleInitialRouting() {
+  const _hash = location.hash.replace('#', '');
+  let _initTab = 'solunar';
+  let _initSub = null;
 
-if (_hash.startsWith('tackle-')) {
-  _initTab = 'tackle';
-  _initSub = _hash.replace('tackle-', '');
-} else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
-  _initTab = _hash;
-} else if (_hash === 'requests') {
-  _initTab = 'settings';
-  _initSub = 'requests';
-}
+  if (_hash.startsWith('tackle-')) {
+    _initTab = 'tackle';
+    _initSub = _hash.replace('tackle-', '');
+  } else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
+    _initTab = _hash;
+  } else if (_hash === 'requests') {
+    _initTab = 'settings';
+    _initSub = 'requests';
+  }
 
-switchTab(_initTab, false);
-if (_initTab === 'tackle' && _initSub) {
-  showTackleSection(_initSub, false);
-  history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
-} else if (_hash === 'requests') {
-  // Handle deep link to friend requests
-  jumpToAccount();
-  switchFriendsTab('requests');
-} else {
-  history.replaceState({ tab: _initTab }, '', '#' + _initTab);
+  switchTab(_initTab, false);
+  if (_initTab === 'tackle' && _initSub) {
+    showTackleSection(_initSub, false);
+    history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
+  } else if (_hash === 'requests') {
+    jumpToAccount(false);
+    switchFriendsTab('requests');
+  } else {
+    history.replaceState({ tab: _initTab }, '', '#' + _initTab);
+  }
 }
+handleInitialRouting();
 
 // ── Fish database ──────────────────────────────────────────────────────────────
 const FISH = [
@@ -2224,14 +2241,16 @@ function showToast(msg) {
   toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function jumpToAccount() {
+function jumpToAccount(pushHistory = true) {
   if (authData) {
     const overlay = document.getElementById('account-overlay');
     overlay.style.display = 'flex';
     document.body.classList.add('overlay-open');
     renderAccountOverlay();
-    appNavigated = true;
-    history.pushState({ tab: currentTab, sub: 'account' }, '', '#account');
+    if (pushHistory) {
+      appNavigated = true;
+      history.pushState({ tab: currentTab, sub: 'account' }, '', '#account');
+    }
   } else {
     openAuthModal();
   }
