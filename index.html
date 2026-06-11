@@ -2271,13 +2271,14 @@ async function approveContent(type, id, btn) {
   pendingApproval = { type, id, btn };
   
   document.getElementById('approve-modal-desc').textContent = `Enter your PIN to approve this ${type} update for "${id}".`;
+  document.getElementById('approve-confirm-btn').textContent = 'Confirm Approval';
   document.getElementById('approve-modal').style.display = 'flex';
   document.getElementById('approve-pin').focus();
 }
 
 async function handleApproveConfirm() {
   if (!pendingApproval) return;
-  const { type, id, btn } = pendingApproval;
+  const { type, id, btn, newRole } = pendingApproval;
   const pin = document.getElementById('approve-pin').value;
   const status = document.getElementById('approve-status');
   const confirmBtn = document.getElementById('approve-confirm-btn');
@@ -2288,15 +2289,37 @@ async function handleApproveConfirm() {
   confirmBtn.textContent = 'Verifying...';
   
   try {
-    const res = await fetch(`${WORKER_URL}/approve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, id, username: authData.username, pin: pin })
-    });
+    let res;
+    if (type === 'role') {
+      res = await fetch(`${WORKER_URL}/set-role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          targetUsername: id, 
+          newRole, 
+          adminUsername: authData.username, 
+          pin 
+        })
+      });
+    } else {
+      res = await fetch(`${WORKER_URL}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, id, username: authData.username, pin: pin })
+      });
+    }
+
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Approval failed');
+    if (!res.ok) throw new Error(data.error || 'Action failed');
     
-    showToast('Approved successfully!');
+    if (type === 'role') {
+      const roleStatus = document.getElementById('role-status');
+      if (roleStatus) roleStatus.textContent = `✅ ${id} is now a ${newRole === 1 ? 'Admin' : 'Caster'}`;
+      showToast('Role updated successfully');
+    } else {
+      showToast('Approved successfully!');
+    }
+
     closeApproveModal();
 
     // If triggered from a specific button, update its state
@@ -2304,19 +2327,19 @@ async function handleApproveConfirm() {
       btn.disabled = true;
       btn.textContent = 'Approved';
     }
-
-          closeApproveModal();
  
+    if (type !== 'role') {
       loadLakeDB().then(() => {
-      if (type === 'lake' || type === 'community-lake') renderLakes();
-        else if (type === 'fish') renderFishRegs(id.split(':')[0]);
-        else if (type === 'bait') renderBaitRecipes();
-      });
+        if (type === 'lake' || type === 'community-lake') renderLakes();
+          else if (type === 'fish') renderFishRegs(id.split(':')[0]);
+          else if (type === 'bait') renderBaitRecipes();
+        });
+    }
 
   } catch (e) {
     status.textContent = '⚠️ ' + e.message;
     confirmBtn.disabled = false;
-    confirmBtn.textContent = 'Confirm Approval';
+    confirmBtn.textContent = type === 'role' ? 'Confirm Role Change' : 'Confirm Approval';
   }
 }
 
@@ -2359,28 +2382,14 @@ async function handleAuth(type) {
 
 async function updateUserRole(newRole) {
   const target = document.getElementById('role-target').value.trim();
-  const status = document.getElementById('role-status');
-  if (!target) return;
+  if (!target) { showToast('Username required'); return; }
 
-  const pin = prompt(`Enter your PIN to confirm changing ${target}'s role:`);
-  if (!pin) return;
-
-  status.textContent = 'Updating...';
-  try {
-    const res = await fetch(`${WORKER_URL}/set-role`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        targetUsername: target, 
-        newRole, 
-        adminUsername: authData.username, 
-        pin 
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    status.textContent = `✅ ${target} is now a ${newRole === 1 ? 'Admin' : 'Caster'}`;
-  } catch (e) { status.textContent = '❌ ' + e.message; }
+  pendingApproval = { type: 'role', id: target, newRole };
+  
+  document.getElementById('approve-modal-desc').textContent = `Enter your PIN to confirm changing ${target}'s role to ${newRole === 1 ? 'Admin' : 'Caster'}.`;
+  document.getElementById('approve-confirm-btn').textContent = 'Confirm Role Change';
+  document.getElementById('approve-modal').style.display = 'flex';
+  document.getElementById('approve-pin').focus();
 }
 
 async function applyUserIcon() {
