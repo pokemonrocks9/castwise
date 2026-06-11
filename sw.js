@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.133.0';
+const VERSION = 'v0.133.1';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -68,6 +68,8 @@ self.addEventListener('push', e => {
     body: data.body,
     icon: data.icon || 'icons/icon-192.png',
     badge: data.badge || 'icons/badge-96.png', // New transparent monochrome icon
+    tag: data.type || 'castwise-notif',
+    renotify: true,
     data: data
   };
 
@@ -77,18 +79,19 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const data = e.notification.data || {};
-  let url = './';
+  const scope = self.registration.scope;
+  let url = scope;
 
   // Deep link based on the notification type
   if (data.type === 'friend_request') {
-    url = './#requests';
+    url = new URL('#requests', scope).href;
   }
 
   e.waitUntil(
     clients.matchAll({ type: 'window' }).then(windowClients => {
       // If the app is already open, navigate it to the deep link and focus
       for (const client of windowClients) {
-        if (client.url.includes(self.registration.scope) && 'focus' in client) {
+        if (client.url.startsWith(scope) && 'focus' in client) {
           return client.navigate(url).then(c => c.focus());
         }
       }
