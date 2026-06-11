@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.132.8';
+const VERSION = 'v0.132.9';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -67,7 +67,7 @@ self.addEventListener('push', e => {
   const options = {
     body: data.body,
     icon: data.icon || 'icons/icon-192.png',
-    badge: data.badge || 'icons/badge-96.png', // New transparent monochrome icon
+    badge: data.badge || 'icons/badgecw-96.png', // New transparent monochrome icon
     data: data
   };
 
