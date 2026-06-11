@@ -578,12 +578,14 @@
 
     /* ── Toast ── */
     #toast {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
       background: var(--green); color: #fff; padding: 12px 24px; border-radius: 30px;
-      font-size: 14px; font-weight: 600; z-index: 9999; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-size: 14px; font-weight: 600; z-index: 9999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none;
+      opacity: 0; visibility: hidden;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, visibility 0.3s;
     }
-    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 
     /* ── Settings Layout ── */
     .settings-divider {
@@ -1476,8 +1478,8 @@ function urlBase64ToUint8Array(base64String) {
  * Subscribes or unsubscribes the user from browser push notifications.
  */
 async function updatePushSubscription(enabled) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (!authData || !authData.vapidPublicKey) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  if (!authData || !authData.vapidPublicKey) return false;
 
   const registration = await navigator.serviceWorker.ready;
 
@@ -1487,21 +1489,23 @@ async function updatePushSubscription(enabled) {
       applicationServerKey: urlBase64ToUint8Array(authData.vapidPublicKey)
     });
 
-    // Send subscription to the Worker
-    await fetch(`${WORKER_URL}/save-subscription`, {
+    // Send subscription to the Worker. We MUST use .toJSON() or it sends an empty object.
+    const res = await fetch(`${WORKER_URL}/save-subscription`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: authData.username,
         castKey: authData.castKey,
-        subscription: subscription
+        subscription: subscription.toJSON()
       })
     });
+    return res.ok;
   } else {
     const subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
     }
+    return true;
   }
 }
 
@@ -1532,7 +1536,10 @@ async function handleNotificationToggle(e) {
     if (!res.ok) throw new Error('Failed to update preference');
 
     // Subscribe/Unsubscribe browser
-    await updatePushSubscription(enabled);
+    const subSuccess = await updatePushSubscription(enabled);
+    if (enabled && !subSuccess) {
+      throw new Error('Could not create browser subscription. Try signing out and back in.');
+    }
 
     authData.notificationsEnabled = enabled;
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
@@ -1765,10 +1772,12 @@ function renderAccountSection() {
   if (authData) {
     const displayIconId = authData.iconId || 0;
     
-    // Update Notification Toggle
+    // Update Notification Toggle - Only show if installed as PWA (Android/iOS standalone)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     if (notifWrap && notifToggle) {
       notifWrap.style.display = 'block';
-      notifToggle.checked = !!authData.notificationsEnabled;
+      notifWrap.style.display = isStandalone ? 'block' : 'none';
+      if (isStandalone) notifToggle.checked = !!authData.notificationsEnabled;
     }
 
     // 1. Update Header Zone
@@ -2199,11 +2208,13 @@ async function handleAddFriend() {
   } catch (e) { status.textContent = '❌ ' + e.message; }
 }
 
+let toastTimeout;
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 function jumpToAccount() {
