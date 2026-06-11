@@ -823,11 +823,16 @@
     <div class="auth-modal-content">
       <button class="modal-close" onclick="closeEditModal()">✕</button>
       <div class="card-title">Edit Profile</div>
-      <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Choose your icon</div>
+      
+      <label class="db-label">Username 
+        <input type="text" id="edit-username-in" placeholder="Choose a handle" autocomplete="username" />
+      </label>
+
+      <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px; margin-top: 16px;">Choose your icon</div>
       <div id="icon-picker-grid" class="icon-grid">
         <!-- Filled by JS -->
       </div>
-      <button id="apply-icon-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="applyUserIcon()" disabled>Apply Change</button>
+      <button id="apply-icon-btn" class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="saveProfileChanges()" disabled>Apply Change</button>
     </div>
   </div>
 
@@ -2184,8 +2189,14 @@ function renderAccountOverlay() {
 function openEditModal() {
   const modal = document.getElementById('edit-profile-modal');
   const grid = document.getElementById('icon-picker-grid');
+  const userIn = document.getElementById('edit-username-in');
   const currentIconId = authData.iconId || 0;
   previewIconId = currentIconId;
+
+  if (userIn) {
+    userIn.value = authData.username;
+    userIn.oninput = checkProfileChanges;
+  }
 
   grid.innerHTML = USER_ICONS.map((svg, i) => `
     <div class="icon-choice ${i === currentIconId ? 'active' : ''}" onclick="setPreviewIcon(${i})">
@@ -2194,6 +2205,7 @@ function openEditModal() {
   `).join('');
 
   modal.style.display = 'flex';
+  checkProfileChanges();
 }
 
 function closeEditModal() {
@@ -2201,11 +2213,76 @@ function closeEditModal() {
   previewIconId = null;
 }
 
+/**
+ * Enables/disables the save button based on whether anything actually changed.
+ */
+function checkProfileChanges() {
+  const userIn = document.getElementById('edit-username-in');
+  const btn = document.getElementById('apply-icon-btn');
+  const usernameChanged = userIn.value.trim() !== authData.username && userIn.value.trim() !== "";
+  const iconChanged = previewIconId !== authData.iconId;
+  btn.disabled = !(usernameChanged || iconChanged);
+}
+
 function setPreviewIcon(id) {
   previewIconId = id;
   const choices = document.querySelectorAll('.icon-choice');
   choices.forEach((c, i) => c.classList.toggle('active', i === id));
-  document.getElementById('apply-icon-btn').disabled = (id === authData.iconId);
+  checkProfileChanges();
+}
+
+/**
+ * Handles saving both username and icon changes.
+ */
+async function saveProfileChanges() {
+  const newUsername = document.getElementById('edit-username-in').value.trim();
+  const btn = document.getElementById('apply-icon-btn');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Saving...';
+
+  try {
+    // 1. Update Username if changed
+    if (newUsername !== authData.username) {
+      const res = await fetch(`${WORKER_URL}/update-username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: authData.username, 
+          castKey: authData.castKey,
+          newUsername 
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Username update failed');
+      authData.username = data.username;
+    }
+
+    // 2. Update Icon if changed
+    if (previewIconId !== authData.iconId) {
+      const res = await fetch(`${WORKER_URL}/set-icon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: authData.username, // Use potentially new username
+          castKey: authData.castKey,
+          iconId: previewIconId
+        })
+      });
+      if (!res.ok) throw new Error('Icon update failed');
+      authData.iconId = previewIconId;
+    }
+
+    localStorage.setItem('castwise_auth', JSON.stringify(authData));
+    closeEditModal();
+    renderAccountSection();
+    showToast('Profile Updated!');
+  } catch (e) {
+    showToast(e.message);
+    checkProfileChanges();
+  } finally {
+    btn.textContent = originalText;
+  }
 }
 
 let currentFriendsView = 'friends';
