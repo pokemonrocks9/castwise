@@ -858,6 +858,27 @@
     </div>
   </div>
 
+  <!-- Delete Account Modal -->
+  <div id="delete-account-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 6500; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeDeleteAccountModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeDeleteAccountModal()">✕</button>
+      <div class="card-title" style="color:var(--red-dark)">Delete Account</div>
+      <div style="font-size:13px; color:var(--text3); margin-bottom:18px; line-height: 1.4;">
+        This will <b>PERMANENTLY</b> delete your account and all associated data. This action is unrecoverable.
+        <ul style="margin-top: 8px; margin-left: 16px;">
+          <li>All messages (sent & received)</li>
+          <li>Favorite lakes</li>
+          <li>Tackle box items</li>
+          <li>Fishing logs</li>
+        </ul>
+      </div>
+      <label class="db-label">Confirm Username <input type="text" id="delete-username" placeholder="Enter your username" autocomplete="off" /></label>
+      <label class="db-label">Confirm PIN <input type="password" id="delete-pin" placeholder="Enter your PIN" inputmode="numeric" pattern="[0-9]*" autocomplete="off" /></label>
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:var(--red-dark); border-color:var(--red-dark);" onclick="confirmDeleteAccount()">Delete My Data Forever</button>
+      <div id="delete-status" style="font-size:11px; margin-top:12px; min-height:14px; color:var(--red-dark); text-align:center;"></div>
+    </div>
+  </div>
+
   <!-- Auth Modal -->
   <div id="auth-modal" onclick="if(event.target === this) closeAuthModal()">
     <div class="auth-modal-content">
@@ -2180,6 +2201,10 @@ function renderAccountOverlay() {
         Cast Key: <code style="color: var(--green); font-weight: 600;">${authData.castKey}</code>
       </div>
       <button class="btn" style="padding: 6px 16px; font-size: 13px;" onclick="openEditModal()">Edit Profile</button>
+      
+      <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <button class="btn" style="color:var(--red-dark); border-color:var(--red-dark); font-size: 11px; padding: 6px 12px; background: none; opacity: 0.7;" onclick="handleDeleteAccount()">Delete Account</button>
+      </div>
     </div>
   `;
   
@@ -2214,6 +2239,68 @@ function closeEditModal() {
 }
 
 /**
+ * Starts the account deletion process with an initial confirmation.
+ */
+function handleDeleteAccount() {
+  if (!confirm("Are you sure you want to delete your account? This will permanently wipe all your data including messages, favorites, and tackle.")) return;
+  document.getElementById('delete-account-modal').style.display = 'flex';
+  document.getElementById('delete-username').value = '';
+  document.getElementById('delete-pin').value = '';
+  document.getElementById('delete-status').textContent = '';
+}
+
+function closeDeleteAccountModal() {
+  document.getElementById('delete-account-modal').style.display = 'none';
+}
+
+/**
+ * Verifies credentials and performs the final deletion.
+ */
+async function confirmDeleteAccount() {
+  const username = document.getElementById('delete-username').value.trim();
+  const pin = document.getElementById('delete-pin').value;
+  const status = document.getElementById('delete-status');
+
+  if (!username || !pin) {
+    status.textContent = '⚠️ Username and PIN required';
+    return;
+  }
+
+  if (username !== authData.username) {
+    status.textContent = '⚠️ Username does not match';
+    return;
+  }
+
+  if (!confirm("LAST WARNING: Are you REALLY sure? All data is unrecoverable.")) return;
+
+  status.style.color = 'var(--text2)';
+  status.textContent = 'Deleting account...';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/delete-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, pin })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Deletion failed');
+
+    showToast('Account successfully deleted.');
+    authData = null;
+    localStorage.removeItem('castwise_auth');
+    userFavorites = new Set();
+    if (lakeFilter === 'favorites') lakeFilter = 'all';
+    closeDeleteAccountModal();
+    renderAccountSection();
+    renderLakes();
+    if (document.getElementById('account-overlay').style.display === 'flex') history.back();
+  } catch (e) {
+    status.style.color = 'var(--red-dark)';
+    status.textContent = '❌ ' + e.message;
+  }
+}
+
+/**
  * Enables/disables the save button based on whether anything actually changed.
  */
 function checkProfileChanges() {
@@ -2229,6 +2316,37 @@ function setPreviewIcon(id) {
   const choices = document.querySelectorAll('.icon-choice');
   choices.forEach((c, i) => c.classList.toggle('active', i === id));
   checkProfileChanges();
+}
+
+async function handleDeleteAccount() {
+  if (!confirm("Are you sure you want to PERMANENTLY delete your account? This will remove all your data, messages, and friends. This action cannot be undone.")) return;
+  
+  const pin = prompt("Please enter your PIN to confirm account deletion:");
+  if (!pin) return;
+
+  try {
+    const res = await fetch(`${WORKER_URL}/delete-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authData.username, pin })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Deletion failed');
+
+    showToast('Account successfully deleted.');
+    
+    // Cleanup local state
+    authData = null;
+    localStorage.removeItem('castwise_auth');
+    userFavorites = new Set();
+    if (lakeFilter === 'favorites') lakeFilter = 'all';
+    renderAccountSection();
+    renderLakes();
+    
+    history.back(); // Close the overlay
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 /**
