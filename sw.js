@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.132.9';
+const VERSION = 'v0.133.0';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -67,7 +67,7 @@ self.addEventListener('push', e => {
   const options = {
     body: data.body,
     icon: data.icon || 'icons/icon-192.png',
-    badge: data.badge || 'icons/badgecw-96.png', // New transparent monochrome icon
+    badge: data.badge || 'icons/badge-96.png', // New transparent monochrome icon
     data: data
   };
 
@@ -76,7 +76,26 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.openWindow(self.registration.scope));
+  const data = e.notification.data || {};
+  let url = './';
+
+  // Deep link based on the notification type
+  if (data.type === 'friend_request') {
+    url = './#requests';
+  }
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window' }).then(windowClients => {
+      // If the app is already open, navigate it to the deep link and focus
+      for (const client of windowClients) {
+        if (client.url.includes(self.registration.scope) && 'focus' in client) {
+          return client.navigate(url).then(c => c.focus());
+        }
+      }
+      // Otherwise open a new window
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
 });
 
 // Allow the page to trigger activation of a waiting SW
