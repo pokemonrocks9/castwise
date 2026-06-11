@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.133.2';
+const VERSION = 'v0.133.3';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -55,7 +55,7 @@ self.addEventListener('fetch', e => {
 });
 
 self.addEventListener('push', e => {
-  let data = { title: 'CastWise', body: 'New update available.' };
+  let data = { title: 'CastWise', body: 'New notification available.' };
   if (e.data) {
     try {
       data = e.data.json();
@@ -67,7 +67,7 @@ self.addEventListener('push', e => {
   const options = {
     body: data.body,
     icon: data.icon || 'icons/icon-192.png',
-    badge: data.badge || 'icons/badge-96.png', // New transparent monochrome icon
+    badge: data.badge || 'icons/badgecw-96.png', // New transparent monochrome icon
     data: data
   };
 
@@ -77,11 +77,11 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const data = e.notification.data || {};
-  let url = './';
+  let url = new URL('/', self.location.origin).href;
 
   // Deep link based on the notification type
   if (data.type === 'friend_request') {
-    url = './#requests';
+    url = new URL('#requests', self.location.origin).href;
   }
 
   e.waitUntil(
