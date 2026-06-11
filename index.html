@@ -605,7 +605,7 @@
     }
 
     /* ── Account Overlay ── */
-    #account-overlay, #admin-overlay, #owner-overlay {
+    #account-overlay, #admin-overlay, #owner-overlay, #messages-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4500; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
@@ -750,6 +750,21 @@
 
       <div id="friends-view" class="friends-list"></div>
       <div id="requests-view" class="friends-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Messages Overlay -->
+  <div id="messages-overlay">
+    <div class="account-header">
+      <button class="btn" onclick="history.back()" style="padding: 0; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <div style="font-size: 18px; font-weight: 600;">Messages</div>
+    </div>
+    <div style="padding: 24px 16px;">
+      <div class="empty">Coming soon</div>
     </div>
   </div>
 
@@ -1267,7 +1282,7 @@ window.addEventListener('popstate', e => {
   const sub = e.state?.sub || null;
   
   // Manage body scroll lock for page-like overlays
-  if (['map', 'fish-detail', 'account', 'admin', 'owner'].includes(sub)) document.body.classList.add('overlay-open');
+  if (['map', 'fish-detail', 'account', 'admin', 'owner', 'messages'].includes(sub)) document.body.classList.add('overlay-open');
   else document.body.classList.remove('overlay-open');
 
   // Close overlays if we're navigating back from them
@@ -1298,6 +1313,13 @@ window.addEventListener('popstate', e => {
   } else {
     if (adminOverlay) adminOverlay.style.display = 'flex';
     renderAdminDashboard();
+  }
+
+  const messagesOverlay = document.getElementById('messages-overlay');
+  if (sub !== 'messages') {
+    if (messagesOverlay) messagesOverlay.style.display = 'none';
+  } else {
+    if (messagesOverlay) messagesOverlay.style.display = 'flex';
   }
 
   const ownerOverlay = document.getElementById('owner-overlay');
@@ -1805,10 +1827,17 @@ function renderAccountSection() {
 
     // 1. Update Header Zone
     headerZone.innerHTML = `
-      <div class="notif-wrapper">
-        <div id="header-notif-dot" class="notif-dot"></div>
-        <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
-          ${USER_ICONS[displayIconId]}
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
+          </svg>
+        </div>
+        <div class="notif-wrapper">
+          <div id="header-notif-dot" class="notif-dot"></div>
+          <div class="header-auth-pill signed-in" onclick="jumpToAccount()" title="${authData.username}">
+            ${USER_ICONS[displayIconId]}
+          </div>
         </div>
       </div>
     `;
@@ -1860,6 +1889,17 @@ function renderAccountSection() {
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
     if (notifWrap) notifWrap.style.display = 'none';
+  }
+}
+
+function openMessagesOverlay(pushHistory = true) {
+  if (!authData) { openAuthModal(); return; }
+  const overlay = document.getElementById('messages-overlay');
+  overlay.style.display = 'flex';
+  document.body.classList.add('overlay-open');
+  if (pushHistory) {
+    appNavigated = true;
+    history.pushState({ tab: currentTab, sub: 'messages' }, '', '#messages');
   }
 }
 
