@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.133.3';
+const VERSION = 'v0.133.4';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -77,11 +77,11 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const data = e.notification.data || {};
-  let url = new URL('/', self.location.origin).href;
+  let url = self.registration.scope;
 
   // Deep link based on the notification type
   if (data.type === 'friend_request') {
-    url = new URL('#requests', self.location.origin).href;
+    url = new URL('#requests', self.registration.scope).href;
   }
 
   e.waitUntil(
