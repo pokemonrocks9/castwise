@@ -1384,7 +1384,6 @@ function handleInitialRouting() {
     history.replaceState({ tab: _initTab }, '', '#' + _initTab);
   }
 }
-handleInitialRouting();
 
 // ── Fish database ──────────────────────────────────────────────────────────────
 const FISH = [
@@ -4722,6 +4721,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchFavorites();
 
   renderAccountSection();
+  handleInitialRouting();
 });
 
 loadCommunityLakes();
