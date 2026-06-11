@@ -1341,6 +1341,34 @@ function loadLakeDB() {
 }
 
 loadLakeDB();
+
+// ── Hash Routing logic (Initialize after function definitions) ───────────────
+const _hash = location.hash.replace('#', '');
+let _initTab = 'solunar';
+let _initSub = null;
+
+if (_hash.startsWith('tackle-')) {
+  _initTab = 'tackle';
+  _initSub = _hash.replace('tackle-', '');
+} else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
+  _initTab = _hash;
+} else if (_hash === 'requests') {
+  _initTab = 'settings';
+  _initSub = 'requests';
+}
+
+switchTab(_initTab, false);
+if (_initTab === 'tackle' && _initSub) {
+  showTackleSection(_initSub, false);
+  history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
+} else if (_hash === 'requests') {
+  // Handle deep link to friend requests
+  jumpToAccount();
+  switchFriendsTab('requests');
+} else {
+  history.replaceState({ tab: _initTab }, '', '#' + _initTab);
+}
+
 // ── Fish database ──────────────────────────────────────────────────────────────
 const FISH = [
   { name: 'Largemouth Bass', peak: [4,5,6,9,10],     tr: [60,85], base: 0.25 },
@@ -4723,36 +4751,8 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
-    error => { console.error('Service Worker registration failed:', error); });
+  }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
 }
-
-// ── Deep Linking & Routing ──────────────────────────────────────────────────
-function handleDeepLink(isInitial = false) {
-  const hash = location.hash.replace('#', '');
-  if (!hash) {
-    if (isInitial) {
-      switchTab('solunar', false);
-      history.replaceState({ tab: 'solunar' }, '', '#solunar');
-    }
-    return;
-  }
-
-  if (hash === 'requests') {
-    switchTab('settings', false);
-    jumpToAccount();
-    switchFriendsTab('requests');
-  } else if (hash.startsWith('tackle-')) {
-    const sub = hash.replace('tackle-', '');
-    switchTab('tackle', false);
-    showTackleSection(sub, false);
-  } else if (['solunar','lakes','fish','tackle','settings'].includes(hash)) {
-    switchTab(hash, false);
-  }
-}
-
-// Run on load and listen for changes (from Service Worker navigation)
-handleDeepLink(true);
-window.addEventListener('hashchange', () => handleDeepLink(false));
 </script>
 </body>
 </html>
