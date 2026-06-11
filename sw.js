@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.131.6';
+const VERSION = 'v0.132.0';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -52,6 +52,31 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request))
   );
+});
+
+self.addEventListener('push', e => {
+  let data = { title: 'CastWise', body: 'New update available.' };
+  if (e.data) {
+    try {
+      data = e.data.json();
+    } catch (err) {
+      data = { title: 'CastWise', body: e.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: data
+  };
+
+  e.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('/'));
 });
 
 // Allow the page to trigger activation of a waiting SW
