@@ -66,8 +66,8 @@ self.addEventListener('push', e => {
 
   const options = {
     body: data.body,
-    icon: 'icons/icon-192.png',
-    badge: 'icons/icon-192.png',
+    icon: data.icon || 'icons/icon-192.png',
+    badge: data.badge || 'icons/badge-96.png', // New transparent monochrome icon
     data: data
   };
 
