@@ -1144,6 +1144,15 @@
         </label>
       </div>
 
+  <!-- Push Notifications Setting -->
+  <div id="notif-settings-wrap" style="width:100%; margin-top:12px; text-align:left; display:none;">
+    <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
+      <span style="font-size:15px; font-weight:500; color:var(--text);">Push Notifications</span>
+      <input type="checkbox" id="notifToggle" style="width:20px; height:20px;" />
+    </label>
+    <p style="font-size:12px; color:var(--text3); margin-top:8px;">Get alerts for friend requests and new messages.</p>
+  </div>
+
       <div id="admin-settings-zone"></div>
 
       <div id="settings-signout-zone" style="margin-top: 24px;"></div>
@@ -1448,6 +1457,124 @@ function sunTimes(lat, lon, date) {
   return { rise: 12 - ha/15 - tcf/60, set: 12 + ha/15 - tcf/60 };
 }
 
+// ── Web Push Helpers ─────────────────────────────────────────────────────────
+/**
+ * Converts a base64 VAPID public key to a Uint8Array for the PushManager.
+ */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+/**
+ * Subscribes or unsubscribes the user from browser push notifications.
+ */
+async function updatePushSubscription(enabled) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!authData || !authData.vapidPublicKey) return;
+
+  const registration = await navigator.serviceWorker.ready;
+
+  if (enabled) {
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(authData.vapidPublicKey)
+    });
+
+    // Send subscription to the Worker
+    await fetch(`${WORKER_URL}/save-subscription`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: authData.username,
+        castKey: authData.castKey,
+        subscription: subscription
+      })
+    });
+  } else {
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      await subscription.unsubscribe();
+    }
+  }
+}
+
+/**
+ * Handles the notification toggle change event.
+ */
+async function handleNotificationToggle(e) {
+  if (!authData) return;
+  const enabled = e.target.checked;
+  
+  try {
+    if (enabled) {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        e.target.checked = false;
+        showToast('Permission denied. Please enable notifications in browser settings.');
+        return;
+      }
+    }
+
+    // Update Worker preference
+    const res = await fetch(`${WORKER_URL}/update-notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authData.username, castKey: authData.castKey, enabled })
+    });
+
+    if (!res.ok) throw new Error('Failed to update preference');
+
+    // Subscribe/Unsubscribe browser
+    await updatePushSubscription(enabled);
+
+    authData.notificationsEnabled = enabled;
+    localStorage.setItem('castwise_auth', JSON.stringify(authData));
+    showToast(enabled ? 'Notifications enabled!' : 'Notifications disabled');
+  } catch (err) {
+    e.target.checked = !enabled;
+    showToast('Failed to update settings');
+  }
+}
+
+/**
+ * Triggers a test push notification from the Worker to the Owner.
+ */
+async function sendTestNotification(btn) {
+  if (!authData) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/test-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: authData.username, 
+        castKey: authData.castKey 
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message);
+    } else {
+      showToast('Error: ' + data.error);
+    }
+  } catch (err) {
+    showToast('Failed to send test notification');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 // ── Solunar windows ───────────────────────────────────────────────────────────
 function solunarWindows(lat, lon, date) {
   const { phase } = moonPhase(date);
@@ -1631,11 +1758,19 @@ function renderAccountSection() {
   const headerZone = document.getElementById('header-auth-zone');
   const signoutZone = document.getElementById('settings-signout-zone');
   const adminZone = document.getElementById('admin-settings-zone');
+  const notifWrap = document.getElementById('notif-settings-wrap');
+  const notifToggle = document.getElementById('notifToggle');
   if (!headerZone) return;
 
   if (authData) {
     const displayIconId = authData.iconId || 0;
     
+    // Update Notification Toggle
+    if (notifWrap && notifToggle) {
+      notifWrap.style.display = 'block';
+      notifToggle.checked = !!authData.notificationsEnabled;
+    }
+
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div class="notif-wrapper">
@@ -1692,6 +1827,7 @@ function renderAccountSection() {
     `;
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
+    if (notifWrap) notifWrap.style.display = 'none';
   }
 }
 
@@ -1836,6 +1972,12 @@ function renderOwnerControls() {
       <p style="font-size:12px; color:var(--text3); margin-top:12px; line-height:1.4;">
         <b>USGS</b> is the official government dataset. <b>OSM</b> is community-mapped and much faster to load.
       </p>
+    </div>
+
+    <div class="section-label">System Tools</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
+      <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Verify that push notifications are correctly reaching your devices.</p>
+      <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="sendTestNotification(this)">Send Test Notification</button>
     </div>
 
     <div class="section-label">Account Security</div>
@@ -2166,7 +2308,8 @@ async function handleAuth(type) {
       castKey: data.castKey, 
       role: data.role ?? 0,
       iconId: data.iconId ?? 0,
-      activeLake: data.activeLake || null
+      activeLake: data.activeLake || null,
+      vapidPublicKey: data.vapidPublicKey
     };
     localStorage.setItem('castwise_auth', JSON.stringify(authData));
     closeAuthModal();
@@ -4509,6 +4652,12 @@ document.addEventListener('DOMContentLoaded', () => {
     autoLocToggle.addEventListener('change', (e) => {
       localStorage.setItem(AUTO_LOCATION_KEY, e.target.checked);
     });
+  }
+
+  // Notification toggle initialization
+  const notifToggle = document.getElementById('notifToggle');
+  if (notifToggle) {
+    notifToggle.addEventListener('change', handleNotificationToggle);
   }
 
   // Theme toggle initialization
