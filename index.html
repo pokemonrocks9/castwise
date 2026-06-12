@@ -1430,9 +1430,11 @@ window.addEventListener('popstate', e => {
   const messagesOverlay = document.getElementById('messages-overlay');
   if (sub !== 'messages') {
     if (messagesOverlay) messagesOverlay.style.display = 'none';
+    if (inboxInterval) { clearInterval(inboxInterval); inboxInterval = null; }
   } else {
     if (messagesOverlay) messagesOverlay.style.display = 'flex';
     renderMessagesOverlay();
+    if (!inboxInterval) inboxInterval = setInterval(renderMessagesOverlay, 5000);
   }
 
   const chatOverlay = document.getElementById('chat-overlay');
@@ -1440,19 +1442,22 @@ window.addEventListener('popstate', e => {
     if (chatOverlay) chatOverlay.style.display = 'none';
     if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
     activeChatFriend = null;
-  } else if (sub === 'chat') {
+  } else if (sub === 'chat' || (location.hash.startsWith('#chat-') && !sub)) {
+    const hashFriend = location.hash.replace('#chat-', '');
+    const friendName = e.state?.friend || hashFriend;
+    
     if (chatOverlay) chatOverlay.style.display = 'flex';
-    // Restore friend context from state if it was lost (e.g. on Back button)
-    if (e.state?.friend && !activeChatFriend) {
-      const friend = friendsList.find(f => f.username === e.state.friend);
+    
+    // Restore friend context if navigating via hash or state
+    if (friendName && (!activeChatFriend || activeChatFriend.username !== friendName)) {
+      const friend = friendsList.find(f => f.username === friendName) || conversationPeers.find(p => p.username === friendName);
       if (friend) {
         activeChatFriend = friend;
         document.getElementById('chat-title').textContent = friend.username;
         if (!chatInterval) chatInterval = setInterval(fetchMessages, 5000);
+        fetchMessages();
       }
     }
-  } else {
-    if (chatOverlay) chatOverlay.style.display = 'flex';
   }
 
   const ownerOverlay = document.getElementById('owner-overlay');
@@ -1521,6 +1526,10 @@ function handleInitialRouting() {
   if (_hash.startsWith('tackle-')) {
     _initTab = 'tackle';
     _initSub = _hash.replace('tackle-', '');
+  } else if (_hash.startsWith('chat-')) {
+    _initTab = 'solunar'; // Keep background on solunar
+    const friendName = _hash.replace('chat-', '');
+    setTimeout(() => startChat(friendName), 500); // Small delay to let app boot
   } else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
     _initTab = _hash;
   }
@@ -2030,6 +2039,8 @@ function openMessagesOverlay(pushHistory = true) {
   const overlay = document.getElementById('messages-overlay');
   overlay.style.display = 'flex';
   renderMessagesOverlay();
+  if (inboxInterval) clearInterval(inboxInterval);
+  inboxInterval = setInterval(renderMessagesOverlay, 5000);
   document.body.classList.add('overlay-open');
   if (pushHistory) {
     appNavigated = true;
@@ -2038,11 +2049,15 @@ function openMessagesOverlay(pushHistory = true) {
 }
 
 let conversationPeers = [];
+let inboxInterval = null;
 async function renderMessagesOverlay() {
   const container = document.getElementById('messages-list-container');
   if (!container || !authData) return;
   
-  container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading chats...</div>';
+  // Only show spinner on first load to prevent flickering during background updates
+  if (!container.innerHTML || container.querySelector('.loading')) {
+    container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading chats...</div>';
+  }
 
   try {
     const res = await fetch(`${WORKER_URL}/get-conversations?username=${authData.username}&castKey=${authData.castKey}`);
@@ -2068,7 +2083,7 @@ async function renderMessagesOverlay() {
       const lastSeen = localStorage.getItem(`seen_chat_${c.username}`) || 0;
       const msgTime = new Date(c.last_message_at).getTime();
       // Show dot if message is from friend AND newer than our last visit
-      const isUnread = c.username !== authData.username && msgTime > parseInt(lastSeen);
+      const isUnread = c.sender_id === c.id && msgTime > parseInt(lastSeen);
       
       // Relative timestamp
       const date = new Date(c.last_message_at);
