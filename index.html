@@ -835,6 +835,17 @@
     <div class="auth-modal-content">
       <button class="modal-close" onclick="closeLakeShareModal()">✕</button>
       <div class="card-title">Share a Lake</div>
+
+      <div class="loc-wrap" style="margin-bottom: 16px;">
+        <div class="loc-bar">
+          <svg class="loc-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="7" r="3"/><path d="M8 2C5.24 2 3 4.24 3 7c0 4 5 8 5 8s5-4 5-8c0-2.76-2.24-5-5-5z"/>
+          </svg>
+          <input type="text" class="loc-in" id="lake-share-loc-in" placeholder="City, state or zip — press Enter" autocomplete="off" />
+        </div>
+        <button class="btn btn-gps" title="Use my location">🛰️</button>
+      </div>
+
       <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Nearest & Favorites</div>
       <div id="lake-share-list" class="friends-list" style="max-height: 300px; overflow-y: auto;">
         <!-- Filled by JS -->
@@ -2131,7 +2142,13 @@ async function renderMessagesOverlay() {
     
     for (const c of conversationPeers) {
       const key = await getChatKey(authData.castKey, c.cast_key);
-      const snippet = await decryptMsg(c.last_message, key);
+      let snippet = await decryptMsg(c.last_message, key);
+
+      // Prettify lake sharing previews in the inbox
+      if (snippet.startsWith('LAKE_SHARE|')) {
+        const parts = snippet.split('|');
+        snippet = `📍 ${parts[1]}`;
+      }
       
       // Check unread status
       const lastSeen = localStorage.getItem(`seen_chat_${c.username}`) || 0;
@@ -2273,8 +2290,16 @@ async function handleSendMessageClick() {
 function openLakeShareModal() {
   const modal = document.getElementById('lake-share-modal');
   const list = document.getElementById('lake-share-list');
-  if (!appData || !appData.lakes) {
-    list.innerHTML = '<div class="empty">No lakes found. Please search for a location first.</div>';
+
+  // Sync the location bar in the modal
+  if (appData) {
+    document.querySelectorAll('#lake-share-modal .loc-in').forEach(i => i.value = appData.locName);
+  }
+
+  if (!appData || appData.lakes === null) {
+    list.innerHTML = '<div class="loading"><div class="spinner"></div>Finding lakes...</div>';
+  } else if (!appData.lakes.length) {
+    list.innerHTML = '<div class="empty">No lakes found in this area.</div>';
   } else {
     const nearest = appData.lakes.slice(0, 5);
     const favs = appData.lakes.filter(l => userFavorites.has(l.name) && l.dist <= 250);
@@ -3390,12 +3415,19 @@ async function fetchInatFish(lat, lon, radiusKm = 8, perPage = 30) {
 // ── Load all data ─────────────────────────────────────────────────────────────
 // Weather loads first and renders immediately — lakes load in background
 async function loadData(lat, lon, locName, state = null) {
-  document.getElementById('locIn').value = locName;
+  document.querySelectorAll('.loc-in').forEach(i => i.value = locName);
   setContent('<div class="loading"><div class="spinner"></div>Loading fishing data…</div>');
   const lakesTab = document.getElementById('lakes-tab-content');
   const fishTab = document.getElementById('fish-tab-content');
   if (lakesTab) lakesTab.innerHTML = '<div class="loading"><div class="spinner"></div>Finding nearby lakes…</div>';
   if (fishTab) fishTab.innerHTML = '<div class="loading"><div class="spinner"></div>Finding common fish in your area…</div>';
+
+  // Show progress in Lake Share Modal if open
+  const shareList = document.getElementById('lake-share-list');
+  if (shareList && document.getElementById('lake-share-modal').style.display === 'flex') {
+    shareList.innerHTML = '<div class="loading"><div class="spinner"></div>Finding lakes...</div>';
+  }
+
   try {
     const wx = await fetchWeather(lat, lon);
     document.querySelectorAll('.loc-in').forEach(i => i.value = locName);
@@ -3441,6 +3473,11 @@ async function loadData(lat, lon, locName, state = null) {
         appData.inatFish = inatFish.length > 0 ? inatFish : FISH.map(f => ({ common: f.name, sci: 'Estimated regional presence', photo: null }));
         renderLakes();
         if (currentTab === 'fish') renderFishTab();
+
+        // Refresh Lake Share Modal if open
+        if (document.getElementById('lake-share-modal').style.display === 'flex') {
+          openLakeShareModal();
+        }
       }
     }).catch(() => {
       if (appData) {
@@ -5288,6 +5325,12 @@ function getAndLoadLocation() {
   if (lakesTab) lakesTab.innerHTML = gpsLoadingHTML;
   if (fishTab) fishTab.innerHTML = gpsLoadingHTML;
 
+  // Show progress in Lake Share Modal if open
+  const shareList = document.getElementById('lake-share-list');
+  if (shareList && document.getElementById('lake-share-modal').style.display === 'flex') {
+    shareList.innerHTML = gpsLoadingHTML;
+  }
+
   let isDone = false;
 
   const finish = () => {
@@ -5327,6 +5370,12 @@ function getAndLoadLocation() {
     setContent(msg);
     const lakesTab = document.getElementById('lakes-tab-content');
     if (lakesTab) lakesTab.innerHTML = msg;
+
+    // Show error in Lake Share Modal if open
+    const shareList = document.getElementById('lake-share-list');
+    if (shareList && document.getElementById('lake-share-modal').style.display === 'flex') {
+      shareList.innerHTML = msg;
+    }
 
     // Only disable auto-location if permission was explicitly denied, otherwise allow retry on next load
     if (localStorage.getItem(AUTO_LOCATION_KEY) === 'true' && error?.code === 1) { // 1 = PERMISSION_DENIED
@@ -5386,6 +5435,12 @@ document.addEventListener('keydown', async e => {
     setContent(msg);
     const lakesTab = document.getElementById('lakes-tab-content');
     if (lakesTab) lakesTab.innerHTML = msg;
+
+    // Show error in Lake Share Modal if open
+    const shareList = document.getElementById('lake-share-list');
+    if (shareList && document.getElementById('lake-share-modal').style.display === 'flex') {
+      shareList.innerHTML = msg;
+    }
   }
 });
 
