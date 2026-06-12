@@ -1669,7 +1669,7 @@ function moonPhase(date) {
   return {
     name:  ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'][i],
     icon:  ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][i],
-    illum: Math.round(Math.abs(Math.cos(p * 2 * Math.PI)) * 100),
+    illum: Math.round((1 - Math.cos(p * 2 * Math.PI)) / 2 * 100),
     phase,
   };
 }
