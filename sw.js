@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.134.2';
+const VERSION = 'v0.134.3';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -71,7 +71,16 @@ self.addEventListener('push', e => {
     data: data
   };
 
-  e.waitUntil(self.registration.showNotification(data.title, options));
+  const nPromise = self.registration.showNotification(data.title, options);
+
+  // Notify open windows to refresh UI in real-time if the app is active
+  const mPromise = clients.matchAll({ type: 'window' }).then(windowClients => {
+    windowClients.forEach(client => {
+      client.postMessage({ type: 'PUSH_RECEIVED', payload: data });
+    });
+  });
+
+  e.waitUntil(Promise.all([nPromise, mPromise]));
 });
 
 self.addEventListener('notificationclick', e => {
