@@ -2037,27 +2037,70 @@ function openMessagesOverlay(pushHistory = true) {
   }
 }
 
-function renderMessagesOverlay() {
+let conversationPeers = [];
+async function renderMessagesOverlay() {
   const container = document.getElementById('messages-list-container');
-  if (!container) return;
-  if (!friendsList || friendsList.length === 0) {
-    container.innerHTML = '<div class="empty">No friends found. Add friends to start messaging.</div>';
-    return;
-  }
-  container.innerHTML = `
-    <div class="section-label">Your Friends</div>
-    <div class="friends-list">
-      ${friendsList.map(f => `
-        <div class="friend-item" style="cursor:pointer;" onclick="startChat('${f.username}')">
-          <div class="friend-icon">${USER_ICONS[f.icon_id || 0]}</div>
-          <div class="friend-info">
-            <div class="friend-name">${f.username}</div>
-            <div class="friend-status">${f.active_lake_id ? `Fishing at ${f.active_lake_id}` : 'Tap to message'}</div>
+  if (!container || !authData) return;
+  
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading chats...</div>';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/get-conversations?username=${authData.username}&castKey=${authData.castKey}`);
+    const data = await res.json();
+    conversationPeers = data.conversations || [];
+
+    if (conversationPeers.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <p>No active chats yet.</p>
+          <p style="font-size:11px; margin-top:8px;">Tap the + button below to start a conversation with a friend.</p>
+        </div>`;
+      return;
+    }
+
+    let html = '<div class="section-label">Active Chats</div><div class="friends-list">';
+    
+    for (const c of conversationPeers) {
+      const key = await getChatKey(authData.castKey, c.cast_key);
+      const snippet = await decryptMsg(c.last_message, key);
+      
+      // Check unread status
+      const lastSeen = localStorage.getItem(`seen_chat_${c.username}`) || 0;
+      const msgTime = new Date(c.last_message_at).getTime();
+      // Show dot if message is from friend AND newer than our last visit
+      const isUnread = c.username !== authData.username && msgTime > parseInt(lastSeen);
+      
+      // Relative timestamp
+      const date = new Date(c.last_message_at);
+      const timeStr = (Date.now() - date < 86400000) 
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+      html += `
+        <div class="friend-item" style="cursor:pointer;" onclick="startChat('${c.username}')">
+          <div style="position:relative">
+            <div class="friend-icon">${USER_ICONS[c.icon_id || 0]}</div>
+            ${isUnread ? '<div style="position:absolute; top:0; right:0; width:12px; height:12px; background:var(--red-dark); border:2px solid var(--bg); border-radius:50%;"></div>' : ''}
           </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
+          <div class="friend-info">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <div class="friend-name">${c.username}</div>
+              <div style="font-size:11px; color:var(--text3);">${timeStr}</div>
+            </div>
+            <div style="font-size:13px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; ${isUnread ? 'font-weight:600; color:var(--text);' : ''}">
+              ${snippet}
+            </div>
+          </div>
+        </div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = '<div class="err-msg">Failed to load conversations.</div>';
+  }
 }
 
 let activeChatFriend = null;
@@ -2085,13 +2128,17 @@ async function decryptMsg(blob, key) {
 }
 
 async function startChat(username) {
-  const friend = friendsList.find(f => f.username === username);
+  const friend = friendsList.find(f => f.username === username) || conversationPeers.find(p => p.username === username);
   if (!friend) return;
   activeChatFriend = friend;
   document.getElementById('chat-title').textContent = username;
   document.getElementById('chat-messages').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   document.getElementById('chat-overlay').style.display = 'flex';
   document.body.classList.add('overlay-open');
+  
+  // Mark as seen
+  localStorage.setItem(`seen_chat_${username}`, Date.now().toString());
+  
   closeNewMessageModal();
   appNavigated = true;
   history.pushState({ tab: currentTab, sub: 'chat', friend: username }, '', '#chat-' + username);
