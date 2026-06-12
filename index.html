@@ -2213,6 +2213,13 @@ async function decryptMsg(blob, key) {
   } catch { return '[Decryption Error]'; }
 }
 
+async function dismissNotification(tag) {
+  if (!('serviceWorker' in navigator)) return;
+  const reg = await navigator.serviceWorker.ready;
+  const notifications = await reg.getNotifications({ tag });
+  notifications.forEach(n => n.close());
+}
+
 async function startChat(username) {
   const friend = friendsList.find(f => f.username === username) || conversationPeers.find(p => p.username === username);
   if (!friend) return;
@@ -2221,6 +2228,9 @@ async function startChat(username) {
   document.getElementById('chat-messages').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   document.getElementById('chat-overlay').style.display = 'flex';
   document.body.classList.add('overlay-open');
+
+  // Dismiss any active push notifications for this chat
+  dismissNotification(`dm-${username}`);
   
   // Mark as seen
   localStorage.setItem(`seen_chat_${username}`, Date.now().toString());
@@ -2920,6 +2930,10 @@ async function respondFriend(target, action) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: authData.username, castKey: authData.castKey, targetUsername: target, action })
     });
+    
+    // Dismiss the notification for this request
+    dismissNotification(`fr-${target}`);
+
     if (res.ok && action === 'remove') showToast('Friend removed');
     fetchFriends();
   } catch (e) { showToast('Action failed'); }
