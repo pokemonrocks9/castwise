@@ -580,10 +580,10 @@
     #toast {
       position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
       background: var(--green); color: #fff; padding: 12px 24px; border-radius: 30px;
-      font-size: 14px; font-weight: 600; z-index: 9999;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none;
+      font-size: 14px; font-weight: 600; z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: auto;
       opacity: 0; visibility: hidden;
-      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, visibility 0.3s;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, visibility 0.3s; cursor: pointer;
     }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 
@@ -1959,21 +1959,16 @@ function renderAccountSection() {
   if (authData) {
     const displayIconId = authData.iconId || 0;
     
-    // Update Notification Toggle - Only show if installed as PWA (Android/iOS standalone)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    if (notifWrap && notifToggle) {
-      notifWrap.style.display = 'block';
-      notifWrap.style.display = isStandalone ? 'block' : 'none';
-      if (isStandalone) notifToggle.checked = !!authData.notificationsEnabled;
-    }
-
     // 1. Update Header Zone
     headerZone.innerHTML = `
       <div style="display: flex; gap: 8px; align-items: center;">
-        <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
-          </svg>
+        <div class="notif-wrapper">
+          <div id="message-notif-dot" class="notif-dot"></div>
+          <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
+            </svg>
+          </div>
         </div>
         <div class="notif-wrapper">
           <div id="header-notif-dot" class="notif-dot"></div>
@@ -1983,6 +1978,13 @@ function renderAccountSection() {
         </div>
       </div>
     `;
+
+    // Update Notification Toggle - Only show if installed as PWA (Android/iOS standalone)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (notifWrap && notifToggle) {
+      notifWrap.style.display = isStandalone ? 'block' : 'none';
+      if (isStandalone) notifToggle.checked = !!authData.notificationsEnabled;
+    }
 
     // Administration Section for Owners
     if (adminZone) {
@@ -2016,6 +2018,7 @@ function renderAccountSection() {
 
     // Check for requests to show red dot
     checkFriendRequests();
+    checkUnreadMessages();
     fetchFriends();
 
     // 3. Update Overlay if open
@@ -2046,6 +2049,28 @@ function openMessagesOverlay(pushHistory = true) {
     appNavigated = true;
     history.pushState({ tab: currentTab, sub: 'messages' }, '', '#messages');
   }
+}
+
+async function checkUnreadMessages() {
+  if (!authData) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/get-conversations?username=${authData.username}&castKey=${authData.castKey}`);
+    const data = await res.json();
+    const convos = data.conversations || [];
+    
+    let hasUnread = false;
+    for (const c of convos) {
+      const lastSeen = localStorage.getItem(`seen_chat_${c.username}`) || 0;
+      const msgTime = new Date(c.last_message_at).getTime();
+      // If the last message was from the peer and is newer than our last visit
+      if (c.sender_id === c.id && msgTime > parseInt(lastSeen)) {
+        hasUnread = true;
+        break;
+      }
+    }
+    const dot = document.getElementById('message-notif-dot');
+    if (dot) dot.style.display = hasUnread ? 'block' : 'none';
+  } catch (e) {}
 }
 
 let conversationPeers = [];
@@ -2153,6 +2178,7 @@ async function startChat(username) {
   
   // Mark as seen
   localStorage.setItem(`seen_chat_${username}`, Date.now().toString());
+  checkUnreadMessages();
   
   closeNewMessageModal();
   appNavigated = true;
@@ -2795,11 +2821,18 @@ async function handleAddFriend() {
 }
 
 let toastTimeout;
-function showToast(msg) {
+function showToast(msg, onClick = null) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   if (toastTimeout) clearTimeout(toastTimeout);
+
+  // Setup click handler
+  t.onclick = () => {
+    if (onClick) onClick();
+    t.classList.remove('show');
+  };
+
   toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
@@ -5347,8 +5380,19 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data?.type === 'PUSH_RECEIVED') {
       const payload = e.data.payload;
-      if (['friend_request', 'friend_accept', 'dm'].includes(payload.type)) {
-        if (authData) { fetchFriends(); checkFriendRequests(); }
+      if (authData) {
+        fetchFriends();
+        checkFriendRequests();
+        checkUnreadMessages();
+        
+        if (payload.type === 'dm' && payload.friend) {
+          // Only show toast if not already in that specific chat
+          if (!activeChatFriend || activeChatFriend.username !== payload.friend) {
+            showToast(`New message from ${payload.friend}`, () => startChat(payload.friend));
+          }
+        } else if (payload.type === 'friend_request') {
+          showToast(payload.body, () => { jumpToAccount(); switchFriendsTab('requests'); });
+        }
       }
     }
   });
