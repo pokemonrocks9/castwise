@@ -2640,6 +2640,18 @@ function openEditModal() {
   checkProfileChanges();
 }
 
+function setPreviewIcon(id) {
+  previewIconId = id;
+  const grid = document.getElementById('icon-picker-grid');
+  if (grid) {
+    const choices = grid.querySelectorAll('.icon-choice');
+    choices.forEach((choice, index) => {
+      choice.classList.toggle('active', index === id);
+    });
+  }
+  checkProfileChanges();
+}
+
 function closeEditModal() {
   document.getElementById('edit-profile-modal').style.display = 'none';
   previewIconId = null;
