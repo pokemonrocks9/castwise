@@ -587,6 +587,20 @@
     }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 
+    /* ── Chat Lake Cards ── */
+    .msg-lake-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px; margin-top: 4px;
+      color: var(--text); text-align: left; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .msg-lake-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .msg-lake-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    .msg-lake-btn {
+      width: 100%; padding: 8px; background: var(--blue-mid); color: #fff;
+      border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
     /* ── Settings Layout ── */
     .settings-divider {
       height: 1px; background: var(--border); margin: 24px 0; border: none;
@@ -794,6 +808,9 @@
     </div>
     <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
     <div style="padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--bg2); padding-bottom: calc(16px + env(safe-area-inset-bottom));">
+      <button class="btn" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="openLakeShareModal()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+      </button>
       <input type="text" id="chat-input" placeholder="Type a message..." style="flex: 1; background: var(--bg); border: 1px solid var(--border2); border-radius: 20px; padding: 10px 16px; font-family: inherit; outline: none; color: var(--text);" />
       <button class="btn btn-primary" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="handleSendMessageClick()">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -808,6 +825,18 @@
       <div class="card-title">New Message</div>
       <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Select a friend</div>
       <div id="new-message-friends-list" class="friends-list">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Lake Share Modal -->
+  <div id="lake-share-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 5200; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeLakeShareModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeLakeShareModal()">✕</button>
+      <div class="card-title">Share a Lake</div>
+      <div style="font-size:12px; font-weight: 600; color:var(--text3); text-transform:uppercase; margin-bottom:12px;">Nearest & Favorites</div>
+      <div id="lake-share-list" class="friends-list" style="max-height: 300px; overflow-y: auto;">
         <!-- Filled by JS -->
       </div>
     </div>
@@ -2199,7 +2228,24 @@ async function fetchMessages() {
     for (const m of data.messages || []) {
       const text = await decryptMsg(m.content, key);
       const isMe = m.sender === authData.username;
-      html += `<div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}"><div>${text}</div><div class="msg-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>`;
+      
+      let content = `<div>${text}</div>`;
+      if (text.startsWith('LAKE_SHARE|')) {
+        const [_, name, fish, fee, lat, lon] = text.split('|');
+        content = `
+          <div class="msg-lake-card">
+            <div class="msg-lake-name">${name}</div>
+            <div class="msg-lake-tags">
+              <span class="tag tag-fish">${fish}</span>
+              <span class="tag ${fee === 'Free' ? 'tag-free' : 'tag-paid'}">${fee}</span>
+            </div>
+            <button class="msg-lake-btn" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${lat},${lon}', '_blank')">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              Navigate
+            </button>
+          </div>`;
+      }
+      html += `<div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">${content}<div class="msg-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>`;
     }
     if (!html) html = '<div class="empty">No messages yet.</div>';
     if (container.innerHTML !== html) { container.innerHTML = html; container.scrollTop = container.scrollHeight; }
@@ -2222,6 +2268,68 @@ async function handleSendMessageClick() {
     input.value = '';
     fetchMessages();
   } catch (e) { showToast(e.message); }
+}
+
+function openLakeShareModal() {
+  const modal = document.getElementById('lake-share-modal');
+  const list = document.getElementById('lake-share-list');
+  if (!appData || !appData.lakes) {
+    list.innerHTML = '<div class="empty">No lakes found. Please search for a location first.</div>';
+  } else {
+    const nearest = appData.lakes.slice(0, 5);
+    const favs = appData.lakes.filter(l => userFavorites.has(l.name) && l.dist <= 250);
+    
+    // Dedupe
+    const combined = [...nearest];
+    favs.forEach(f => { if(!combined.find(c => c.name === f.name)) combined.push(f); });
+
+    list.innerHTML = combined.map(l => `
+      <div class="friend-item" style="cursor:pointer; padding: 10px;" onclick="shareLake('${l.name.replace(/'/g,"\\\\'")}')">
+        <div class="friend-icon" style="background:var(--green-light); color:var(--green); font-size:16px;">${userFavorites.has(l.name) ? '⭐' : '📍'}</div>
+        <div class="friend-info">
+          <div class="friend-name" style="font-size:14px;">${l.name}</div>
+          <div class="friend-status">${l.dist} mi away</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+function closeLakeShareModal() {
+  document.getElementById('lake-share-modal').style.display = 'none';
+}
+
+async function shareLake(lakeName) {
+  if (!activeChatFriend || !authData || !appData) return;
+  
+  const lk = appData.lakes.find(l => l.name === lakeName);
+  if (!lk) return;
+
+  const d = appData.days[selectedDay];
+  const fish = d.fish.slice(0, 3).map(f => f.name.split(' ').pop()).join(', ');
+  
+  const _dbEntry = getDBEntry(lakeName);
+  const fee = (_dbEntry && _dbEntry.payToFish !== true && (
+    (_dbEntry.bankFishing === true && (_dbEntry.bankPrices || []).length === 0) ||
+    (_dbEntry.boatLaunch === true && (_dbEntry.launchPrices || []).length === 0)
+  )) ? 'Free' : 'Paid';
+
+  const payload = `LAKE_SHARE|${lakeName}|${fish}|${fee}|${lk.lat}|${lk.lon}`;
+  
+  const key = await getChatKey(authData.castKey, activeChatFriend.cast_key);
+  const encrypted = await encryptMsg(payload, key);
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/send-message`, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ senderUsername: authData.username, senderCastKey: authData.castKey, receiverUsername: activeChatFriend.username, encryptedContent: encrypted })
+    });
+    if (!res.ok) throw new Error();
+    closeLakeShareModal();
+    fetchMessages();
+  } catch (e) { showToast('Failed to share lake'); }
 }
 
 function openNewMessageModal() {
@@ -5378,6 +5486,20 @@ fetch('sw.js').then(r => r.text()).then(text => {
 if ('serviceWorker' in navigator) {
   // Listen for real-time updates from push notifications
   navigator.serviceWorker.addEventListener('message', e => {
+    // 1. Handle soft navigation from OS notification clicks
+    if (e.data?.type === 'NAVIGATE') {
+      const url = new URL(e.data.url);
+      if (url.hash === '#requests') {
+        jumpToAccount();
+        switchFriendsTab('requests');
+      } else if (url.hash.startsWith('#chat-')) {
+        const friend = url.hash.replace('#chat-', '');
+        startChat(friend);
+      }
+      return;
+    }
+
+    // 2. Handle background UI updates
     if (e.data?.type === 'PUSH_RECEIVED') {
       const payload = e.data.payload;
       if (authData) {
@@ -5385,19 +5507,20 @@ if ('serviceWorker' in navigator) {
         checkFriendRequests();
         checkUnreadMessages();
         
-        if (payload.type === 'dm' && payload.friend) {
-          // Only show toast if not already in that specific chat
-          if (!activeChatFriend || activeChatFriend.username !== payload.friend) {
-            showToast(`New message from ${payload.friend}`, () => startChat(payload.friend));
-          }
-        } else if (payload.type === 'friend_request') {
+        if (payload.type === 'friend_request') {
           showToast(payload.body, () => { jumpToAccount(); switchFriendsTab('requests'); });
         }
       }
     }
   });
+
   navigator.serviceWorker.register('sw.js').then(reg => {
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+    document.addEventListener('visibilitychange', () => { 
+      if (document.visibilityState === 'visible') {
+        reg.update();
+        if (authData) checkUnreadMessages();
+      }
+    });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
   }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
 }
