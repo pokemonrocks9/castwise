@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.135.2';
+const VERSION = 'v0.135.3';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -67,7 +67,7 @@ self.addEventListener('push', e => {
   const options = {
     body: data.body,
     icon: data.icon || 'icons/icon-192.png',
-    badge: data.badge || 'icons/badgecw2-96.png', // New transparent monochrome icon
+    badge: data.badge || 'icons/badgecw-96.png', // New transparent monochrome icon
     data: data
   };
 
@@ -91,6 +91,10 @@ self.addEventListener('notificationclick', e => {
   // Deep link based on the notification type
   if (data.type === 'friend_request') {
     url = new URL('#requests', self.registration.scope).href;
+  }
+  
+  if (data.type === 'dm' && data.friend) {
+    url = new URL('#chat-' + data.friend, self.registration.scope).href;
   }
 
   e.waitUntil(
