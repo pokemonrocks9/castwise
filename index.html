@@ -2511,10 +2511,14 @@ async function handleAddFriend() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    status.textContent = '✅ Request sent!';
+    status.textContent = '';
+    showToast('Friend request sent!');
     document.getElementById('friend-search').value = '';
     fetchFriends();
-  } catch (e) { status.textContent = '❌ ' + e.message; }
+  } catch (e) { 
+    status.textContent = '';
+    showToast('Error: ' + e.message); 
+  }
 }
 
 let toastTimeout;
