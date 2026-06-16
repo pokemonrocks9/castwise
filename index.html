@@ -2538,15 +2538,8 @@ function renderOwnerControls() {
   let html = getReviewQueueHTML();
   html += `<hr class="settings-divider">`;
   html += `
-    <div class="section-label">User Management</div>
-    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
-  `;
-  
-  html += `
-    <div class="section-label">Feature Suggestions</div>
-    <div id="owner-suggestions-list" class="friends-list" style="margin-top: 8px; margin-bottom: 24px;">
-      <div class="loading"><div class="spinner"></div>Loading suggestions...</div>
-    </div>
+    <div class="section-label">System Administration</div>
+    <div style="margin-bottom: 24px;"></div>
 
     <div class="section-label">User Management</div>
     <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
@@ -2579,6 +2572,11 @@ function renderOwnerControls() {
     <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
       <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Verify that push notifications are correctly reaching your devices.</p>
       <button class="btn btn-primary" style="width:100%; font-size:12px;" onclick="sendTestNotification(this)">Send Test Notification</button>
+    </div>
+
+    <div class="section-label">Feature Suggestions</div>
+    <div id="owner-suggestions-list" class="friends-list" style="margin-top: 8px; margin-bottom: 24px;">
+      <div class="loading"><div class="spinner"></div>Loading suggestions...</div>
     </div>
 
     <div class="section-label">Account Security</div>
@@ -2623,31 +2621,54 @@ async function fetchOwnerSuggestions() {
       return;
     }
 
-    list.innerHTML = sugs.map(s => {
+    const renderCard = s => {
       const isPending = s.status === 'pending';
       const isApproved = s.status === 'approved';
-      const statusColor = isPending ? 'var(--amber-dark)' : isApproved ? 'var(--blue-mid)' : 'var(--green)';
+      const isDenied = s.status === 'denied';
+      const statusColor = isPending ? 'var(--amber-dark)' : isApproved ? 'var(--blue-mid)' : isDenied ? 'var(--red-dark)' : 'var(--green)';
       
       return `
         <div class="card" style="margin-top: 8px; border-left: 4px solid ${statusColor};">
           <div style="font-weight:600; font-size:15px; margin-bottom:4px;">${s.title}</div>
           <div style="font-size:13px; color:var(--text2); line-height:1.4; margin-bottom:12px;">${s.description}</div>
           <div style="display:flex; justify-content:space-between; align-items:center;">
-             <span class="db-badge" style="background:var(--gray-100); color:var(--text2); text-transform:uppercase;">${s.status}</span>
+             <span class="db-badge" style="background:var(--bg2); color:var(--text2); text-transform:uppercase;">${s.status}</span>
              <div style="display:flex; gap:8px;">
                ${isPending ? `
                  <button class="btn btn-primary" style="padding:4px 10px; font-size:11px;" onclick="updateSuggestionStatus(${s.id}, 'approved', this)">Approve</button>
-                 <button class="btn" style="padding:4px 10px; font-size:11px; color:var(--red-dark); border-color:var(--red-dark); background:none;" onclick="updateSuggestionStatus(${s.id}, 'denied', this)">Reject</button>
+                 <button class="btn" style="padding:4px 10px; font-size:11px; color:var(--red-dark); border-color:var(--red-dark); background:none;" onclick="updateSuggestionStatus(${s.id}, 'denied', this)">Deny</button>
                ` : ''}
                ${isApproved ? `
                  <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:var(--green); border-color:var(--green);" onclick="updateSuggestionStatus(${s.id}, 'added', this)">Mark Added</button>
+               ` : ''}
+               ${isDenied ? `
+                 <button class="btn" style="padding:4px 10px; font-size:11px; color:var(--green); border-color:var(--green); background:none;" onclick="updateSuggestionStatus(${s.id}, 'approved', this)">Restore</button>
                ` : ''}
              </div>
           </div>
           <div class="db-meta" style="margin-top:12px;">By ${s.username || 'anonymous'} · ${new Date(s.created_at).toLocaleDateString()}</div>
         </div>
       `;
-    }).join('');
+    };
+
+    const active = sugs.filter(s => s.status !== 'denied');
+    const denied = sugs.filter(s => s.status === 'denied');
+
+    let html = active.map(renderCard).join('');
+    if (denied.length > 0) {
+      html += `
+        <details style="margin-top: 16px;">
+          <summary style="font-size: 11px; font-weight: 600; color: var(--text3); cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; list-style: none; display: flex; align-items: center; gap: 4px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" style="margin-top: -2px;"><path d="m6 9 6 6 6-6"/></svg>
+            Denied Suggestions (${denied.length})
+          </summary>
+          <div style="margin-top: 8px; opacity: 0.8;">
+            ${denied.map(renderCard).join('')}
+          </div>
+        </details>
+      `;
+    }
+    list.innerHTML = html;
   } catch (e) {
     list.innerHTML = '<div class="err-msg">Failed to load suggestions.</div>';
   }
