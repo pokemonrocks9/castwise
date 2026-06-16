@@ -2540,6 +2540,16 @@ function renderOwnerControls() {
   html += `
     <div class="section-label">User Management</div>
     <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
+  `;
+  
+  html += `
+    <div class="section-label">Feature Suggestions</div>
+    <div id="owner-suggestions-list" class="friends-list" style="margin-top: 8px; margin-bottom: 24px;">
+      <div class="loading"><div class="spinner"></div>Loading suggestions...</div>
+    </div>
+
+    <div class="section-label">User Management</div>
+    <div class="card" style="margin-top: 8px; margin-bottom: 24px;">
       <p style="font-size: 13px; color: var(--text2); margin-bottom: 12px;">Update user permissions by username.</p>
       <div class="loc-bar" style="margin-bottom: 8px;">
         <input type="text" id="role-target" placeholder="Enter username..." style="font-size: 14px;" />
@@ -2582,6 +2592,7 @@ function renderOwnerControls() {
     </div>
   `;
   container.innerHTML = html;
+  fetchOwnerSuggestions();
 
   document.getElementById('lakeSourceSelect').addEventListener('change', (e) => {
     localStorage.setItem(LAKE_SOURCE_KEY, e.target.value);
@@ -2593,6 +2604,61 @@ function renderAdminDashboard() {
   if (!authData || authData.role < 1) return;
   const container = document.getElementById('admin-dashboard-content');
   if (container) container.innerHTML = getReviewQueueHTML();
+}
+
+/**
+ * Fetches all suggestions for the management view.
+ */
+async function fetchOwnerSuggestions() {
+  const list = document.getElementById('owner-suggestions-list');
+  if (!list || !authData) return;
+
+  try {
+    const res = await fetch(`${WORKER_URL}/suggestions?username=${authData.username}&castKey=${authData.castKey}`);
+    const data = await res.json();
+    const sugs = data.suggestions || [];
+
+    if (sugs.length === 0) {
+      list.innerHTML = '<div class="empty">No suggestions yet.</div>';
+      return;
+    }
+
+    list.innerHTML = sugs.map(s => {
+      const isPending = s.status === 'pending';
+      const isApproved = s.status === 'approved';
+      const statusColor = isPending ? 'var(--amber-dark)' : isApproved ? 'var(--blue-mid)' : 'var(--green)';
+      
+      return `
+        <div class="card" style="margin-top: 8px; border-left: 4px solid ${statusColor};">
+          <div style="font-weight:600; font-size:15px; margin-bottom:4px;">${s.title}</div>
+          <div style="font-size:13px; color:var(--text2); line-height:1.4; margin-bottom:12px;">${s.description}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+             <span class="db-badge" style="background:var(--gray-100); color:var(--text2); text-transform:uppercase;">${s.status}</span>
+             <div style="display:flex; gap:8px;">
+               ${isPending ? `
+                 <button class="btn btn-primary" style="padding:4px 10px; font-size:11px;" onclick="updateSuggestionStatus(${s.id}, 'approved', this)">Approve</button>
+                 <button class="btn" style="padding:4px 10px; font-size:11px; color:var(--red-dark); border-color:var(--red-dark); background:none;" onclick="updateSuggestionStatus(${s.id}, 'denied', this)">Reject</button>
+               ` : ''}
+               ${isApproved ? `
+                 <button class="btn btn-primary" style="padding:4px 10px; font-size:11px; background:var(--green); border-color:var(--green);" onclick="updateSuggestionStatus(${s.id}, 'added', this)">Mark Added</button>
+               ` : ''}
+             </div>
+          </div>
+          <div class="db-meta" style="margin-top:12px;">By ${s.username || 'anonymous'} · ${new Date(s.created_at).toLocaleDateString()}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="err-msg">Failed to load suggestions.</div>';
+  }
+}
+
+function updateSuggestionStatus(id, status, btn) {
+  pendingApproval = { type: 'suggestion', id, status, btn };
+  document.getElementById('approve-modal-desc').textContent = `Enter your PIN to mark suggestion #${id} as "${status}".`;
+  document.getElementById('approve-confirm-btn').textContent = 'Confirm Action';
+  document.getElementById('approve-modal').style.display = 'flex';
+  document.getElementById('approve-pin').focus();
 }
 
 function copyCastKey() {
@@ -3072,13 +3138,20 @@ async function handleApproveConfirm() {
   const confirmBtn = document.getElementById('approve-confirm-btn');
 
   if (!pin) { status.textContent = '⚠️ PIN required'; return; }
-
   confirmBtn.disabled = true;
   confirmBtn.textContent = 'Verifying...';
   
   try {
     let res;
-    if (type === 'role') {
+    if (type === 'suggestion') {
+      res = await fetch(`${WORKER_URL}/update-suggestion-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, status: pendingApproval.status, adminUsername: authData.username, pin 
+        })
+      });
+    } else if (type === 'role') {
       res = await fetch(`${WORKER_URL}/set-role`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3101,11 +3174,18 @@ async function handleApproveConfirm() {
     if (!res.ok) throw new Error(data.error || 'Action failed');
     
     if (type === 'role') {
-      const roleStatus = document.getElementById('role-status');
-      if (roleStatus) roleStatus.textContent = `✅ ${id} is now a ${newRole === 1 ? 'Admin' : 'Caster'}`;
+      if (document.getElementById('role-status')) document.getElementById('role-status').textContent = `✅ ${id} is now a ${newRole === 1 ? 'Admin' : 'Caster'}`;
       showToast('Role updated successfully');
+    } else if (type === 'suggestion') {
+      showToast(`Suggestion marked as ${pendingApproval.status}`);
+      fetchOwnerSuggestions();
     } else {
       showToast('Approved successfully!');
+      loadLakeDB().then(() => {
+        if (type === 'lake' || type === 'community-lake') renderLakes();
+        else if (type === 'fish') renderFishRegs(id.split(':')[0]);
+        else if (type === 'bait') renderBaitRecipes();
+      });
     }
 
     closeApproveModal();
@@ -3115,15 +3195,6 @@ async function handleApproveConfirm() {
       btn.disabled = true;
       btn.textContent = 'Approved';
     }
- 
-    if (type !== 'role') {
-      loadLakeDB().then(() => {
-        if (type === 'lake' || type === 'community-lake') renderLakes();
-          else if (type === 'fish') renderFishRegs(id.split(':')[0]);
-          else if (type === 'bait') renderBaitRecipes();
-        });
-    }
-
   } catch (e) {
     status.textContent = '⚠️ ' + e.message;
     confirmBtn.disabled = false;
