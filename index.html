@@ -533,12 +533,16 @@
 
     /* ── Responsive ── */
     @media (max-width: 420px) {
-      .app { padding: 16px 12px 48px; }
+      .app { 
+        padding-left: 12px; 
+        padding-right: 12px;
+        /* Keep the vertical padding logic consistent with safe areas */
+        padding-top: calc(16px + env(safe-area-inset-top));
+        padding-bottom: calc(48px + env(safe-area-inset-bottom));
+      }
       .fish-grid { grid-template-columns: 1fr 1fr; }
       .day-card { flex: 0 0 68px; }
     }
-    /* Always add bottom nav padding */
-.app { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
     .map-fab {
       position: fixed;
       bottom: calc(80px + env(safe-area-inset-bottom));
