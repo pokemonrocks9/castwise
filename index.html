@@ -96,8 +96,8 @@
       margin: 0 auto;
       padding-left: 16px;
       padding-right: 16px;
-      padding-top: calc(20px + env(safe-area-inset-top)); /* Add safe area to top padding */
-      padding-bottom: calc(84px + env(safe-area-inset-bottom)); /* Bar height (64) + 20px buffer */
+      padding-top: calc(40px + env(safe-area-inset-top)); /* Increased to match perfect settings layout */
+      padding-bottom: calc(100px + env(safe-area-inset-bottom)); /* Increased to match perfect settings layout */
     }
 
     /* ── Map ── */
@@ -503,7 +503,7 @@
     /* ── Bottom nav ── */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: calc(64px + env(safe-area-inset-bottom));
+      height: calc(60px + env(safe-area-inset-bottom)); /* Slightly shorter for a more native feel */
       background: var(--bg);
       border-top: 1px solid var(--border);
       display: flex;
@@ -537,15 +537,15 @@
         padding-left: 12px; 
         padding-right: 12px;
         /* Keep the vertical padding logic consistent with safe areas */
-        padding-top: calc(16px + env(safe-area-inset-top));
-        padding-bottom: calc(84px + env(safe-area-inset-bottom));
+        padding-top: calc(32px + env(safe-area-inset-top));
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
       }
       .fish-grid { grid-template-columns: 1fr 1fr; }
       .day-card { flex: 0 0 68px; }
     }
     .map-fab {
       position: fixed;
-      bottom: calc(94px + env(safe-area-inset-bottom));
+      bottom: calc(80px + env(safe-area-inset-bottom));
       right: 16px;
       width: 54px;
       height: 54px;
@@ -1339,7 +1339,7 @@
   </div>
 
   <div id="tab-settings" class="tab-panel">
-    <div style="padding: 20px 16px;">
+    <div>
       <!-- PWA Install Button -->
       <div style="width:100%; margin-top:20px; text-align:left; display:none;" id="installPwaWrap">
         <button id="installPwaBtn" style="width:100%; background:var(--green); color:#fff; border:none; border-radius:var(--radius); padding:12px; font-size:15px; font-weight:500; font-family:'DM Sans', sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -1410,7 +1410,7 @@
       <div id="settings-signout-zone" style="margin-top: 24px;"></div>
     </div>
     
-    <div class="footer" style="margin-top:0; border-top:none; padding-bottom: 20px;">
+    <div class="footer" style="margin-top:0; border-top:none; padding-bottom: 0;">
       <p>Weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> · Lakes via USGS NHD · Solunar math is calculated locally</p>
       <p style="margin-top:6px">Built with CastWise · <a href="https://github.com/pokemonrocks9/castwise" target="_blank">View source</a></p>
       <p id="app-version-display" style="margin-top:10px;font-size:10px;opacity:0.4">v--</p>
