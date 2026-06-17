@@ -50,7 +50,7 @@
       --radius-lg: 14px;
     }
     @media (prefers-color-scheme: dark) {
-      html:not([data-theme="light"]) {
+      html:not([data-theme="light"]) { /* System dark mode */
         --bg: #1a1a18;
         --bg2: #222220;
         --border: rgba(255,255,255,0.1);
@@ -66,7 +66,7 @@
         --lime-light: #1a2e0a;
       }
     }
-    html[data-theme="dark"] {
+    html[data-theme="dark"] { /* Explicit dark mode */
       --bg: #1a1a18;
       --bg2: #222220;
       --border: rgba(255,255,255,0.1);
@@ -91,7 +91,14 @@
     a { color: var(--green); }
 
     /* ── Layout ── */
-    .app { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding-left: 16px;
+      padding-right: 16px;
+      padding-top: calc(20px + env(safe-area-inset-top)); /* Add safe area to top padding */
+      padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Combine with existing bottom padding */
+    }
 
     /* ── Map ── */
     #map-overlay { 
