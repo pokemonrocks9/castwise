@@ -1332,6 +1332,19 @@
         </label>
       </div>
 
+      <!-- Lake Visibility Setting -->
+      <div id="visibility-settings-wrap" style="width:100%; margin-top:12px; text-align:left; display:none;">
+        <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
+          <span style="font-size:15px; font-weight:500; color:var(--text);">Fishing Visibility</span>
+          <select id="visibilitySelect" style="background:var(--bg); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:4px 8px; font-family:'DM Sans', sans-serif; outline:none; cursor:pointer;">
+            <option value="private">Private (Only You)</option>
+            <option value="friends">Friends Only</option>
+            <option value="public">Public (Everyone)</option>
+          </select>
+        </label>
+        <p style="font-size:12px; color:var(--text3); margin-top:8px;">Who can see which lake you are currently fishing at.</p>
+      </div>
+
   <!-- Push Notifications Setting -->
   <div id="notif-settings-wrap" style="width:100%; margin-top:12px; text-align:left; display:none;">
     <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
@@ -1811,6 +1824,31 @@ async function handleNotificationToggle(e) {
 }
 
 /**
+ * Handles the social visibility toggle change event.
+ */
+async function handleSocialVisibilityChange(e) {
+  if (!authData) return;
+  const socialVisibility = e.target.value;
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/update-social-visibility`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authData.username, castKey: authData.castKey, socialVisibility })
+    });
+
+    if (!res.ok) throw new Error('Failed to update preference');
+
+    authData.socialVisibility = socialVisibility;
+    localStorage.setItem('castwise_auth', JSON.stringify(authData));
+    showToast('Visibility updated');
+  } catch (err) {
+    e.target.value = authData.socialVisibility || 'private';
+    showToast('Failed to update settings');
+  }
+}
+
+/**
  * Triggers a test push notification from the Worker to the Owner.
  */
 async function sendTestNotification(btn) {
@@ -2027,6 +2065,8 @@ function renderAccountSection() {
   const adminZone = document.getElementById('admin-settings-zone');
   const notifWrap = document.getElementById('notif-settings-wrap');
   const notifToggle = document.getElementById('notifToggle');
+  const visibilityWrap = document.getElementById('visibility-settings-wrap');
+  const visibilitySelect = document.getElementById('visibilitySelect');
   if (!headerZone) return;
 
   if (authData) {
@@ -2057,6 +2097,12 @@ function renderAccountSection() {
     if (notifWrap && notifToggle) {
       notifWrap.style.display = isStandalone ? 'block' : 'none';
       if (isStandalone) notifToggle.checked = !!authData.notificationsEnabled;
+    }
+
+    // Update Visibility Setting
+    if (visibilityWrap && visibilitySelect) {
+      visibilityWrap.style.display = 'block';
+      visibilitySelect.value = authData.socialVisibility || 'private';
     }
 
     // Administration Section for Owners
@@ -2107,6 +2153,7 @@ function renderAccountSection() {
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
     if (notifWrap) notifWrap.style.display = 'none';
+    if (visibilityWrap) visibilityWrap.style.display = 'none';
   }
 }
 
@@ -5666,6 +5713,12 @@ document.addEventListener('DOMContentLoaded', () => {
     autoLocToggle.addEventListener('change', (e) => {
       localStorage.setItem(AUTO_LOCATION_KEY, e.target.checked);
     });
+  }
+
+  // Visibility toggle initialization
+  const visibilitySelect = document.getElementById('visibilitySelect');
+  if (visibilitySelect) {
+    visibilitySelect.addEventListener('change', handleSocialVisibilityChange);
   }
 
   // Notification toggle initialization
