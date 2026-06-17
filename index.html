@@ -82,12 +82,15 @@
       --lime-light: #1a2e0a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 16px; background: var(--bg); min-height: 100dvh; }
+    html {
+      font-size: 16px; background: var(--bg);
+      height: 100%; overflow: hidden;
+    }
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100dvh;
+      height: 100%; overflow: hidden;
     }
     a { color: var(--green); }
 
@@ -97,9 +100,21 @@
       margin: 0 auto;
       padding-left: 16px;
       padding-right: 16px;
-      padding-top: calc(20px + env(safe-area-inset-top)); 
-      padding-bottom: calc(88px + env(safe-area-inset-bottom));
-      min-height: 100dvh;
+      /* App shell fills the viewport exactly — no document scroll */
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Scrollable content area above the nav */
+    .app-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: calc(20px + env(safe-area-inset-top));
+      padding-bottom: 16px;
+      padding-left: 16px;
+      padding-right: 16px;
     }
 
     /* ── Map ── */
@@ -504,7 +519,7 @@
 
     /* ── Bottom nav ── */
     .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
+      flex-shrink: 0;
       height: calc(64px + env(safe-area-inset-bottom));
       background: var(--bg);
       border-top: 1px solid var(--border);
@@ -536,11 +551,13 @@
     /* ── Responsive ── */
     @media (max-width: 420px) {
       .app { 
-        padding-left: 12px; 
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .app-scroll {
+        padding-left: 12px;
         padding-right: 12px;
-        /* Keep the vertical padding logic consistent with safe areas */
         padding-top: calc(16px + env(safe-area-inset-top));
-        padding-bottom: calc(88px + env(safe-area-inset-bottom));
       }
       .fish-grid { grid-template-columns: 1fr 1fr; }
       .day-card { flex: 0 0 68px; }
@@ -647,7 +664,7 @@
       padding-top: env(safe-area-inset-top);
       -webkit-overflow-scrolling: touch;
     }
-    body.overlay-open { overflow: hidden; height: 100dvh; }
+    body.overlay-open { overflow: hidden; } /* height lock removed — app shell is already fixed */
     .account-header {
       padding: 16px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--border);
@@ -1069,6 +1086,7 @@
     </div>
   </div>
 
+  <div class="app-scroll">
   <div class="header">
     <div>
       <div class="logo">Cast<span>Wise</span></div>
@@ -1429,6 +1447,8 @@
   </div>
 
   <div id="toast"></div>
+
+  </div><!-- /.app-scroll -->
 
   <!-- Bottom nav -->
   <nav class="bottom-nav">
