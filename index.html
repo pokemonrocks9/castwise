@@ -982,6 +982,32 @@
     </div>
   </div>
 
+  <!-- iOS Install Modal -->
+  <div id="ios-install-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 6600; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeIosInstallModal()">
+    <div class="auth-modal-content">
+      <button class="modal-close" onclick="closeIosInstallModal()">✕</button>
+      <div class="card-title">Install CastWise</div>
+      <div style="font-size:14px; line-height:1.5; color:var(--text2); margin-bottom:20px;">
+        To install CastWise on your iPhone or iPad, follow these simple steps:
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:var(--green-light); color:var(--green); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0;">1</div>
+          <div style="font-size:14px;">Tap the <b>Share</b> button <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; display:inline-block; position:relative; top:-2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari.</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:var(--green-light); color:var(--green); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0;">2</div>
+          <div style="font-size:14px;">Scroll down and select <b>Add to Home Screen</b>.</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:var(--green-light); color:var(--green); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0;">3</div>
+          <div style="font-size:14px;">Tap <b>Add</b> in the top right corner.</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:24px;" onclick="closeIosInstallModal()">Got it</button>
+    </div>
+  </div>
+
   <!-- Delete Account Modal -->
   <div id="delete-account-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 6500; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);" onclick="if(event.target === this) closeDeleteAccountModal()">
     <div class="auth-modal-content">
@@ -1732,6 +1758,11 @@ function sunTimes(lat, lon, date) {
   return { rise: 12 - ha/15 - tcf/60, set: 12 + ha/15 - tcf/60 };
 }
 
+// ── PWA Detection Helpers ─────────────────────────────────────────────────────
+const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+
 // ── Web Push Helpers ─────────────────────────────────────────────────────────
 /**
  * Converts a base64 VAPID public key to a Uint8Array for the PushManager.
@@ -2076,7 +2107,6 @@ function renderAccountSection() {
     headerZone.innerHTML = `
       <div style="display: flex; gap: 8px; align-items: center;">
         <div class="notif-wrapper">
-          <div id="message-notif-dot" class="notif-dot"></div>
           <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
@@ -2093,10 +2123,10 @@ function renderAccountSection() {
     `;
 
     // Update Notification Toggle - Only show if installed as PWA (Android/iOS standalone)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const installed = isStandalone();
     if (notifWrap && notifToggle) {
-      notifWrap.style.display = isStandalone ? 'block' : 'none';
-      if (isStandalone) notifToggle.checked = !!authData.notificationsEnabled;
+      notifWrap.style.display = installed ? 'block' : 'none';
+      if (installed) notifToggle.checked = !!authData.notificationsEnabled;
     }
 
     // Update Visibility Setting
@@ -2835,6 +2865,13 @@ function setPreviewIcon(id) {
 function closeEditModal() {
   document.getElementById('edit-profile-modal').style.display = 'none';
   previewIconId = null;
+}
+
+function openIosInstallModal() {
+  document.getElementById('ios-install-modal').style.display = 'flex';
+}
+function closeIosInstallModal() {
+  document.getElementById('ios-install-modal').style.display = 'none';
 }
 
 /**
@@ -4763,6 +4800,18 @@ async function submitFishReg(species, region, btn) {
   }
 }
 
+function checkPwaInstallation() {
+  const wrap = document.getElementById('installPwaWrap');
+  if (!wrap) return;
+
+  if (isStandalone()) {
+    wrap.style.display = 'none';
+  } else if (isIos()) {
+    // iOS doesn't fire beforeinstallprompt, so we detect and show the button ourselves
+    wrap.style.display = 'block';
+  }
+}
+
 async function voteFishReg(key, btn) {
   btn.disabled = true;
   try {
@@ -5715,6 +5764,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  checkPwaInstallation();
+
   // Visibility toggle initialization
   const visibilitySelect = document.getElementById('visibilitySelect');
   if (visibilitySelect) {
@@ -5781,13 +5832,16 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 document.getElementById('installPwaBtn')?.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === 'accepted') {
-    document.getElementById('installPwaWrap').style.display = 'none';
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('installPwaWrap').style.display = 'none';
+    }
+    deferredPrompt = null;
+  } else if (isIos()) {
+    openIosInstallModal();
   }
-  deferredPrompt = null;
 });
 
 // ── Sync version from Service Worker ───────────────────────────────────────────
