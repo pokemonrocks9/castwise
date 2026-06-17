@@ -1461,6 +1461,30 @@
 </div>
 
 <script>
+// ── iOS bottom nav fix ────────────────────────────────────────────────────────
+// iOS Safari's vh/dvh units are unreliable until the page has enough content
+// to scroll. visualViewport gives us the true visible bottom every time.
+(function() {
+  var nav = null;
+  function pinNav() {
+    if (!nav) nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var fromBottom = window.innerHeight - (vv.offsetTop + vv.height);
+    nav.style.bottom = fromBottom + 'px';
+  }
+  function setup() {
+    nav = document.querySelector('.bottom-nav');
+    pinNav();
+    var vv = window.visualViewport;
+    if (vv) { vv.addEventListener('resize', pinNav); vv.addEventListener('scroll', pinNav); }
+    window.addEventListener('resize', pinNav);
+    window.addEventListener('orientationchange', function() { setTimeout(pinNav, 150); });
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', setup); } else { setup(); }
+})();
+
 // ── Config ────────────────────────────────────────────────────────────────────
 // Replace with your deployed Cloudflare Worker URL after `wrangler deploy`
 const WORKER_URL = 'https://castwise-worker.tytygoins.workers.dev';
