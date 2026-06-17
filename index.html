@@ -82,11 +82,12 @@
       --lime-light: #1a2e0a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 16px; background: var(--bg); }
+    html { font-size: 16px; background: var(--bg); min-height: 100dvh; }
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
+      min-height: 100dvh;
     }
     a { color: var(--green); }
 
@@ -97,7 +98,8 @@
       padding-left: 16px;
       padding-right: 16px;
       padding-top: calc(20px + env(safe-area-inset-top)); 
-      padding-bottom: calc(88px + env(safe-area-inset-bottom)); 
+      padding-bottom: calc(88px + env(safe-area-inset-bottom));
+      min-height: 100dvh;
     }
 
     /* ── Map ── */
