@@ -2189,11 +2189,8 @@ async function renderMessagesOverlay() {
       // Show dot if message is from friend AND newer than our last visit
       const isUnread = c.sender_id === c.id && msgTime > parseInt(lastSeen);
       
-      // Relative timestamp
-      const date = new Date(c.last_message_at);
-      const timeStr = (Date.now() - date < 86400000) 
-        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      // Smart relative timestamp for inbox
+      const timeStr = formatRelativeTime(c.last_message_at, true);
 
       html += `
         <div class="friend-item" style="cursor:pointer;" onclick="startChat('${c.username}')">
@@ -2244,6 +2241,22 @@ async function decryptMsg(blob, key) {
     const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: combined.slice(0, 12) }, key, combined.slice(12));
     return new TextDecoder().decode(decrypted);
   } catch { return '[Decryption Error]'; }
+}
+
+/**
+ * Returns a human-readable relative timestamp (Today, Yesterday, or Date).
+ */
+function formatRelativeTime(dateStr, isCompact = false) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const mDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (mDate.getTime() === today.getTime()) return isCompact ? time : `Today at ${time}`;
+  if (mDate.getTime() === yesterday.getTime()) return isCompact ? 'Yesterday' : `Yesterday at ${time}`;
+  const ds = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return isCompact ? ds : `${ds} at ${time}`;
 }
 
 async function dismissNotification(tag) {
@@ -2305,7 +2318,7 @@ async function fetchMessages() {
             </button>
           </div>`;
       }
-      html += `<div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">${content}<div class="msg-meta">${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>`;
+      html += `<div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">${content}<div class="msg-meta">${formatRelativeTime(m.created_at)}</div></div>`;
     }
     if (!html) html = '<div class="empty">No messages yet.</div>';
     if (container.innerHTML !== html) { container.innerHTML = html; container.scrollTop = container.scrollHeight; }
