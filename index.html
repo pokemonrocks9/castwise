@@ -630,10 +630,19 @@
     }
 
     /* ── Account Overlay ── */
-    #account-overlay, #admin-overlay, #owner-overlay, #messages-overlay, #chat-overlay {
+    #account-overlay, #admin-overlay, #owner-overlay, #messages-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 4500; background: var(--bg); display: none;
-      flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 0;
+      flex-direction: column; overflow-y: auto;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Chat overlay: input bar handles bottom safe area, don't double-apply */
+    #chat-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 4500; background: var(--bg); display: none;
+      flex-direction: column;
+      padding-top: env(safe-area-inset-top);
       -webkit-overflow-scrolling: touch;
     }
     body.overlay-open { overflow: hidden; height: 100vh; }
