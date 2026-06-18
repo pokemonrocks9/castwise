@@ -1492,11 +1492,10 @@
   function pinNav() {
     if (!app) app = document.querySelector('.app');
     if (!app) return;
-    var vv = window.visualViewport;
-    if (!vv) return;
-    // Set the app container height to the actual visible viewport height.
-    // This keeps the bottom nav flush with the browser chrome or keyboard.
-    app.style.height = vv.height + 'px';
+    // We no longer manually set app.style.height here.
+    // By letting the CSS height: 100dvh and bottom: 0 handle it,
+    // the nav bar will stay at the true bottom of the screen
+    // just like the map overlay does.
   }
   function setup() {
     pinNav();
