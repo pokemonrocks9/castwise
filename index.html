@@ -103,7 +103,6 @@
       flex-direction: column;
       transform: translateZ(0);
     }
-
     /* Scrollable content area above the nav */
     .app-scroll {
       flex: 1;
@@ -519,6 +518,10 @@
 
     /* ── Bottom nav ── */
     .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       height: calc(64px + env(safe-area-inset-bottom));
       background: var(--bg);
       border-top: 1px solid var(--border);
@@ -527,19 +530,6 @@
       padding-bottom: env(safe-area-inset-bottom);
       padding-left: max(0px, calc((100% - 520px) / 2));
       padding-right: max(0px, calc((100% - 520px) / 2));
-    }
-    /* Default Nav - standard flex child of .app */
-    #bottom-nav-default {
-      position: relative;
-      flex-shrink: 0;
-    }
-    /* Experimental nav (outside .app) */
-    #bottom-nav-experimental {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: none; /* Hidden by default */
       transform: translateZ(0);
     }
     .nav-btn {
@@ -553,10 +543,6 @@
       transition: color .15s;
       -webkit-tap-highlight-color: transparent;
     }
-    /* Control visibility based on body class */
-    body.experimental-nav-active #bottom-nav-default { display: none; }
-    body.experimental-nav-active #bottom-nav-experimental { display: flex; }
-
 .nav-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
     .nav-btn.active { color: var(--text); }
     .nav-btn.active svg { stroke: var(--text); }
@@ -1470,20 +1456,20 @@
   </div><!-- /.app-scroll -->
 
   <!-- Bottom nav -->
-  <nav class="bottom-nav" id="bottom-nav-default">
-    <button class="nav-btn active btn-nav-solunar" onclick="switchTab('solunar')">
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-solunar" onclick="switchTab('solunar')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       Solunar
     </button>
-    <button class="nav-btn btn-nav-lakes" onclick="switchTab('lakes')">
+    <button class="nav-btn" id="nav-lakes" onclick="switchTab('lakes')">
       <svg viewBox="0 0 24 24"><path d="M3 17c3-3 5-5 9-5s6 2 9 5"/><path d="M3 11c3-3 5-5 9-5s6 2 9 5"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
       Lakes
     </button>
-    <button class="nav-btn btn-nav-fish" onclick="switchTab('fish')">
+    <button class="nav-btn" id="nav-fish" onclick="switchTab('fish')">
       <svg viewBox="0 0 24 24"><path d="M6.5 12c.94-3.46 4.96-6 9.5-6 3.07 0 5.61 1.15 7 3l-4 3 4 3c-1.39 1.85-3.93 3-7 3-4.54 0-8.56-2.54-9.5-6Z"/><path d="M18 12h.01"/><path d="M2 16c1.1-1.5 1.1-6.5 0-8"/><path d="M6.5 12h-3"/></svg>
       Fishidex
     </button>
-    <button class="nav-btn btn-nav-tackle" onclick="switchTab('tackle')">
+    <button class="nav-btn" id="nav-tackle" onclick="switchTab('tackle')">
       <svg viewBox="0 0 1024 1024" class="fill-svg">
         <path d="M745.124 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H745.124c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M158.127 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H158.127c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M402.709 560.377h244.582c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H402.709c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458"/>
         <path d="M402.709 633.752v-24.458h-73.377v-97.833h48.916l0.002 122.291h24.459v-24.458 24.458h24.456v-146.75c0-6.442-2.607-12.74-7.161-17.294-4.554-4.554-10.855-7.164-17.294-7.164h-97.833c-6.442 0-12.74 2.607-17.297 7.164-4.554 4.554-7.161 10.852-7.161 17.294v146.749c0 6.44 2.607 12.74 7.161 17.294 4.556 4.554 10.854 7.164 17.297 7.164h97.833c6.44 0 12.74-2.61 17.294-7.166 4.554-4.554 7.161-10.852 7.161-17.292h-24.456zM745.124 633.752v-24.458h-73.377v-97.833h48.916l0.002 122.291h24.459v-24.458 24.458h24.456v-146.75c0-6.442-2.607-12.74-7.161-17.294-4.554-4.554-10.855-7.164-17.294-7.164h-97.833c-6.442 0-12.74 2.607-17.297 7.164-4.554 4.554-7.162 10.852-7.162 17.294v146.749c0 6.44 2.607 12.74 7.162 17.294 4.556 4.554 10.854 7.164 17.297 7.164h97.833c6.44 0 12.74-2.61 17.294-7.166 4.554-4.554 7.161-10.852 7.161-17.292h-24.456z"/>
@@ -1491,73 +1477,27 @@
       </svg>
       Tackle
     </button>
-    <button class="nav-btn btn-nav-settings" onclick="switchTab('settings')">
+    <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
     </button>
   </nav>
-</div>
 
-<!-- Experimental Bottom Nav (outside .app for iOS testing) -->
-<nav class="bottom-nav" id="bottom-nav-experimental">
-  <button class="nav-btn active btn-nav-solunar" onclick="switchTab('solunar')">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    Solunar
-  </button>
-  <button class="nav-btn btn-nav-lakes" onclick="switchTab('lakes')">
-    <svg viewBox="0 0 24 24"><path d="M3 17c3-3 5-5 9-5s6 2 9 5"/><path d="M3 11c3-3 5-5 9-5s6 2 9 5"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
-    Lakes
-  </button>
-  <button class="nav-btn btn-nav-fish" onclick="switchTab('fish')">
-    <svg viewBox="0 0 24 24"><path d="M6.5 12c.94-3.46 4.96-6 9.5-6 3.07 0 5.61 1.15 7 3l-4 3 4 3c-1.39 1.85-3.93 3-7 3-4.54 0-8.56-2.54-9.5-6Z"/><path d="M18 12h.01"/><path d="M2 16c1.1-1.5 1.1-6.5 0-8"/><path d="M6.5 12h-3"/></svg>
-    Fishidex
-  </button>
-  <button class="nav-btn btn-nav-tackle" onclick="switchTab('tackle')">
-    <svg viewBox="0 0 1024 1024" class="fill-svg">
-      <path d="M745.124 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H745.124c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M158.127 560.377h146.749c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H158.127c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458M402.709 560.377h244.582c13.506 0 24.458-10.95 24.458-24.458s-10.952-24.458-24.458-24.458H402.709c-13.508 0-24.458 10.95-24.458 24.458s10.95 24.458 24.458 24.458"/>
-      <path d="M402.709 633.752v-24.458h-73.377v-97.833h48.916l0.002 122.291h24.459v-24.458 24.458h24.456v-146.75c0-6.442-2.607-12.74-7.161-17.294-4.554-4.554-10.855-7.164-17.294-7.164h-97.833c-6.442 0-12.74 2.607-17.297 7.164-4.554 4.554-7.161 10.852-7.161 17.294v146.749c0 6.44 2.607 12.74 7.161 17.294 4.556 4.554 10.854 7.164 17.297 7.164h97.833c6.44 0 12.74-2.61 17.294-7.166 4.554-4.554 7.161-10.852 7.161-17.292h-24.456zM745.124 633.752v-24.458h-73.377v-97.833h48.916l0.002 122.291h24.459v-24.458 24.458h24.456v-146.75c0-6.442-2.607-12.74-7.161-17.294-4.554-4.554-10.855-7.164-17.294-7.164h-97.833c-6.442 0-12.74 2.607-17.297 7.164-4.554 4.554-7.162 10.852-7.162 17.294v146.749c0 6.44 2.607 12.74 7.162 17.294 4.556 4.554 10.854 7.164 17.297 7.164h97.833c6.44 0 12.74-2.61 17.294-7.166 4.554-4.554 7.161-10.852 7.161-17.292h-24.456z"/>
-      <path d="M842.957 266.876H720.666v-73.375c-0.017-40.532-32.845-73.358-73.375-73.375H402.709c-40.532 0.017-73.36 32.842-73.375 73.375v73.375H207.043c-40.532 0.017-73.36 32.842-73.375 73.375v440.248c0.015 40.535 32.843 73.36 73.375 73.375h635.914c40.53-0.015 73.358-32.84 73.372-73.375V340.251c-0.014-40.533-32.842-73.358-73.372-73.375z m-464.706-73.375c0.024-13.496 10.957-24.434 24.458-24.458h244.582c13.498 0.024 24.431 10.962 24.458 24.458v73.375H378.251v-73.375z m489.164 586.998c-0.027 13.499-10.96 24.436-24.458 24.458H207.043c-13.501-0.022-24.434-10.96-24.461-24.458V340.251c0.027-13.496 10.96-24.434 24.461-24.458h635.913c13.499 0.024 24.431 10.962 24.458 24.458v440.248z"/>
-    </svg>
-    Tackle
-  </button>
-  <button class="nav-btn btn-nav-settings" onclick="switchTab('settings')">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    Settings
-  </button>
-</nav>
+</div>
 
 <script>
 // ── iOS bottom nav fix ────────────────────────────────────────────────────────
 // iOS Safari's vh/dvh units are unreliable until the page has enough content
 // to scroll. visualViewport gives us the true visible bottom every time.
 (function() {
-  var appScroll = null;
-  var safeAreaProbe = null; // The probe for safe-area-inset-bottom
-
+  var app = null;
   function pinNav() {
-    if (!appScroll) appScroll = document.querySelector('.app-scroll');
-    if (!safeAreaProbe) safeAreaProbe = document.getElementById('safe-area-probe');
-
-    if (!appScroll || !safeAreaProbe) return;
-
-    const isExperimental = document.body.classList.contains('experimental-nav-active');
-    const nav = isExperimental ? document.getElementById('bottom-nav-experimental') : document.getElementById('bottom-nav-default');
-    const navHeight = nav ? nav.offsetHeight : 0;
-    const safeAreaBottom = safeAreaProbe.getBoundingClientRect().height;
-
-    // If default nav is active, flexbox handles positioning, so no padding needed for the nav itself.
-    // If experimental nav is active, it overlaps, so we need padding.
-    if (isExperimental) {
-      appScroll.style.paddingBottom = `calc(${navHeight}px + ${safeAreaBottom}px)`;
-    } else {
-      appScroll.style.paddingBottom = `calc(20px + ${safeAreaBottom}px)`;
-    }
+    if (!app) app = document.querySelector('.app');
+    if (!app) return;
+    // Height manipulation is no longer needed because the nav bar 
+    // is now position: fixed; bottom: 0, matching the debug bar.
   }
   function setup() {
-    // Initial check for experimental nav state
-    const experimentalNavActive = localStorage.getItem('castwise_experimental_nav') === 'true';
-    document.body.classList.toggle('experimental-nav-active', experimentalNavActive);
-
     pinNav();
     var vv = window.visualViewport;
     if (vv) { vv.addEventListener('resize', pinNav); vv.addEventListener('scroll', pinNav); }
@@ -1565,9 +1505,6 @@
     window.addEventListener('orientationchange', function() { setTimeout(pinNav, 150); });
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', setup); } else { setup(); }
-
-  // Expose pinNav for external calls (e.g., after toggling experimental nav)
-  window.updatePinNav = pinNav;
 })();
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -1592,14 +1529,7 @@ let friendsList = [];
 let appNavigated = false;
 let updatingLakeLocation = null;
 let map = null;
-let mapTempMarker = null; // This should be defined globally or passed around
-
-// New function to get the currently active navigation bar
-function getActiveNavBar() {
-  return document.body.classList.contains('experimental-nav-active')
-    ? document.getElementById('bottom-nav-experimental')
-    : document.getElementById('bottom-nav-default');
-}
+let mapTempMarker = null;
 
 function cancelLocationUpdate() {
   updatingLakeLocation = null;
@@ -1620,11 +1550,9 @@ function switchTab(tab, pushHistory = true) {
 
   // Update panels
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); // Clear active from both navs
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab)?.classList.add('active');
-
-  // Apply active class to buttons in BOTH nav bars (by class since IDs must be unique)
-  document.querySelectorAll('.btn-nav-' + tab).forEach(b => b.classList.add('active'));
+  document.getElementById('nav-' + tab)?.classList.add('active');
 
   // Push history so back button works
   if (pushHistory) {
@@ -2034,20 +1962,6 @@ async function handleSocialVisibilityChange(e) {
 }
 
 /**
- * Toggles the experimental navigation bar setting.
- */
-function toggleExperimentalNav(on) {
-  localStorage.setItem('castwise_experimental_nav', on);
-  document.body.classList.toggle('experimental-nav-active', on);
-  // Re-apply active tab styling to the correct nav bar
-  switchTab(currentTab, false);
-  // Re-calculate padding for app-scroll
-  if (window.updatePinNav) window.updatePinNav();
-  showToast(on ? 'Experimental Nav ON' : 'Experimental Nav OFF');
-}
-
-
-/**
  * Triggers a test push notification from the Worker to the Owner.
  */
 async function sendTestNotification(btn) {
@@ -2315,7 +2229,6 @@ function renderAccountSection() {
         `;
       } else if (authData.role === 2) {
         const navDbgOn = localStorage.getItem('cw_nav_debug') === '1';
-        const experimentalNavOn = localStorage.getItem('castwise_experimental_nav') === 'true';
         adminZone.innerHTML = `
           <hr class="settings-divider">
           <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
@@ -2329,14 +2242,6 @@ function renderAccountSection() {
             </label>
             <p style="font-size:12px; color:var(--text3); margin-top:8px;">Show real-time positioning data to debug the navigation bar.</p>
           </div>
-          <div style="width:100%; margin-top:12px; text-align:left;">
-            <label style="display:flex; align-items:center; justify-content:space-between; background:var(--bg2); border-radius:var(--radius); padding:12px 14px; cursor:pointer;">
-              <span style="font-size:15px; font-weight:500; color:var(--text);">Experimental Nav Bar</span>
-              <input type="checkbox" id="experimental-nav-toggle" ${experimentalNavOn ? 'checked' : ''} onchange="toggleExperimentalNav(this.checked)" style="width:20px; height:20px;" />
-            </label>
-            <p style="font-size:12px; color:var(--text3); margin-top:8px;">Move navigation bar outside the main app container (for iOS PWA testing).</p>
-          </div>
-
         `;
       } else {
         adminZone.innerHTML = '';
@@ -5980,12 +5885,6 @@ document.addEventListener('DOMContentLoaded', () => {
     calcMonoBraid();
   }
 
-  // Experimental Nav Bar toggle initialization
-  const experimentalNavToggle = document.getElementById('experimental-nav-toggle');
-  if (experimentalNavToggle) {
-    experimentalNavToggle.addEventListener('change', (e) => toggleExperimentalNav(e.target.checked));
-  }
-
   // PIN input listener for approval modal
   document.getElementById('approve-pin')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') handleApproveConfirm();
@@ -6090,9 +5989,12 @@ if ('serviceWorker' in navigator) {
 </script>
 <!-- Owner-only nav debug bar — toggled via Settings > Nav Debug Overlay -->
 <div id="nav-debug" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.92);color:#fff;font-size:10px;padding:3px 8px;z-index:999999;font-family:monospace;pointer-events:none;white-space:nowrap;overflow:hidden;"></div>
-<div id="safe-area-probe" style="position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;pointer-events:none;visibility:hidden;"></div>
 <script>
 (function(){
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;pointer-events:none;visibility:hidden;';
+  document.body.appendChild(probe);
+
   function updateDebugBar() {
     var el = document.getElementById('nav-debug');
     if (!el || el.style.display === 'none') return;
@@ -6100,10 +6002,9 @@ if ('serviceWorker' in navigator) {
     if (!nav) return;
     var r = nav.getBoundingClientRect();
     var vv = window.visualViewport;
-    var app = document.querySelector('.app'); // Use the main app container
-    var safeAreaProbe = document.getElementById('safe-area-probe');
+    var app = document.querySelector('.app');
     var ar = app ? app.getBoundingClientRect() : {};
-    var sab = safeAreaProbe ? safeAreaProbe.getBoundingClientRect().height : 0;
+    var sab = probe.getBoundingClientRect().height;
     el.textContent =
       'nav T=' + Math.round(r.top) + ' B=' + Math.round(r.bottom) + ' H=' + Math.round(r.height) +
       ' | appB=' + Math.round(ar.bottom) +
