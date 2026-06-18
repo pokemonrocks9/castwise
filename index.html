@@ -84,13 +84,11 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html {
       font-size: 16px; background: var(--bg);
-      height: 100%; overflow: hidden;
     }
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
-      height: 100%; overflow: hidden;
     }
     a { color: var(--green); }
 
@@ -5975,6 +5973,51 @@ if ('serviceWorker' in navigator) {
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
   }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
 }
+</script>
+<!-- DEBUG BAR -->
+<div id="nav-debug" style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,0,0,0.9);color:#fff;font-size:10px;padding:3px 6px;z-index:999999;font-family:monospace;pointer-events:none;white-space:nowrap;overflow:hidden;"></div>
+<script>
+(function(){
+  function update(){
+    var el=document.getElementById('nav-debug');
+    var nav=document.querySelector('.bottom-nav');
+    if(!el||!nav)return;
+    var r=nav.getBoundingClientRect();
+    var vv=window.visualViewport;
+    var app=document.querySelector('.app');
+    var ar=app?app.getBoundingClientRect():{};
+    el.textContent=
+      'nav T='+Math.round(r.top)+' B='+Math.round(r.bottom)+' H='+Math.round(r.height)+
+      ' | app B='+Math.round(ar.bottom)+
+      ' | winH='+window.innerHeight+
+      ' | vvH='+(vv?Math.round(vv.height):'?')+
+      ' | vvOT='+(vv?Math.round(vv.offsetTop):'?')+
+      ' | safeB='+getComputedStyle(document.documentElement).getPropertyValue('--sab');
+  }
+  // also measure safe-area-inset-bottom via a probe div
+  var probe=document.createElement('div');
+  probe.style.cssText='position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;pointer-events:none;';
+  document.body.appendChild(probe);
+  function update2(){
+    var el=document.getElementById('nav-debug');
+    var nav=document.querySelector('.bottom-nav');
+    if(!el||!nav)return;
+    var r=nav.getBoundingClientRect();
+    var vv=window.visualViewport;
+    var app=document.querySelector('.app');
+    var ar=app?app.getBoundingClientRect():{};
+    var sab=probe.getBoundingClientRect().height;
+    el.textContent=
+      'nav T='+Math.round(r.top)+' B='+Math.round(r.bottom)+' H='+Math.round(r.height)+
+      ' | app B='+Math.round(ar.bottom)+
+      ' | winH='+window.innerHeight+
+      ' | vvH='+(vv?Math.round(vv.height):'?')+
+      ' | safeB='+Math.round(sab);
+  }
+  setInterval(update2,300);
+  window.addEventListener('resize',update2);
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',update2);
+})();
 </script>
 </body>
 </html>
