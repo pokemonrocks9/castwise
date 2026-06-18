@@ -94,14 +94,11 @@
 
     /* ── Layout ── */
     .app {
-      /* Use dynamic viewport height and explicit pinning to prevent floating on iOS */
+      /* Pin to all four true screen edges — no height/dvh so iOS can't miscalculate */
       position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 100vh;
-      height: 100dvh;
+      top: 0; left: 0; right: 0; bottom: 0;
       display: flex;
       flex-direction: column;
-      transform: translateZ(0);
     }
     /* Scrollable content area above the nav */
     .app-scroll {
