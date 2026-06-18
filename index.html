@@ -83,6 +83,9 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; background: var(--bg); }
+    /* Force page tall enough to scroll so iOS collapses browser chrome
+       and position:fixed; bottom:0 anchors to the true screen bottom */
+    .app { min-height: calc(100vh + 1px); }
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--bg);
@@ -636,7 +639,7 @@
       flex-direction: column; overflow-y: auto; padding: env(safe-area-inset-top) 0 0;
       -webkit-overflow-scrolling: touch;
     }
-    body.overlay-open { overflow: hidden; height: 100vh; }
+    body.overlay-open { overflow: hidden; height: 100dvh; }
     .account-header {
       padding: 16px; display: flex; align-items: center; gap: 12px;
       border-bottom: 1px solid var(--border);
@@ -2157,12 +2160,18 @@ function renderAccountSection() {
           </button>
         `;
       } else if (authData.role === 2) {
+        const navDbgOn = localStorage.getItem('cw_nav_debug') === '1';
         adminZone.innerHTML = `
           <hr class="settings-divider">
           <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             Open Owner Dashboard
           </button>
+          <hr class="settings-divider">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 0;">
+            <span style="font-size:13px; color:var(--text2);">Nav Debug Overlay</span>
+            <input type="checkbox" id="nav-debug-toggle" ${navDbgOn ? 'checked' : ''} onchange="toggleNavDebug(this.checked)" style="width:20px;height:20px;cursor:pointer;">
+          </div>
         `;
       } else {
         adminZone.innerHTML = '';
@@ -5906,6 +5915,46 @@ if ('serviceWorker' in navigator) {
     });
     reg.addEventListener('updatefound', () => { const newWorker = reg.installing; newWorker.addEventListener('statechange', () => { if (newWorker.state === 'installed' && navigator.serviceWorker.controller) { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload()); newWorker.postMessage({ type: 'SKIP_WAITING' }); } }); });
   }).catch(error => { console.error('Service Worker registration failed:', error); }); // Added error logging
+}
+</script>
+
+<!-- Owner-only nav debug bar -->
+<div id="nav-debug" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.92);color:#fff;font-size:10px;padding:3px 8px;z-index:999999;font-family:monospace;pointer-events:none;white-space:pre-wrap;word-break:break-all;"></div>
+<script>
+(function(){
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;pointer-events:none;visibility:hidden;';
+  document.body.appendChild(probe);
+
+  function updateDebugBar() {
+    var el = document.getElementById('nav-debug');
+    if (!el || el.style.display === 'none') return;
+    var nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    var r = nav.getBoundingClientRect();
+    var vv = window.visualViewport;
+    var sab = probe.getBoundingClientRect().height;
+    el.textContent =
+      'nav T=' + Math.round(r.top) + ' B=' + Math.round(r.bottom) + ' H=' + Math.round(r.height) + '\n' +
+      'winH=' + window.innerHeight + ' vvH=' + (vv ? Math.round(vv.height) : '?') + ' safeB=' + Math.round(sab);
+  }
+
+  setInterval(updateDebugBar, 500);
+  window.addEventListener('resize', updateDebugBar);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', updateDebugBar);
+
+  if (localStorage.getItem('cw_nav_debug') === '1') {
+    document.addEventListener('DOMContentLoaded', function() {
+      var el = document.getElementById('nav-debug');
+      if (el) el.style.display = 'block';
+    });
+  }
+})();
+
+function toggleNavDebug(on) {
+  localStorage.setItem('cw_nav_debug', on ? '1' : '0');
+  var el = document.getElementById('nav-debug');
+  if (el) el.style.display = on ? 'block' : 'none';
 }
 </script>
 </body>
