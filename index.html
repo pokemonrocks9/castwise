@@ -2404,7 +2404,7 @@ async function fetchMessages() {
       if (text.startsWith('LAKE_SHARE|')) {
         const [_, name, fish, fee, lat, lon] = text.split('|');
         content = `
-          <div class="msg-lake-card">
+          <div class="msg-lake-card" onclick="window.open('https://maps.rbt.no/?q=${lat},${lon}', '_blank')">
             <div class="msg-lake-name">${name}</div>
             <div class="msg-lake-tags">
               <span class="tag tag-fish">${fish}</span>
@@ -2412,7 +2412,7 @@ async function fetchMessages() {
             </div>
             <button class="msg-lake-btn" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${lat},${lon}', '_blank')">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-              Navigate
+              View on Map
             </button>
           </div>`;
       }
@@ -3144,7 +3144,7 @@ function handleFamNavigate() {
   if (!currentActionFriend || !currentActionFriend.active_lake_id) return;
   const rec = getDBRecord(currentActionFriend.active_lake_id);
   if (rec && rec.lat && rec.lon) {
-    window.open(`https://www.google.com/maps/search/?api=1&query=${rec.lat},${rec.lon}`, '_blank');
+    window.open(`https://maps.rbt.no/?q=${rec.lat},${rec.lon}`, '_blank');
   } else {
     showToast('Lake location details not found');
   }
@@ -4531,8 +4531,8 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     let navigateBtn = '';
     if (isMapMode && _canNavigate) {
       navigateBtn = `
-        <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;" 
-          onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${lk.lat},${lk.lon}', '_blank')">
+        <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;"
+          onclick="event.stopPropagation(); window.open('https://maps.rbt.no/?q=${lk.lat},${lk.lon}', '_blank')">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
           </svg>
