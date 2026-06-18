@@ -94,9 +94,11 @@
 
     /* ── Layout ── */
     .app {
-      /* Pinned to all four screen edges exactly like map-overlay — no dvh, no max-width */
+      /* Use dynamic viewport height and explicit pinning to prevent floating on iOS */
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0; left: 0; right: 0;
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
     }
@@ -1487,10 +1489,11 @@
   function pinNav() {
     if (!app) app = document.querySelector('.app');
     if (!app) return;
-    // We no longer manually set app.style.height here.
-    // By letting the CSS height: 100dvh and bottom: 0 handle it,
-    // the nav bar will stay at the true bottom of the screen
-    // just like the map overlay does.
+    // Manually setting height via visualViewport is the most reliable way 
+    // to fix the "floating nav bar" bug on iOS PWAs.
+    if (window.visualViewport) {
+      app.style.height = window.visualViewport.height + 'px';
+    }
   }
   function setup() {
     pinNav();
