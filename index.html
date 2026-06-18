@@ -112,7 +112,7 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding-top: calc(20px + env(safe-area-inset-top));
-      padding-bottom: 16px;
+      padding-bottom: calc(64px + env(safe-area-inset-bottom) + 16px); /* Adjusted for fixed bottom nav */
       padding-left: 16px;
       padding-right: 16px;
     }
@@ -1489,10 +1489,10 @@
   function pinNav() {
     if (!nav) nav = document.querySelector('.bottom-nav');
     if (!nav) return;
-    var vv = window.visualViewport;
+    var vv = window.visualViewport; // Keep for potential future use or debugging
     if (!vv) return;
     var fromBottom = window.innerHeight - (vv.offsetTop + vv.height);
-    nav.style.bottom = fromBottom + 'px';
+    // nav.style.bottom = fromBottom + 'px'; // Removed: Let CSS handle bottom: 0
   }
   function setup() {
     nav = document.querySelector('.bottom-nav');
