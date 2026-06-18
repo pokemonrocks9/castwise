@@ -103,6 +103,7 @@
       /* App shell fills the viewport exactly — no document scroll */
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
+      height: 100dvh; /* Use dynamic viewport height as a primary CSS fallback */
       display: flex;
       flex-direction: column;
     }
@@ -1485,17 +1486,17 @@
 // iOS Safari's vh/dvh units are unreliable until the page has enough content
 // to scroll. visualViewport gives us the true visible bottom every time.
 (function() {
-  var nav = null;
+  var app = null;
   function pinNav() {
-    if (!nav) nav = document.querySelector('.bottom-nav');
-    if (!nav) return;
-    var vv = window.visualViewport; // Keep for potential future use or debugging
+    if (!app) app = document.querySelector('.app');
+    if (!app) return;
+    var vv = window.visualViewport;
     if (!vv) return;
-    var fromBottom = window.innerHeight - (vv.offsetTop + vv.height);
-    // nav.style.bottom = fromBottom + 'px'; // Removed: Let CSS handle bottom: 0
+    // Set the app container height to the actual visible viewport height.
+    // This keeps the bottom nav flush with the browser chrome or keyboard.
+    app.style.height = vv.height + 'px';
   }
   function setup() {
-    nav = document.querySelector('.bottom-nav');
     pinNav();
     var vv = window.visualViewport;
     if (vv) { vv.addEventListener('resize', pinNav); vv.addEventListener('scroll', pinNav); }
