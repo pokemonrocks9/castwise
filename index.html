@@ -5968,7 +5968,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- Owner-only nav debug bar — toggled via Settings > Nav Debug Overlay -->
-<div id="nav-debug" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.92);color:#fff;font-size:10px;padding:3px 8px;z-index:999999;font-family:monospace;pointer-events:none;white-space:nowrap;overflow:hidden;"></div>
+<div id="nav-debug" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.92);color:#fff;font-size:10px;padding:3px 8px;z-index:999999;font-family:monospace;pointer-events:none;white-space:pre-wrap;word-break:break-all;"></div>
 <script>
 (function(){
   var probe = document.createElement('div');
@@ -5988,12 +5988,9 @@ if ('serviceWorker' in navigator) {
     var dbg = document.getElementById('nav-debug');
     var dbgR = dbg ? dbg.getBoundingClientRect() : {};
     el.textContent =
-      'nav T=' + Math.round(r.top) + ' B=' + Math.round(r.bottom) + ' H=' + Math.round(r.height) +
-      ' | appB=' + Math.round(ar.bottom) +
-      ' | winH=' + window.innerHeight +
-      ' | vvH=' + (vv ? Math.round(vv.height) : '?') +
-      ' | safeB=' + Math.round(sab) +
-      ' | dbgB=' + Math.round(dbgR.bottom);
+      'nav T=' + Math.round(r.top) + ' B=' + Math.round(r.bottom) + ' H=' + Math.round(r.height) + '\n' +
+      'appB=' + Math.round(ar.bottom) + ' winH=' + window.innerHeight + ' vvH=' + (vv ? Math.round(vv.height) : '?') + '\n' +
+      'safeB=' + Math.round(sab) + ' dbgB=' + Math.round(dbgR.bottom);
   }
 
   setInterval(updateDebugBar, 500);
