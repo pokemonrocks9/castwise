@@ -1484,34 +1484,7 @@
 </div>
 
 <script>
-// ── iOS bottom nav fix ────────────────────────────────────────────────────────
-// iOS Safari's vh/dvh units are unreliable until the page has enough content
-// to scroll. visualViewport gives us the true visible bottom every time.
-(function() {
-  var app = null;
-  function pinNav() {
-    if (!app) app = document.querySelector('.app');
-    if (!app) return;
-    if (window.visualViewport) {
-      const vh = window.visualViewport.height;
-      // Use a explicit pixel height to bypass Safari's viewport lag
-      app.style.height = vh + 'px';
-      
-      // Force a micro-scroll to trigger iOS viewport snapping
-      if (vh === window.innerHeight) {
-        window.scrollTo(0, 0);
-      }
-    }
-  }
-  function setup() {
-    pinNav();
-    var vv = window.visualViewport;
-    if (vv) { vv.addEventListener('resize', pinNav); vv.addEventListener('scroll', pinNav); }
-    window.addEventListener('resize', pinNav);
-    window.addEventListener('orientationchange', function() { setTimeout(pinNav, 150); });
-  }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', setup); } else { setup(); }
-})();
+// iOS nav fix removed — .app uses position:fixed; top:0; left:0; right:0; bottom:0 which handles this correctly
 
 // ── Config ────────────────────────────────────────────────────────────────────
 // Replace with your deployed Cloudflare Worker URL after `wrangler deploy`
