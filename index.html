@@ -5985,12 +5985,15 @@ if ('serviceWorker' in navigator) {
     var app = document.querySelector('.app');
     var ar = app ? app.getBoundingClientRect() : {};
     var sab = probe.getBoundingClientRect().height;
+    var dbg = document.getElementById('nav-debug');
+    var dbgR = dbg ? dbg.getBoundingClientRect() : {};
     el.textContent =
       'nav T=' + Math.round(r.top) + ' B=' + Math.round(r.bottom) + ' H=' + Math.round(r.height) +
       ' | appB=' + Math.round(ar.bottom) +
       ' | winH=' + window.innerHeight +
       ' | vvH=' + (vv ? Math.round(vv.height) : '?') +
-      ' | safeB=' + Math.round(sab);
+      ' | safeB=' + Math.round(sab) +
+      ' | dbgB=' + Math.round(dbgR.bottom);
   }
 
   setInterval(updateDebugBar, 500);
