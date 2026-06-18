@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.139.18 DEBUG';
+const VERSION = 'v0.139.19';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
