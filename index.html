@@ -108,6 +108,7 @@
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
+      padding-top: env(safe-area-inset-top);
     }
     #map-canvas { flex-shrink: 0; }
     #map-canvas {
@@ -749,7 +750,7 @@
     </div>
     <div id="map-canvas"></div>
     <div id="map-list"></div>
-    <div style="padding: 10px; font-size: 11px; text-align: center; color: var(--text2); background: var(--bg2); font-weight: 500;">
+    <div style="padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); font-size: 11px; text-align: center; color: var(--text2); background: var(--bg2); font-weight: 500;">
       Long-press (or right-click) anywhere to drop a pin for a new lake
     </div>
   </div>
