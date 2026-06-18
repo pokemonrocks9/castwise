@@ -1777,6 +1777,12 @@ function sunTimes(lat, lon, date) {
 const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
 
+function getMapLink(lat, lon) {
+  if (isIos()) return `maps://?q=${lat},${lon}`;
+  if (navigator.userAgent.toLowerCase().includes('android')) return `geo:${lat},${lon}?q=${lat},${lon}`;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+}
+
 
 // ── Web Push Helpers ─────────────────────────────────────────────────────────
 /**
@@ -2403,14 +2409,15 @@ async function fetchMessages() {
       let content = `<div>${text}</div>`;
       if (text.startsWith('LAKE_SHARE|')) {
         const [_, name, fish, fee, lat, lon] = text.split('|');
+        const mapUrl = getMapLink(lat, lon);
         content = `
-          <div class="msg-lake-card" onclick="window.open('https://maps.rbt.no/?q=${lat},${lon}', '_blank')">
+          <div class="msg-lake-card" onclick="window.open('${mapUrl}', '_blank')">
             <div class="msg-lake-name">${name}</div>
             <div class="msg-lake-tags">
               <span class="tag tag-fish">${fish}</span>
               <span class="tag ${fee === 'Free' ? 'tag-free' : 'tag-paid'}">${fee}</span>
             </div>
-            <button class="msg-lake-btn" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${lat},${lon}', '_blank')">
+            <button class="msg-lake-btn" onclick="window.open('${mapUrl}', '_blank')">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
               View on Map
             </button>
@@ -2597,7 +2604,7 @@ function getReviewQueueHTML() {
           </div>
           <div style="margin-top:12px; display:flex; gap:8px;">
             ${l.lat && l.lon ? `
-              <a href="https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lon}" target="_blank" class="btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
+              <a href="${getMapLink(l.lat, l.lon)}" target="_blank" class="btn" style="flex:1; text-align:center; text-decoration:none; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                 View Coordinates
               </a>
@@ -3144,7 +3151,7 @@ function handleFamNavigate() {
   if (!currentActionFriend || !currentActionFriend.active_lake_id) return;
   const rec = getDBRecord(currentActionFriend.active_lake_id);
   if (rec && rec.lat && rec.lon) {
-    window.open(`https://maps.rbt.no/?q=${rec.lat},${rec.lon}`, '_blank');
+    window.open(getMapLink(rec.lat, rec.lon), '_blank');
   } else {
     showToast('Lake location details not found');
   }
@@ -4532,7 +4539,7 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     if (isMapMode && _canNavigate) {
       navigateBtn = `
         <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;"
-          onclick="event.stopPropagation(); window.open('https://maps.rbt.no/?q=${lk.lat},${lk.lon}', '_blank')">
+          onclick="event.stopPropagation(); window.open('${getMapLink(lk.lat, lk.lon)}', '_blank')">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
           </svg>
