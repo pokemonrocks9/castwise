@@ -123,6 +123,7 @@
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       z-index: 2000; background: var(--bg); display: none;
       flex-direction: column;
+      padding-top: env(safe-area-inset-top);
     }
     #map-canvas { flex-shrink: 0; }
     #map-canvas {
@@ -140,6 +141,7 @@
       z-index: 4000; background: var(--bg); display: none;
       flex-direction: column; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      padding-top: env(safe-area-inset-top);
     }
     .fish-detail-hero { width: 100%; height: 250px; background: var(--bg2); position: relative; }
     .fish-detail-hero img { width: 100%; height: 100%; object-fit: cover; }
@@ -1829,6 +1831,20 @@ function sunTimes(lat, lon, date) {
 const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = () => window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
 
+/**
+ * Opens a map application with the given coordinates, attempting to use the device's preferred app.
+ */
+function openMapApp(lat, lon) {
+  let url = '';
+  if (isIos()) {
+    // For iOS, prefer Apple Maps link, which often provides options for other installed map apps.
+    url = `https://maps.apple.com/?q=${lat},${lon}`;
+  } else {
+    // For Android and other platforms, a generic Google Maps web link is often intercepted by the OS to offer choices.
+    url = `https://maps.google.com/maps?q=${lat},${lon}`;
+  }
+  window.open(url, '_system'); // '_system' hint for PWAs to open external apps
+}
 
 // ── Web Push Helpers ─────────────────────────────────────────────────────────
 /**
@@ -2449,14 +2465,14 @@ async function fetchMessages() {
       let content = `<div>${text}</div>`;
       if (text.startsWith('LAKE_SHARE|')) {
         const [_, name, fish, fee, lat, lon] = text.split('|');
-        content = `
+        content = `\
           <div class="msg-lake-card">
             <div class="msg-lake-name">${name}</div>
             <div class="msg-lake-tags">
               <span class="tag tag-fish">${fish}</span>
               <span class="tag ${fee === 'Free' ? 'tag-free' : 'tag-paid'}">${fee}</span>
             </div>
-            <button class="msg-lake-btn" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${lat},${lon}', '_blank')">
+            <button class="msg-lake-btn" onclick="openMapApp(${lat},${lon})">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
               Navigate
             </button>
@@ -2541,7 +2557,7 @@ async function shareLake(lakeName) {
   )) ? 'Free' : 'Paid';
 
   const payload = `LAKE_SHARE|${lakeName}|${fish}|${fee}|${lk.lat}|${lk.lon}`;
-  
+
   const key = await getChatKey(authData.castKey, activeChatFriend.cast_key);
   const encrypted = await encryptMsg(payload, key);
   
@@ -3190,7 +3206,7 @@ function handleFamNavigate() {
   if (!currentActionFriend || !currentActionFriend.active_lake_id) return;
   const rec = getDBRecord(currentActionFriend.active_lake_id);
   if (rec && rec.lat && rec.lon) {
-    window.open(`https://www.google.com/maps/search/?api=1&query=${rec.lat},${rec.lon}`, '_blank');
+    openMapApp(rec.lat, rec.lon);
   } else {
     showToast('Lake location details not found');
   }
@@ -4577,8 +4593,8 @@ function renderLakeListHTML(lakes, dayData, isMapMode) {
     let navigateBtn = '';
     if (isMapMode && _canNavigate) {
       navigateBtn = `
-        <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;" 
-          onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${lk.lat},${lk.lon}', '_blank')">
+        <button style="width:38px; height:38px; border:none; background:none; color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;"
+          onclick="event.stopPropagation(); openMapApp(${lk.lat},${lk.lon})">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
           </svg>
