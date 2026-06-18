@@ -2323,6 +2323,7 @@ function renderAccountSection() {
         `;
       } else if (authData.role === 2) {
         const navDbgOn = localStorage.getItem('cw_nav_debug') === '1';
+        const experimentalNavOn = localStorage.getItem('castwise_experimental_nav') === 'true';
         adminZone.innerHTML = `
           <hr class="settings-divider">
           <button class="btn btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="openOwnerOverlay()">
