@@ -586,9 +586,11 @@
     .map-fab:active { transform: scale(0.92); }
     .map-fab svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .map-fab .icon-close { display: none; }
-    body.map-active .map-fab { background: var(--red-dark); }
-    body.map-active .map-fab .icon-map { display: none; }
-    body.map-active .map-fab .icon-close { display: block; }
+    #map-toggle-btn { display: none; }
+    body[data-tab="lakes"] #map-toggle-btn, body.map-active #map-toggle-btn { display: flex; }
+    body.map-active #map-toggle-btn { background: var(--red-dark); }
+    body.map-active #map-toggle-btn .icon-map { display: none; }
+    body.map-active #map-toggle-btn .icon-close { display: block; }
 
     /* ── Icon Picker ── */
     .icon-grid {
@@ -780,6 +782,15 @@
       Long-press (or right-click) anywhere to drop a pin for a new lake
     </div>
   </div>
+
+  <!-- Map Toggle FAB moved out of scroll area for iOS layering fix -->
+  <button id="map-toggle-btn" class="map-fab" onclick="toggleMap()" title="View Map">
+    <svg class="icon-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+    <svg class="icon-close" viewBox="0 0 24 24">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  </button>
 
   <!-- Account Overlay -->
   <div id="account-overlay">
@@ -1124,13 +1135,6 @@
         🛰️ Tap the satellite for GPS, or enter a city / zip to get started
       </div>
     </div>
-    <button class="map-fab" onclick="toggleMap()" title="View Map">
-      <svg class="icon-map" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-      <svg class="icon-close" viewBox="0 0 24 24">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
   </div>
 
   <div id="tab-fish" class="tab-panel">
@@ -1552,6 +1556,7 @@ function switchTab(tab, pushHistory = true) {
     return;
   }
   currentTab = tab;
+  document.body.setAttribute('data-tab', tab);
 
   // Update panels
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
