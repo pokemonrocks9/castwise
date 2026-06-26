@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.141.2';
+const VERSION = 'v0.141.5';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -69,9 +69,17 @@ self.addEventListener('push', e => {
     icon: data.icon || 'icons/icon-192.png',
     badge: data.badge || 'icons/badgecw2-96.png', // New transparent monochrome icon
     data: data,
-    tag: data.type === 'dm' ? `dm-${data.friend}` : (data.type === 'friend_request' ? `fr-${data.sender}` : undefined),
-    renotify: true
+    tag: data.type === 'dm' ? `dm-${data.friend}` : (data.type === 'friend_request' ? `fr-${data.sender}` : 'general-notif'),
+    renotify: true,
+    actions: []
   };
+
+  // Add quick actions based on type
+  if (data.type === 'dm') {
+    options.actions.push({ action: 'open-chat', title: 'Reply' });
+  } else if (data.type === 'friend_request') {
+    options.actions.push({ action: 'view-requests', title: 'View Requests' });
+  }
 
   const nPromise = self.registration.showNotification(data.title, options);
 
@@ -87,15 +95,16 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const action = e.action; // Detect if a specific button was pressed
   const data = e.notification.data || {};
   let url = self.registration.scope;
 
   // Deep link based on the notification type
-  if (data.type === 'friend_request') {
+  if (data.type === 'friend_request' || action === 'view-requests') {
     url = new URL('#requests', self.registration.scope).href;
   }
   
-  if (data.type === 'dm' && data.friend) {
+  if ((data.type === 'dm' || action === 'open-chat') && data.friend) {
     url = new URL('#chat-' + data.friend, self.registration.scope).href;
   }
 
