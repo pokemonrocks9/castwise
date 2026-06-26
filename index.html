@@ -143,13 +143,13 @@
     .tagline { font-size: 13px; color: var(--text3); margin-top: 3px; }
 
     .header-auth-pill {
-      font-size: 11px; font-weight: 600; padding: 6px 12px;
+      font-size: 14px; font-weight: 600; padding: 0 16px;
+      height: 38px; display: flex; align-items: center; justify-content: center;
       background: var(--bg2); border: 1px solid var(--border);
       border-radius: 20px; cursor: pointer; color: var(--text2);
     }
     .header-auth-pill.signed-in {
-      width: 38px; height: 38px; padding: 0;
-      display: flex; align-items: center; justify-content: center;
+      width: 38px; padding: 0;
       border-radius: 50%;
     }
     .header-auth-pill svg { 
@@ -1433,15 +1433,15 @@
       <svg viewBox="0 0 24 24"><path d="M3 17c3-3 5-5 9-5s6 2 9 5"/><path d="M3 11c3-3 5-5 9-5s6 2 9 5"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
       Lakes
     </button>
-    <button class="nav-btn" onclick="showToast('Fishing logging coming soon!')">
-      <div style="background: var(--green); color: #fff; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-bottom: 2px;">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <button class="nav-btn" onclick="showToast('Coming soon')">
+      <div style="background: var(--green); color: #fff; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-shrink: 0;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </div>
-      Soon
+      ???
     </button>
     <button class="nav-btn" id="nav-fish" onclick="switchTab('fish')">
       <svg viewBox="0 0 24 24"><path d="M6.5 12c.94-3.46 4.96-6 9.5-6 3.07 0 5.61 1.15 7 3l-4 3 4 3c-1.39 1.85-3.93 3-7 3-4.54 0-8.56-2.54-9.5-6Z"/><path d="M18 12h.01"/><path d="M2 16c1.1-1.5 1.1-6.5 0-8"/><path d="M6.5 12h-3"/></svg>
@@ -2136,18 +2136,18 @@ function renderAccountSection() {
     headerZone.innerHTML = `
       <div style="display: flex; gap: 10px; align-items: center;">
         <div class="notif-wrapper">
-          <div id="message-notif-dot" class="notif-dot"></div>
-          <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
-            </svg>
-          </div>
-        </div>
-        <div class="notif-wrapper">
           <div class="header-auth-pill signed-in" onclick="switchTab('settings')" title="Settings">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+        </div>
+        <div class="notif-wrapper">
+          <div id="message-notif-dot" class="notif-dot"></div>
+          <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
             </svg>
           </div>
         </div>
