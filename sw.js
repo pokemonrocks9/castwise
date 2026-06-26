@@ -1,5 +1,5 @@
 // Bump this with every deploy — matches the version in index.html
-const VERSION = 'v0.141.7';
+const VERSION = 'v0.141.8';
 const CACHE   = `castwise-${VERSION}`;
 const SHELL   = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -81,16 +81,15 @@ self.addEventListener('push', e => {
     options.actions.push({ action: 'view-requests', title: 'View Requests' });
   }
 
-  const nPromise = self.registration.showNotification(data.title, options);
-
-  // Notify open windows to refresh UI in real-time if the app is active
-  const mPromise = clients.matchAll({ type: 'window' }).then(windowClients => {
-    windowClients.forEach(client => {
-      client.postMessage({ type: 'PUSH_RECEIVED', payload: data });
-    });
-  });
-
-  e.waitUntil(Promise.all([nPromise, mPromise]));
+  // On iOS, we must ensure showNotification is the primary promise returned to e.waitUntil.
+  // We chain the client notification afterwards so it doesn't block the alert.
+  e.waitUntil(
+    self.registration.showNotification(data.title, options)
+      .then(() => clients.matchAll({ type: 'window' }))
+      .then(windowClients => {
+        windowClients.forEach(client => client.postMessage({ type: 'PUSH_RECEIVED', payload: data }));
+      }).catch(() => {}) // Silently fail if clients are unreachable (app is closed)
+  );
 });
 
 self.addEventListener('notificationclick', e => {
