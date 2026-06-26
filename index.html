@@ -2414,6 +2414,11 @@ async function fetchMessages() {
   try {
     const res = await fetch(`${WORKER_URL}/get-messages?username=${authData.username}&castKey=${authData.castKey}&friend=${activeChatFriend.username}`);
     const data = await res.json();
+    
+    // Update local seen timestamp so notification logic knows we've seen these messages
+    localStorage.setItem(`seen_chat_${activeChatFriend.username}`, Date.now().toString());
+    checkUnreadMessages();
+
     const key = await getChatKey(authData.castKey, activeChatFriend.cast_key);
     const container = document.getElementById('chat-messages');
     let html = '';
@@ -5920,6 +5925,11 @@ if ('serviceWorker' in navigator) {
     if (e.data?.type === 'PUSH_RECEIVED') {
       const payload = e.data.payload;
       if (authData) {
+        // If we're currently in the chat that just got a message, fetch it immediately (which also marks it read)
+        if (payload.type === 'dm' && activeChatFriend && activeChatFriend.username === payload.friend) {
+          fetchMessages();
+        }
+
         fetchFriends();
         checkFriendRequests();
         checkUnreadMessages();
