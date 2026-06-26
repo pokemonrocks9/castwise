@@ -1433,6 +1433,16 @@
       <svg viewBox="0 0 24 24"><path d="M3 17c3-3 5-5 9-5s6 2 9 5"/><path d="M3 11c3-3 5-5 9-5s6 2 9 5"/><line x1="12" y1="22" x2="12" y2="17"/></svg>
       Lakes
     </button>
+    <button class="nav-btn" onclick="showToast('Fishing logging coming soon!')">
+      <div style="background: var(--green); color: #fff; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-bottom: 2px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      Soon
+    </button>
     <button class="nav-btn" id="nav-fish" onclick="switchTab('fish')">
       <svg viewBox="0 0 24 24"><path d="M6.5 12c.94-3.46 4.96-6 9.5-6 3.07 0 5.61 1.15 7 3l-4 3 4 3c-1.39 1.85-3.93 3-7 3-4.54 0-8.56-2.54-9.5-6Z"/><path d="M18 12h.01"/><path d="M2 16c1.1-1.5 1.1-6.5 0-8"/><path d="M6.5 12h-3"/></svg>
       Fishidex
@@ -1444,10 +1454,6 @@
         <path d="M842.957 266.876H720.666v-73.375c-0.017-40.532-32.845-73.358-73.375-73.375H402.709c-40.532 0.017-73.36 32.842-73.375 73.375v73.375H207.043c-40.532 0.017-73.36 32.842-73.375 73.375v440.248c0.015 40.535 32.843 73.36 73.375 73.375h635.914c40.53-0.015 73.358-32.84 73.372-73.375V340.251c-0.014-40.533-32.842-73.358-73.372-73.375z m-464.706-73.375c0.024-13.496 10.957-24.434 24.458-24.458h244.582c13.498 0.024 24.431 10.962 24.458 24.458v73.375H378.251v-73.375z m489.164 586.998c-0.027 13.499-10.96 24.436-24.458 24.458H207.043c-13.501-0.022-24.434-10.96-24.461-24.458V340.251c0.027-13.496 10.96-24.434 24.461-24.458h635.913c13.499 0.024 24.431 10.962 24.458 24.458v440.248z"/>
       </svg>
       Tackle
-    </button>
-    <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Settings
     </button>
   </nav>
 
@@ -2128,12 +2134,20 @@ function renderAccountSection() {
     
     // 1. Update Header Zone
     headerZone.innerHTML = `
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 10px; align-items: center;">
         <div class="notif-wrapper">
           <div id="message-notif-dot" class="notif-dot"></div>
           <div class="header-auth-pill signed-in" onclick="openMessagesOverlay()" title="Messages">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><rect width="20" height="14" x="2" y="5" rx="2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="notif-wrapper">
+          <div class="header-auth-pill signed-in" onclick="switchTab('settings')" title="Settings">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </div>
         </div>
@@ -2208,7 +2222,15 @@ function renderAccountSection() {
   } else {
     // 1. Update Header Zone for logged out state
     headerZone.innerHTML = `
-      <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="header-auth-pill signed-in" onclick="switchTab('settings')" title="Settings">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </div>
+        <div class="header-auth-pill" onclick="openAuthModal()">Sign In</div>
+      </div>
     `;
     if (signoutZone) signoutZone.innerHTML = '';
     if (adminZone) adminZone.innerHTML = '';
