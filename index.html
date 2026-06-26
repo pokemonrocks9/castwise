@@ -1645,7 +1645,7 @@ function loadLakeDB() {
 loadLakeDB();
 
 // ── Hash Routing logic (Initialize after function definitions) ───────────────
-function handleInitialRouting() {
+async function handleInitialRouting() {
   const _hash = location.hash.replace('#', '');
   let _initTab = 'solunar';
   let _initSub = null;
@@ -1656,7 +1656,7 @@ function handleInitialRouting() {
   } else if (_hash.startsWith('chat-')) {
     _initTab = 'solunar'; // Keep background on solunar
     const friendName = _hash.replace('chat-', '');
-    setTimeout(() => startChat(friendName), 500); // Small delay to let app boot
+    startChat(friendName);
   } else if (['solunar','lakes','fish','tackle','settings'].includes(_hash)) {
     _initTab = _hash;
   }
@@ -1665,12 +1665,14 @@ function handleInitialRouting() {
   if (_initTab === 'tackle' && _initSub) {
     showTackleSection(_initSub, false);
     history.replaceState({ tab: _initTab, sub: _initSub }, '', '#' + _hash);
-  } else if (_hash === 'requests') {
+  } else if (_hash === 'requests' || _hash.startsWith('chat-')) {
     // Notification deep link: Initialize history stack so Back button works
     _initTab = 'solunar';
     history.replaceState({ tab: _initTab }, '', '#' + _initTab);
-    jumpToAccount(true);
-    switchFriendsTab('requests');
+    if (_hash === 'requests') {
+      jumpToAccount(true);
+      switchFriendsTab('requests');
+    }
   } else {
     history.replaceState({ tab: _initTab }, '', '#' + _initTab);
   }
@@ -2316,10 +2318,11 @@ async function renderMessagesOverlay() {
     
     html += '</div>';
     container.innerHTML = html;
-
+    return conversationPeers;
   } catch (e) {
     console.error(e);
     container.innerHTML = '<div class="err-msg">Failed to load conversations.</div>';
+    return [];
   }
 }
 
@@ -2371,7 +2374,18 @@ async function dismissNotification(tag) {
 }
 
 async function startChat(username) {
-  const friend = friendsList.find(f => f.username === username) || conversationPeers.find(p => p.username === username);
+  let friend = friendsList.find(f => f.username === username) || conversationPeers.find(p => p.username === username);
+  
+  // If data isn't loaded yet (cold boot/refresh), try fetching it before giving up
+  if (!friend && authData) {
+    await fetchFriends();
+    friend = friendsList.find(f => f.username === username);
+    if (!friend) {
+      await renderMessagesOverlay();
+      friend = conversationPeers.find(p => p.username === username);
+    }
+  }
+
   if (!friend) return;
   activeChatFriend = friend;
   document.getElementById('chat-title').textContent = username;
@@ -3102,8 +3116,10 @@ async function fetchFriends() {
         </div>
       `).join('');
     }
+    return friendsList;
   } catch (e) {
     fView.innerHTML = rView.innerHTML = '<div class="err-msg">Failed to load.</div>';
+    return [];
   }
 }
 
